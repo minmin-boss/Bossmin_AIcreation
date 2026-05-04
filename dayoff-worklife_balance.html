@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Our dayoff · worklife-balance</title>
+<title>Our dayoff · work-life balance</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -104,6 +104,15 @@ tr:hover td{background:#fafaf8}
 .stat-green{color:var(--accent)}
 .stat-orange{color:var(--warn)}
 
+/* Year tabs */
+.year-tab{padding:9px 22px;border-radius:10px;border:1.5px solid #7a5c3a;background:#7a5c3a;color:#fff;font-size:.88rem;font-weight:600;cursor:pointer;transition:all .18s;font-family:var(--font)}
+.year-tab.active{background:#3e2a10;color:#fff;border-color:#3e2a10;box-shadow:0 2px 8px rgba(62,42,16,.3)}
+.year-tab.active-current{background:#3e2a10;color:#fff;border-color:#3e2a10;box-shadow:0 2px 8px rgba(62,42,16,.3)}
+.year-tab:hover:not(.active):not(.active-current){background:#5e4528;border-color:#5e4528}
+.readonly-banner{display:flex;align-items:center;gap:8px;font-size:.76rem;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:1rem}
+.admin-banner{display:flex;align-items:center;gap:8px;font-size:.76rem;color:#fff;background:#dc2626;border-radius:8px;padding:8px 14px;margin-bottom:1rem;font-weight:600}
+.admin-card{border:2px solid #dc2626!important}
+
 /* Team filter buttons */
 .team-filter-btn{padding:8px 22px;border-radius:99px;font-size:.82rem;font-weight:600;cursor:pointer;border:2px solid var(--border);background:var(--card);color:var(--muted);transition:all .18s;font-family:var(--font)}
 .team-filter-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -124,7 +133,7 @@ tr:hover td{background:#fafaf8}
 <div class="app" id="main-app" style="display:none">
   <div class="header">
     <div class="header-left">
-      <h1>Our dayoff · worklife-balance</h1>
+      <h1>Our dayoff · work-life balance</h1>
       <p id="today-str"></p>
     </div>
     <div class="header-right">
@@ -147,7 +156,22 @@ tr:hover td{background:#fafaf8}
     <div class="section-title" style="margin-top:0"><span class="dot"></span>전체 사원 월별 사용 현황 (<span id="chart-year"></span>년 1월~12월)</div>
     <div class="card" id="company-chart-card"><div class="empty">데이터 불러오는 중...</div></div>
 
-    <div id="team-sections-wrap"></div>
+    <!-- 사원별 현황 잠금 -->
+    <div id="member-lock-wrap">
+      <div class="card" style="text-align:center;padding:2.5rem 1.5rem">
+        <div style="font-size:1.8rem;margin-bottom:.75rem">🔒</div>
+        <div style="font-size:.9rem;font-weight:700;margin-bottom:.4rem">사원별 현황</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:1.25rem">비밀번호를 입력하면 확인할 수 있습니다</div>
+        <div style="display:flex;gap:8px;justify-content:center;max-width:280px;margin:0 auto">
+          <input type="password" id="member-pw-input" placeholder="비밀번호 입력"
+            style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:var(--font);outline:none"
+            onkeydown="if(event.key==='Enter')checkMemberPw()">
+          <button class="btn btn-primary btn-sm" onclick="checkMemberPw()">확인</button>
+        </div>
+        <div id="member-pw-err" style="font-size:.74rem;color:var(--danger);margin-top:.6rem;min-height:1rem"></div>
+      </div>
+    </div>
+    <div id="team-sections-wrap" style="display:none"></div>
   </div>
 
   <!-- 팀원 현황 -->
@@ -163,24 +187,8 @@ tr:hover td{background:#fafaf8}
 
   <!-- 내 휴가 -->
   <div class="page" id="page-personal">
-    <!-- 연차 섹션 -->
-    <div class="section-title" style="margin-top:0;justify-content:space-between"><div style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:#2d6a4f"></span>연차</div><button class="btn btn-primary btn-sm" onclick="openAddModal()">+ 휴가 추가</button></div>
-    <div class="grid2" id="personal-cards" style="margin-bottom:1rem"></div>
-    <div class="card card-flush" style="margin-bottom:1.5rem">
-      <table>
-        <thead><tr><th>날짜</th><th>종류</th><th>메모</th><th>차감</th><th></th><th></th></tr></thead>
-        <tbody id="all-tbody"></tbody>
-      </table>
-    </div>
-    <!-- 워라밸 섹션 -->
-    <div class="section-title" style="justify-content:space-between"><div style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:#d97706"></span>워라밸</div><button class="btn btn-sm" style="background:#fef3c7;color:#d97706;font-weight:600" onclick="openAddWlbModal()">+ 워라밸 추가</button></div>
-    <div class="grid2" id="wlb-cards" style="margin-bottom:1rem"></div>
-    <div class="card card-flush">
-      <table>
-        <thead><tr><th>날짜</th><th>사용시간</th><th>메모</th><th></th><th></th></tr></thead>
-        <tbody id="wlb-tbody"></tbody>
-      </table>
-    </div>
+    <div id="year-tabs-wrap" style="display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap"></div>
+    <div id="personal-year-content"></div>
   </div>
 
   <!-- 설정 -->
@@ -218,6 +226,25 @@ tr:hover td{background:#fafaf8}
       <div class="section-title" style="margin-top:0"><span class="dot"></span>데이터 관리</div>
       <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem">모든 데이터는 Firebase에 실시간 저장됩니다. 어느 PC에서도 동일하게 확인됩니다.</p>
       <button class="btn btn-danger btn-sm" onclick="resetMyData()">내 휴가 데이터 초기화</button>
+    </div>
+    <div class="card" id="admin-lock-card">
+      <div class="section-title" style="margin-top:0"><span class="dot" style="background:#dc2626"></span>메인 담당자 모드</div>
+      <div id="admin-lock-section">
+        <p style="font-size:.78rem;color:var(--muted);margin-bottom:1rem">비밀번호를 입력하면 전체 사원 데이터를 수정할 수 있습니다.</p>
+        <div style="display:flex;gap:8px;max-width:300px">
+          <input type="password" id="admin-pw-input" placeholder="비밀번호 입력"
+            style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:var(--font);outline:none"
+            onkeydown="if(event.key==='Enter')checkAdminPw()">
+          <button class="btn btn-sm" style="background:#dc2626;color:#fff" onclick="checkAdminPw()">확인</button>
+        </div>
+        <div id="admin-pw-err" style="font-size:.74rem;color:var(--danger);margin-top:.5rem;min-height:1rem"></div>
+      </div>
+      <div id="admin-active-section" style="display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+          <p style="font-size:.78rem;color:#dc2626;font-weight:600">🔓 메인 담당자 모드 활성화됨</p>
+          <button class="btn btn-sm btn-secondary" onclick="lockAdmin()">모드 종료</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -295,7 +322,10 @@ function setSyncState(s) {
   else lbl.textContent='동기화 중';
 }
 
-function myUsedDays() { return myLeaves.reduce((a,l)=>a+(+l.deduct),0); }
+function myUsedDays(year) {
+  const y = year || new Date().getFullYear();
+  return myLeaves.filter(l=>l.date && l.date.startsWith(y)).reduce((a,l)=>a+(+l.deduct),0);
+}
 function myRemainDays() { return Math.max(0, mySettings.total - myUsedDays()); }
 
 // ── Mini 12-month bar chart (Jan-Dec fixed) ───────────────
@@ -361,6 +391,7 @@ function renderCompanyChart() {
 
 // ── Member cards grouped by team ─────────────────────────
 function renderMemberCards() {
+  if (!memberUnlocked) return;
   const wrap = document.getElementById('team-sections-wrap');
   const entries = Object.entries(allMembers);
   if (!entries.length) { wrap.innerHTML = '<div class="empty">등록된 사원이 없습니다</div>'; return; }
@@ -373,7 +404,8 @@ function renderMemberCards() {
   const cards = entries.map(([uid, m], i) => {
     const s = m.settings || {};
     const leaves = m.leaves || [];
-    const used   = leaves.reduce((a,l)=>a+(+l.deduct),0);
+    const curYear = new Date().getFullYear();
+    const used   = leaves.filter(l=>l.date&&l.date.startsWith(curYear)).reduce((a,l)=>a+(+l.deduct),0);
     const tot    = +(s.total||15);
     const rem    = Math.max(0, tot-used);
     const usedPct = tot>0 ? Math.round(used/tot*100) : 0;
@@ -383,7 +415,8 @@ function renderMemberCards() {
     const teamName = s.team || '';
     const teamCol  = TEAM_COLORS[teamName] || '#6b7280';
     const wTot  = +(s.wlb||0);
-    const wUsed = isMe ? myWlbUsed() : 0;
+    const memberWlb = (m.wlb||[]);
+    const wUsed = memberWlb.reduce((a,w)=>a+(+w.hours),0);
     const wRem  = Math.max(0, wTot - wUsed);
     const wUsedPct = wTot>0 ? Math.round(wUsed/wTot*100) : 0;
     const annualBarCol = '#52b788';
@@ -447,6 +480,202 @@ function renderMemberCards() {
   wrap.innerHTML = `<div class="section-title"><span class="dot"></span>사원별 현황</div><div class="member-grid">${cards}</div>`;
 }
 
+// ── Admin mode ───────────────────────────────────────────
+let adminMode = false;
+
+window.checkAdminPw = function() {
+  const val = document.getElementById('admin-pw-input').value;
+  if (val === '020622') {
+    adminMode = true;
+    document.getElementById('admin-lock-section').style.display = 'none';
+    document.getElementById('admin-active-section').style.display = 'block';
+    document.getElementById('admin-lock-card').classList.add('admin-card');
+    toast('메인 담당자 모드가 활성화되었습니다.');
+    renderAll();
+  } else {
+    document.getElementById('admin-pw-err').textContent = '비밀번호가 틀렸습니다.';
+    document.getElementById('admin-pw-input').value = '';
+    setTimeout(()=>{ document.getElementById('admin-pw-err').textContent=''; }, 2000);
+  }
+};
+window.lockAdmin = function() {
+  adminMode = false;
+  document.getElementById('admin-lock-section').style.display = 'block';
+  document.getElementById('admin-active-section').style.display = 'none';
+  document.getElementById('admin-lock-card').classList.remove('admin-card');
+  document.getElementById('admin-pw-input').value = '';
+  toast('메인 담당자 모드가 종료되었습니다.');
+  renderAll();
+};
+
+// 관리자용 - 특정 멤버 설정 수정 모달
+window.openAdminEditMember = function(uid) {
+  const m = allMembers[uid];
+  if (!m) return;
+  const s = m.settings || {};
+  openModal(`
+    <div class="modal-title" style="color:#dc2626">사원 정보 수정 <span style="font-size:.72rem;font-weight:400;color:var(--muted)">${s.name||''}</span></div>
+    <div class="form-grid2">
+      <div class="form-group"><label>이름</label><input id="adm-name" value="${s.name||''}"></div>
+      <div class="form-group"><label>직급</label>
+        <select id="adm-rank">
+          <option value="">선택</option>
+          ${['부장','차장','과장','과장(팀장)','대리','주임'].map(r=>`<option value="${r}" ${s.rank===r?'selected':''}>${r}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>팀</label>
+        <select id="adm-team">
+          <option value="">선택</option>
+          ${['1팀','2팀','경영팀'].map(t=>`<option value="${t}" ${s.team===t?'selected':''}>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label>총 연차</label><input type="number" id="adm-total" value="${s.total||15}" min="1" max="30"></div>
+      <div class="form-group"><label>총 워라밸 (h)</label><input type="number" id="adm-wlb" value="${s.wlb||0}" min="0" max="200"></div>
+      <div class="form-group"><label>입사일</label><input type="date" id="adm-join" value="${s.join||''}"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger btn-sm" onclick="adminDeleteMember('${uid}')">사원 삭제</button>
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" style="background:#dc2626" onclick="adminSaveMember('${uid}')">저장</button>
+    </div>`);
+};
+window.adminSaveMember = async function(uid) {
+  const s = {
+    name:  document.getElementById('adm-name').value.trim()  || '이름없음',
+    rank:  document.getElementById('adm-rank').value,
+    team:  document.getElementById('adm-team').value,
+    total: +document.getElementById('adm-total').value || 15,
+    wlb:   +document.getElementById('adm-wlb').value   || 0,
+    join:  document.getElementById('adm-join').value   || '',
+  };
+  try {
+    await setDoc(doc(db,'members',uid,'meta','settings'), s);
+    if (!allMembers[uid]) allMembers[uid]={settings:{},leaves:[],wlb:[]};
+    allMembers[uid].settings = {...s};
+    if (uid===MY_ID) mySettings = {...s};
+    closeModal(); renderAll(); toast('수정되었습니다.');
+  } catch(e) { toast('수정 실패: '+e.message); }
+};
+window.adminDeleteMember = async function(uid) {
+  const name = (allMembers[uid]?.settings?.name) || '이 사원';
+  if (!confirm(`${name}의 모든 데이터를 삭제하시겠습니까?
+이 작업은 되돌릴 수 없습니다.`)) return;
+  try {
+    // leaves, wlb, settings, memberIndex 삭제
+    const [lSnap, wSnap] = await Promise.all([
+      getDocs(collection(db,'members',uid,'leaves')),
+      getDocs(collection(db,'members',uid,'wlb'))
+    ]);
+    await Promise.all([
+      ...lSnap.docs.map(d=>deleteDoc(d.ref)),
+      ...wSnap.docs.map(d=>deleteDoc(d.ref)),
+      deleteDoc(doc(db,'members',uid,'meta','settings')),
+      deleteDoc(doc(db,'memberIndex',uid))
+    ]);
+    delete allMembers[uid];
+    closeModal(); renderAll(); toast(`${name} 삭제 완료.`);
+  } catch(e) { toast('삭제 실패: '+e.message); }
+};
+
+// 관리자용 - 특정 멤버 휴가 추가
+window.openAdminAddLeave = function(uid) {
+  const name = allMembers[uid]?.settings?.name || '';
+  openModal(leaveModalHtml(`휴가 추가 — ${name}`, '추가하기', `adminAddLeave('${uid}')`));
+};
+window.adminAddLeave = async function(uid) {
+  const {date,dateEnd,type,memo,deduct} = getLeaveFormData();
+  if (!validateLeave(date,dateEnd)) return;
+  try {
+    await addDoc(collection(db,'members',uid,'leaves'), {date,dateEnd,type,memo,deduct});
+    closeModal(); toast('휴가가 추가되었습니다.');
+  } catch(e) { toast('추가 실패: '+e.message); }
+};
+
+// 관리자용 - 특정 멤버 휴가 수정
+window.openAdminEditLeave = function(uid, lid) {
+  const leaves = allMembers[uid]?.leaves || [];
+  const l = leaves.find(x=>x.id===lid); if(!l) return;
+  const name = allMembers[uid]?.settings?.name || '';
+  openModal(leaveModalHtml(`휴가 수정 — ${name}`, '저장하기', `adminUpdateLeave('${uid}','${lid}')`, l));
+};
+window.adminUpdateLeave = async function(uid, lid) {
+  const {date,dateEnd,type,memo,deduct} = getLeaveFormData();
+  if (!validateLeave(date,dateEnd)) return;
+  try {
+    await updateDoc(doc(db,'members',uid,'leaves',lid), {date,dateEnd,type,memo,deduct});
+    closeModal(); toast('수정되었습니다.');
+  } catch(e) { toast('수정 실패: '+e.message); }
+};
+
+// 관리자용 - 특정 멤버 휴가 삭제
+window.adminDeleteLeave = async function(uid, lid) {
+  if (!confirm('이 휴가를 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db,'members',uid,'leaves',lid));
+    toast('삭제되었습니다.');
+  } catch(e) { toast('삭제 실패: '+e.message); }
+};
+
+// 관리자용 - 특정 멤버 워라밸 추가
+window.openAdminAddWlb = function(uid) {
+  const name = allMembers[uid]?.settings?.name || '';
+  openModal(wlbModalHtml(`워라밸 추가 — ${name}`, '추가하기', `adminAddWlb('${uid}')`));
+};
+window.adminAddWlb = async function(uid) {
+  const date  = document.getElementById('w-date').value;
+  const hours = +document.getElementById('w-hours').value;
+  const memo  = document.getElementById('w-memo').value.trim();
+  if (!date) { toast('날짜를 선택해주세요.'); return; }
+  try {
+    await addDoc(collection(db,'members',uid,'wlb'), {date,hours,memo});
+    closeModal(); toast('워라밸이 추가되었습니다.');
+  } catch(e) { toast('추가 실패: '+e.message); }
+};
+
+// 관리자용 - 특정 멤버 워라밸 수정
+window.openAdminEditWlb = function(uid, wid) {
+  const wlbList = allMembers[uid]?.wlb || [];
+  const w = wlbList.find(x=>x.id===wid); if(!w) return;
+  const name = allMembers[uid]?.settings?.name || '';
+  openModal(wlbModalHtml(`워라밸 수정 — ${name}`, '저장하기', `adminUpdateWlb('${uid}','${wid}')`, w));
+};
+window.adminUpdateWlb = async function(uid, wid) {
+  const date  = document.getElementById('w-date').value;
+  const hours = +document.getElementById('w-hours').value;
+  const memo  = document.getElementById('w-memo').value.trim();
+  if (!date) { toast('날짜를 선택해주세요.'); return; }
+  try {
+    await updateDoc(doc(db,'members',uid,'wlb',wid), {date,hours,memo});
+    closeModal(); toast('수정되었습니다.');
+  } catch(e) { toast('수정 실패: '+e.message); }
+};
+
+// 관리자용 - 특정 멤버 워라밸 삭제
+window.adminDeleteWlb = async function(uid, wid) {
+  if (!confirm('이 워라밸 내역을 삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db,'members',uid,'wlb',wid));
+    toast('삭제되었습니다.');
+  } catch(e) { toast('삭제 실패: '+e.message); }
+};
+
+// ── Member section password ──────────────────────────────
+let memberUnlocked = false;
+
+window.checkMemberPw = function() {
+  const val = document.getElementById('member-pw-input').value;
+  if (val === '721104') {
+    memberUnlocked = true;
+    document.getElementById('member-lock-wrap').style.display = 'none';
+    document.getElementById('team-sections-wrap').style.display = 'block';
+    renderMemberCards();
+  } else {
+    document.getElementById('member-pw-err').textContent = '비밀번호가 틀렸습니다.';
+    document.getElementById('member-pw-input').value = '';
+    setTimeout(()=>{ document.getElementById('member-pw-err').textContent=''; }, 2000);
+  }
+};
+
 // ── Tab switching ─────────────────────────────────────────
 window.switchTab = function(t) {
   const ids = ['overview','team','personal','settings'];
@@ -466,68 +695,141 @@ function renderAll() {
 }
 
 // ── Personal ──────────────────────────────────────────────
-function myWlbUsed() { return myWlb.reduce((a,w)=>a+(+w.hours),0); }
-function myWlbRemain() { return Math.max(0, (mySettings.wlb||0) - myWlbUsed()); }
+function myWlbUsed(year) {
+  const y = year || new Date().getFullYear();
+  return myWlb.filter(w=>w.date&&w.date.startsWith(y)).reduce((a,w)=>a+(+w.hours),0);
+}
+function myWlbRemain(year) { return Math.max(0, (mySettings.wlb||0) - myWlbUsed(year)); }
+
+let selectedYear = new Date().getFullYear();
+
+window.switchYear = function(y) {
+  selectedYear = y;
+  renderPersonal();
+};
 
 function renderPersonal() {
-  // ── 연차 카드 ──
-  const used=myUsedDays(), rem=myRemainDays(), tot=+(mySettings.total||15);
+  const curYear = new Date().getFullYear();
+
+  // 데이터 있는 연도 수집
+  const leaveYears = [...new Set(myLeaves.map(l=>l.date?+l.date.slice(0,4):null).filter(Boolean))];
+  const wlbYears   = [...new Set(myWlb.map(w=>w.date?+w.date.slice(0,4):null).filter(Boolean))];
+  const allYears   = [...new Set([curYear, ...leaveYears, ...wlbYears])].sort((a,b)=>b-a);
+
+  // 연도 탭 렌더
+  const tabsWrap = document.getElementById('year-tabs-wrap');
+  tabsWrap.innerHTML = allYears.map(y=>{
+    const isSel = y===selectedYear;
+    const isCur = y===curYear;
+    const cls = isSel ? (isCur?'year-tab active-current':'year-tab active') : 'year-tab';
+    const label = isCur
+      ? `${y}년 <span style="font-size:.62rem;opacity:.8;font-weight:400;margin-left:2px">현재</span>`
+      : `${y}년`;
+    return `<button class="${cls}" onclick="switchYear(${y})">${label}</button>`;
+  }).join('');
+
+  const isCurrent = selectedYear === curYear;
+  const yStr = String(selectedYear);
+
+  // 해당 연도 연차 데이터
+  const yearLeaves = [...myLeaves].filter(l=>l.date&&l.date.startsWith(yStr)).sort((a,b)=>b.date.localeCompare(a.date));
+  const used = yearLeaves.reduce((a,l)=>a+(+l.deduct),0);
+  const tot  = +(mySettings.total||15);
+  const rem  = Math.max(0, tot-used);
   const remPct  = tot>0 ? Math.round(rem/tot*100)  : 0;
   const usedPct = tot>0 ? Math.round(used/tot*100) : 0;
-  document.getElementById('personal-cards').innerHTML = `
-    <div class="card">
-      <div class="card-title">잔여 연차</div>
-      <div class="card-val stat-green">${rem}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">일</span></div>
-      <div class="card-sub">총 ${tot}일 중 ${remPct}% 남음</div>
-      <div class="bar-wrap"><div class="bar bar-green" style="width:${remPct}%"></div></div>
-    </div>
-    <div class="card">
-      <div class="card-title">사용한 연차</div>
-      <div class="card-val stat-orange">${used}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">일</span></div>
-      <div class="card-sub">사용률 ${usedPct}%</div>
-      <div class="bar-wrap"><div class="bar bar-orange" style="width:${usedPct}%"></div></div>
+
+  // 해당 연도 워라밸 데이터
+  const yearWlb = [...myWlb].filter(w=>w.date&&w.date.startsWith(yStr)).sort((a,b)=>b.date.localeCompare(a.date));
+  const wUsed = yearWlb.reduce((a,w)=>a+(+w.hours),0);
+  const wTot  = +(mySettings.wlb||0);
+  const wRem  = Math.max(0, wTot-wUsed);
+  const wRemPct  = wTot>0 ? Math.round(wRem/wTot*100)  : 0;
+  const wUsedPct = wTot>0 ? Math.round(wUsed/wTot*100) : 0;
+
+  const readonlyBanner = isCurrent ? '' : `
+    <div class="readonly-banner">
+      🔒 ${selectedYear}년 데이터 — 읽기 전용 (수정/삭제 불가)
     </div>`;
 
-  const sorted = [...myLeaves].sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('all-tbody').innerHTML = sorted.length
-    ? sorted.map(l=>`<tr>
+  const addLeaveBtn = isCurrent ? `<button class="btn btn-primary btn-sm" onclick="openAddModal()">+ 휴가 추가</button>` : '';
+  const addWlbBtn   = isCurrent ? `<button class="btn btn-sm" style="background:#fef3c7;color:#d97706;font-weight:600" onclick="openAddWlbModal()">+ 워라밸 추가</button>` : '';
+
+  const leaveRows = yearLeaves.length
+    ? yearLeaves.map(l=>`<tr>
         <td style="white-space:nowrap">${fmtDateRange(l.date, l.dateEnd)}</td>
         <td><span class="badge badge-${l.type}">${l.type}</span></td>
         <td style="color:var(--muted)">${l.memo||'—'}</td>
         <td style="font-weight:600">${l.deduct}일</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="openEditLeaveModal('${l.id}')">수정</button></td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteLeave('${l.id}')">삭제</button></td>
+        ${isCurrent?`<td><button class="btn btn-secondary btn-sm" onclick="openEditLeaveModal('${l.id}')">수정</button></td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteLeave('${l.id}')">삭제</button></td>`:'<td colspan="2"></td>'}
       </tr>`).join('')
-    : '<tr><td colspan="6" class="empty">등록된 휴가가 없습니다</td></tr>';
+    : `<tr><td colspan="6" class="empty">${selectedYear}년 휴가 내역이 없습니다</td></tr>`;
 
-  // ── 워라밸 카드 ──
-  const wUsed=myWlbUsed(), wRem=myWlbRemain(), wTot=+(mySettings.wlb||0);
-  const wRemPct  = wTot>0 ? Math.round(wRem/wTot*100)  : 0;
-  const wUsedPct = wTot>0 ? Math.round(wUsed/wTot*100) : 0;
-  document.getElementById('wlb-cards').innerHTML = `
-    <div class="card" style="border-top:3px solid #d97706">
-      <div class="card-title">잔여 워라밸</div>
-      <div class="card-val" style="color:#d97706">${wRem}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">시간</span></div>
-      <div class="card-sub">총 ${wTot}시간 중 ${wRemPct}% 남음</div>
-      <div class="bar-wrap"><div class="bar" style="background:#d97706;width:${wRemPct}%"></div></div>
-    </div>
-    <div class="card" style="border-top:3px solid #f59e0b">
-      <div class="card-title">사용한 워라밸</div>
-      <div class="card-val" style="color:#f59e0b">${wUsed}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">시간</span></div>
-      <div class="card-sub">사용률 ${wUsedPct}%</div>
-      <div class="bar-wrap"><div class="bar" style="background:#f59e0b;width:${wUsedPct}%"></div></div>
-    </div>`;
-
-  const wSorted = [...myWlb].sort((a,b)=>b.date.localeCompare(a.date));
-  document.getElementById('wlb-tbody').innerHTML = wSorted.length
-    ? wSorted.map(w=>`<tr>
+  const wlbRows = yearWlb.length
+    ? yearWlb.map(w=>`<tr>
         <td>${fmtDate(w.date)}</td>
         <td style="font-weight:600;color:#d97706">${w.hours}시간</td>
         <td style="color:var(--muted)">${w.memo||'—'}</td>
-        <td><button class="btn btn-secondary btn-sm" onclick="openEditWlbModal('${w.id}')">수정</button></td>
-        <td><button class="btn btn-danger btn-sm" onclick="deleteWlb('${w.id}')">삭제</button></td>
+        ${isCurrent?`<td><button class="btn btn-secondary btn-sm" onclick="openEditWlbModal('${w.id}')">수정</button></td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteWlb('${w.id}')">삭제</button></td>`:'<td colspan="2"></td>'}
       </tr>`).join('')
-    : '<tr><td colspan="5" class="empty">등록된 워라밸이 없습니다</td></tr>';
+    : `<tr><td colspan="5" class="empty">${selectedYear}년 워라밸 내역이 없습니다</td></tr>`;
+
+  document.getElementById('personal-year-content').innerHTML = `
+    ${readonlyBanner}
+
+    <!-- 연차 섹션 -->
+    <div class="section-title" style="margin-top:0;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:#2d6a4f"></span>연차</div>
+      ${addLeaveBtn}
+    </div>
+    <div class="grid2" style="margin-bottom:1rem">
+      <div class="card">
+        <div class="card-title">잔여 연차</div>
+        <div class="card-val stat-green">${rem}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">일</span></div>
+        <div class="card-sub">총 ${tot}일 중 ${remPct}% 남음</div>
+        <div class="bar-wrap"><div class="bar bar-green" style="width:${remPct}%"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">사용한 연차</div>
+        <div class="card-val stat-orange">${used}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">일</span></div>
+        <div class="card-sub">사용률 ${usedPct}%</div>
+        <div class="bar-wrap"><div class="bar bar-orange" style="width:${usedPct}%"></div></div>
+      </div>
+    </div>
+    <div class="card card-flush" style="margin-bottom:1.5rem">
+      <table>
+        <thead><tr><th>날짜</th><th>종류</th><th>메모</th><th>차감</th><th colspan="2"></th></tr></thead>
+        <tbody>${leaveRows}</tbody>
+      </table>
+    </div>
+
+    <!-- 워라밸 섹션 -->
+    <div class="section-title" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:7px"><span class="dot" style="background:#d97706"></span>워라밸</div>
+      ${addWlbBtn}
+    </div>
+    <div class="grid2" style="margin-bottom:1rem">
+      <div class="card" style="border-top:3px solid #d97706">
+        <div class="card-title">잔여 워라밸</div>
+        <div class="card-val" style="color:#d97706">${wRem}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">시간</span></div>
+        <div class="card-sub">총 ${wTot}시간 중 ${wRemPct}% 남음</div>
+        <div class="bar-wrap"><div class="bar" style="background:#d97706;width:${wRemPct}%"></div></div>
+      </div>
+      <div class="card" style="border-top:3px solid #f59e0b">
+        <div class="card-title">사용한 워라밸</div>
+        <div class="card-val" style="color:#f59e0b">${wUsed}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">시간</span></div>
+        <div class="card-sub">사용률 ${wUsedPct}%</div>
+        <div class="bar-wrap"><div class="bar" style="background:#f59e0b;width:${wUsedPct}%"></div></div>
+      </div>
+    </div>
+    <div class="card card-flush">
+      <table>
+        <thead><tr><th>날짜</th><th>사용시간</th><th>메모</th><th colspan="2"></th></tr></thead>
+        <tbody>${wlbRows}</tbody>
+      </table>
+    </div>`;
 }
 
 // ── Team tab (with filter buttons) ───────────────────────
@@ -585,14 +887,16 @@ function renderTeam() {
     const rows = members.map(([uid, m], i) => {
       const s = m.settings || {};
       const leaves = m.leaves || [];
-      const used = leaves.reduce((a,l)=>a+(+l.deduct),0);
+      const curYear = new Date().getFullYear();
+      const used = leaves.filter(l=>l.date&&l.date.startsWith(curYear)).reduce((a,l)=>a+(+l.deduct),0);
       const tot  = +(s.total||15);
       const rem  = Math.max(0, tot-used);
       const pct  = tot>0 ? Math.round(used/tot*100) : 0;
       const isMe = uid===MY_ID;
       const col  = AVATAR_COLORS[i % AVATAR_COLORS.length];
       const wTot  = +(s.wlb||0);
-      const wUsed = isMe ? myWlbUsed() : 0;
+      const memberWlb = (m.wlb||[]);
+      const wUsed = memberWlb.reduce((a,w)=>a+(+w.hours),0);
       const wRem  = Math.max(0, wTot - wUsed);
       const wPct  = wTot>0 ? Math.round(wUsed/wTot*100) : 0;
       return `<div class="team-row" style="align-items:flex-start;padding:14px 0">
@@ -630,6 +934,11 @@ function renderTeam() {
             </div>
           </div>
         </div>
+      ${adminMode ? `<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+        <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;font-size:.7rem" onclick="openAdminEditMember('${uid}')">✏️ 정보 수정</button>
+        <button class="btn btn-sm" style="background:#dcfce7;color:#166534;font-size:.7rem" onclick="openAdminAddLeave('${uid}')">+ 휴가</button>
+        <button class="btn btn-sm" style="background:#fef3c7;color:#d97706;font-size:.7rem" onclick="openAdminAddWlb('${uid}')">+ 워라밸</button>
+      </div>` : ''}
       </div>`;
     }).join('');
 
@@ -683,12 +992,29 @@ document.getElementById('modal-overlay').addEventListener('click', e=>{
 });
 
 // ── Add Leave ─────────────────────────────────────────────
+// 평일(월~금) 일수 계산
+function countWeekdays(start, end) {
+  if (!start) return 1;
+  const s = new Date(start + 'T00:00:00');
+  const e = end ? new Date(end + 'T00:00:00') : s;
+  if (e < s) return null; // 유효하지 않음
+  let cnt = 0;
+  const cur = new Date(s);
+  while (cur <= e) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) cnt++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return cnt;
+}
+
 function leaveModalHtml(title, btnLabel, btnFn, d={}) {
+  const initDeduct = d.deduct || 1;
   return `
     <div class="modal-title">${title}</div>
     <div class="form-grid2">
-      <div class="form-group"><label>시작일</label><input type="date" id="m-date" value="${d.date||todayStr()}"></div>
-      <div class="form-group"><label>종료일 (생략 시 당일)</label><input type="date" id="m-date-end" value="${d.dateEnd||''}"></div>
+      <div class="form-group"><label>시작일</label><input type="date" id="m-date" value="${d.date||todayStr()}" onchange="autoCalcDeduct()"></div>
+      <div class="form-group"><label>종료일 <span style="font-size:.7rem;color:var(--muted)">(생략 시 당일)</span></label><input type="date" id="m-date-end" value="${d.dateEnd||''}" onchange="autoCalcDeduct()"></div>
     </div>
     <div class="form-grid2">
       <div class="form-group"><label>종류</label>
@@ -700,8 +1026,9 @@ function leaveModalHtml(title, btnLabel, btnFn, d={}) {
           <option ${d.type==='공가'?'selected':''}>공가</option>
         </select>
       </div>
-      <div class="form-group"><label>차감 일수</label>
-        <input type="number" id="m-deduct" value="${d.deduct||1}" min="0.5" max="30" step="0.5">
+      <div class="form-group">
+        <label>차감 일수 <span style="font-size:.7rem;color:var(--muted)" id="m-deduct-hint"></span></label>
+        <input type="number" id="m-deduct" value="${initDeduct}" min="0.5" max="30" step="0.5">
       </div>
     </div>
     <div class="form-group"><label>메모</label><input id="m-memo" placeholder="선택 입력" value="${d.memo||''}"></div>
@@ -710,6 +1037,29 @@ function leaveModalHtml(title, btnLabel, btnFn, d={}) {
       <button class="btn btn-primary" onclick="${btnFn}">${btnLabel}</button>
     </div>`;
 }
+
+window.autoCalcDeduct = function() {
+  const start = document.getElementById('m-date').value;
+  const end   = document.getElementById('m-date-end').value;
+  const type  = document.getElementById('m-type') ? document.getElementById('m-type').value : '';
+  const hint  = document.getElementById('m-deduct-hint');
+
+  if (end && end < start) {
+    if (hint) hint.textContent = '⚠ 종료일이 시작일보다 빠릅니다';
+    if (hint) hint.style.color = 'var(--danger)';
+    return;
+  }
+  if (type === '반차') {
+    document.getElementById('m-deduct').value = 0.5;
+    if (hint) { hint.textContent = ''; }
+    return;
+  }
+  const days = countWeekdays(start, end || start);
+  if (days !== null) {
+    document.getElementById('m-deduct').value = days;
+    if (hint) { hint.textContent = end && end !== start ? `(평일 ${days}일 자동 계산)` : ''; hint.style.color = 'var(--muted)'; }
+  }
+};
 
 window.openAddModal = function() {
   openModal(leaveModalHtml('휴가 추가', '추가하기', 'addLeave()'));
@@ -720,27 +1070,35 @@ window.openEditLeaveModal = function(id) {
 };
 window.onTypeChange = function() {
   const t = document.getElementById('m-type').value;
-  document.getElementById('m-deduct').value = t==='반차' ? 0.5 : 1;
+  if (t === '반차') { document.getElementById('m-deduct').value = 0.5; return; }
+  autoCalcDeduct();
 };
-window.addLeave = async function() {
+
+function getLeaveFormData() {
   const date    = document.getElementById('m-date').value;
   const dateEnd = document.getElementById('m-date-end').value || '';
   const type    = document.getElementById('m-type').value;
   const memo    = document.getElementById('m-memo').value.trim();
   const deduct  = +document.getElementById('m-deduct').value;
-  if (!date) { toast('날짜를 선택해주세요.'); return; }
+  return { date, dateEnd, type, memo, deduct };
+}
+function validateLeave(date, dateEnd) {
+  if (!date) { toast('시작일을 선택해주세요.'); return false; }
+  if (dateEnd && dateEnd < date) { toast('종료일이 시작일보다 빠릅니다.'); return false; }
+  return true;
+}
+
+window.addLeave = async function() {
+  const {date,dateEnd,type,memo,deduct} = getLeaveFormData();
+  if (!validateLeave(date, dateEnd)) return;
   try {
     await addDoc(collection(db,'members',MY_ID,'leaves'), {date,dateEnd,type,memo,deduct});
     window.closeModal(); toast('휴가가 추가되었습니다.');
   } catch(e) { toast('추가 실패: '+e.message); }
 };
 window.updateLeave = async function(id) {
-  const date    = document.getElementById('m-date').value;
-  const dateEnd = document.getElementById('m-date-end').value || '';
-  const type    = document.getElementById('m-type').value;
-  const memo    = document.getElementById('m-memo').value.trim();
-  const deduct  = +document.getElementById('m-deduct').value;
-  if (!date) { toast('날짜를 선택해주세요.'); return; }
+  const {date,dateEnd,type,memo,deduct} = getLeaveFormData();
+  if (!validateLeave(date, dateEnd)) return;
   try {
     await updateDoc(doc(db,'members',MY_ID,'leaves',id), {date,dateEnd,type,memo,deduct});
     window.closeModal(); toast('수정되었습니다.');
@@ -872,13 +1230,14 @@ function listenMember(uid) {
     if (uid===MY_ID) myLeaves = [...leaves];
     renderAll();
   });
-  // WLB (only need to track own for personal tab)
-  if (uid===MY_ID) {
-    onSnapshot(collection(db,'members',uid,'wlb'), snap=>{
-      myWlb = snap.docs.map(d=>({id:d.id,...d.data()}));
-      renderAll();
-    });
-  }
+  // WLB - 전체 멤버 리스너 (팀원 현황 워라밸 표시용)
+  onSnapshot(collection(db,'members',uid,'wlb'), snap=>{
+    if (!allMembers[uid]) allMembers[uid]={settings:{},leaves:[],wlb:[]};
+    const wlbData = snap.docs.map(d=>({id:d.id,...d.data()}));
+    allMembers[uid].wlb = wlbData;
+    if (uid===MY_ID) myWlb = [...wlbData];
+    renderAll();
+  });
 }
 
 // ── Watch memberIndex for new members ─────────────────────
@@ -915,16 +1274,16 @@ document.getElementById('today-str').textContent =
         getDoc(doc(db,'members',uid,'meta','settings')),
         getDocs(collection(db,'members',uid,'leaves'))
       ]);
-      const wlbSnap = uid===MY_ID ? await getDocs(collection(db,'members',uid,'wlb')) : null;
+      const wlbSnap = await getDocs(collection(db,'members',uid,'wlb'));
       allMembers[uid] = {
         settings: setSnap.exists() ? setSnap.data() : {},
         leaves:   leavesSnap.docs.map(d=>({id:d.id,...d.data()})),
-        wlb:      []
+        wlb:      wlbSnap.docs.map(d=>({id:d.id,...d.data()}))
       };
       if (uid===MY_ID) {
         mySettings = {...allMembers[uid].settings};
         myLeaves   = [...allMembers[uid].leaves];
-        myWlb      = wlbSnap ? wlbSnap.docs.map(d=>({id:d.id,...d.data()})) : [];
+        myWlb      = [...allMembers[uid].wlb];
       }
     }));
 
