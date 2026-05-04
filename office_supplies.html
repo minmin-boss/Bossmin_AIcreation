@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>비품 소원함</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: linear-gradient(160deg, #fff0f5 0%, #ffe4ef 50%, #ffd6e8 100%);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 36px 16px 60px; gap: 24px;
+    }
+
+    .header { text-align: center; }
+    .header h1 {
+      font-size: 26px; font-weight: 700; color: #c2456a;
+      letter-spacing: -0.5px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .header p { font-size: 13px; color: #e08aaa; margin-top: 6px; }
+
+    .form-card {
+      background: #fff8fb; border: 1.5px solid #f5c0d4;
+      border-radius: 20px; padding: 28px 24px;
+      width: 100%; max-width: 460px;
+      box-shadow: 0 4px 24px rgba(210,100,140,0.10);
+    }
+    .tabs {
+      display: flex; border: 1.5px solid #f5c0d4;
+      border-radius: 12px; overflow: hidden; margin-bottom: 22px;
+    }
+    .tab-btn {
+      flex: 1; padding: 10px 0; font-size: 13px; font-weight: 500;
+      font-family: 'Noto Sans KR', sans-serif;
+      border: none; cursor: pointer;
+      background: #fff0f5; color: #e08aaa;
+      transition: background 0.18s, color 0.18s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .tab-btn.active { background: #e8728f; color: #fff; }
+    .tab-btn:not(:last-child) { border-right: 1.5px solid #f5c0d4; }
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    .field-wrap { margin-bottom: 14px; }
+    .field-label {
+      font-size: 12px; font-weight: 500; color: #d4637e;
+      margin-bottom: 5px; display: flex; align-items: center; gap: 4px;
+    }
+    .required { color: #e24b4a; }
+    .optional { color: #f0afc4; font-size: 11px; font-weight: 400; }
+    .field-wrap input[type="text"],
+    .field-wrap input[type="number"],
+    .field-wrap input[type="url"],
+    .field-wrap input[type="date"] {
+      width: 100%; padding: 11px 14px;
+      border: 1.5px solid #f5c0d4; border-radius: 10px;
+      font-size: 14px; font-family: 'Noto Sans KR', sans-serif;
+      color: #7a2040; background: #fff8fb; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .field-wrap input:focus { border-color: #e8728f; box-shadow: 0 0 0 3px rgba(232,114,143,0.14); }
+    .field-wrap input::placeholder { color: #f0bfce; }
+    .hint { font-size: 11px; color: #f0afc4; margin-top: 5px; }
+
+    .auth-notice {
+      background: #fff3f7; border: 1px solid #fad4e2;
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+      font-size: 12px; color: #c2456a; line-height: 1.6;
+      display: flex; align-items: flex-start; gap: 7px;
+    }
+
+    .attach-area {
+      border: 2px dashed #f5c0d4; border-radius: 12px; padding: 28px 16px;
+      text-align: center; cursor: pointer; background: #fff0f5;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .attach-area:hover { border-color: #e8728f; background: #ffe4ef; }
+    .attach-icon { font-size: 30px; margin-bottom: 8px; }
+    .attach-text { font-size: 13px; color: #d4637e; }
+    .attach-sub { font-size: 11px; color: #f0afc4; margin-top: 4px; }
+    #preview-img {
+      width: 100%; max-height: 160px; object-fit: contain;
+      border-radius: 10px; margin-top: 14px;
+      border: 1.5px solid #f5c0d4; display: none;
+    }
+    .divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; }
+    .divider-line { flex: 1; height: 1px; background: #fad4e2; }
+    .divider-text { font-size: 12px; color: #f0afc4; }
+
+    .submit-btn {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #e8728f 0%, #c94d70 100%);
+      color: white; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; margin-top: 10px;
+      transition: opacity 0.2s, transform 0.12s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .submit-btn:hover { opacity: 0.9; }
+    .submit-btn:active { transform: scale(0.97); }
+    .submit-btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+    .conn-bar {
+      width: 100%; max-width: 460px;
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 14px;
+      background: #fff8fb; border: 1.5px solid #f5c0d4;
+      border-radius: 12px; font-size: 12px; color: #d4637e;
+    }
+    .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; transition: background 0.3s; }
+    .conn-dot.connected { background: #2e9e6a; }
+    .conn-dot.error { background: #e24b4a; }
+
+    .bucket-wrap { width: 100%; max-width: 460px; }
+    .bucket-label { font-size: 13px; color: #e08aaa; margin-bottom: 10px; text-align: center; font-weight: 500; }
+    #wish-bucket {
+      width: 100%; height: 360px;
+      border: 2.5px solid #f0a0bc; border-radius: 24px;
+      position: relative; overflow: hidden;
+      background: linear-gradient(155deg, #fff0f8 0%, #ffe8f2 50%, #ffdcee 100%);
+      box-shadow: inset 0 2px 20px rgba(220,100,140,0.07);
+    }
+    .ball {
+      width: 68px; height: 68px; border-radius: 50%;
+      position: absolute; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9.5px; font-weight: 700; text-align: center;
+      word-break: break-all; padding: 7px;
+      user-select: none; text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+      line-height: 1.3; will-change: left, top; cursor: pointer;
+    }
+    .ball.status-done   { outline: 3px solid #2e9e6a; outline-offset: 2px; }
+    .ball.status-reject { outline: 3px solid #e24b4a; outline-offset: 2px; }
+    .ball.status-etc    { outline: 3px solid #b07d10; outline-offset: 2px; }
+
+    .ball-tooltip {
+      position: absolute; z-index: 50;
+      background: rgba(50,20,30,0.88);
+      color: #fff; font-size: 11px; font-weight: 500;
+      padding: 6px 10px; border-radius: 8px;
+      pointer-events: none; white-space: nowrap;
+      opacity: 0; transition: opacity 0.15s;
+    }
+    .ball-tooltip.show { opacity: 1; }
+
+    .legend {
+      display: flex; gap: 12px; flex-wrap: wrap;
+      justify-content: center; margin-top: 10px;
+    }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #d4637e; }
+    .legend-dot  { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+    .legend-ring { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2.5px solid transparent; }
+
+    /* ── 내 신청 확인 ── */
+    .my-wrap { width: 100%; max-width: 460px; }
+    .my-btn {
+      width: 100%; padding: 12px; background: #fff8fb;
+      border: 1.5px solid #f5c0d4; border-radius: 12px;
+      font-size: 14px; font-weight: 500; font-family: 'Noto Sans KR', sans-serif;
+      color: #d4637e; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .my-btn:hover { background: #fff0f5; border-color: #e8728f; }
+
+    .my-panel {
+      display: none; background: #fff8fb;
+      border: 1.5px solid #f5c0d4; border-radius: 16px;
+      padding: 22px; margin-top: 12px;
+      box-shadow: 0 4px 20px rgba(210,100,140,0.08);
+    }
+    .my-panel.open { display: block; }
+    .my-panel-title {
+      font-size: 16px; font-weight: 700; color: #c2456a; margin-bottom: 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .close-my {
+      font-size: 12px; color: #d4637e; cursor: pointer; padding: 4px 10px;
+      border: 1px solid #f5c0d4; border-radius: 8px; background: #fff0f5; font-weight: 400;
+    }
+    .close-my:hover { background: #fad4e2; }
+
+    .my-search-notice {
+      background: #fff3f7; border: 1px solid #fad4e2;
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+      font-size: 12px; color: #c2456a; line-height: 1.6;
+      display: flex; align-items: flex-start; gap: 7px;
+    }
+
+    .my-search-grid {
+      display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px;
+    }
+    .my-search-row { display: flex; gap: 8px; }
+    .my-search-row input {
+      flex: 1; padding: 10px 14px;
+      border: 1.5px solid #f5c0d4; border-radius: 10px;
+      font-size: 14px; font-family: 'Noto Sans KR', sans-serif;
+      color: #7a2040; background: #fff8fb; outline: none;
+    }
+    .my-search-row input:focus { border-color: #e8728f; box-shadow: 0 0 0 3px rgba(232,114,143,0.14); }
+    .my-search-row input::placeholder { color: #f0bfce; }
+    .my-search-row input[type="date"] { flex: 1; }
+    .my-search-btn {
+      padding: 10px 18px; background: linear-gradient(135deg, #e8728f, #c94d70);
+      color: #fff; border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 700; font-family: 'Noto Sans KR', sans-serif;
+      cursor: pointer; white-space: nowrap;
+    }
+    .my-search-btn:hover { opacity: 0.9; }
+    .my-auth-error {
+      background: #fdeaea; border: 1px solid #f5aaaa;
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 10px;
+      font-size: 12px; color: #c0392b; display: none;
+    }
+    .my-auth-error.show { display: block; }
+
+    .my-card {
+      background: #fff; border: 1.5px solid #f5c0d4;
+      border-radius: 14px; padding: 16px 18px; margin-bottom: 10px;
+      position: relative; overflow: hidden;
+    }
+    .my-card:last-child { margin-bottom: 0; }
+    .my-card-accent {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 5px;
+    }
+    .my-card-inner { padding-left: 12px; }
+    .my-card-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
+    }
+    .my-card-name { font-size: 15px; font-weight: 700; color: #7a2040; }
+    .my-card-qty  { font-size: 12px; color: #e08aaa; }
+    .my-card-meta { font-size: 12px; color: #e08aaa; margin-bottom: 10px; }
+
+    .my-status-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 5px 12px; border-radius: 20px;
+      font-size: 12px; font-weight: 700;
+    }
+    .badge-none   { background: #f5f5f5; color: #999; }
+    .badge-done   { background: #eefaf3; color: #2e9e6a; border: 1px solid #b0e4c8; }
+    .badge-reject { background: #fdeaea; color: #c0392b; border: 1px solid #f5aaaa; }
+    .badge-etc    { background: #fff7e6; color: #b07d10; border: 1px solid #f5d48a; }
+
+    .my-etc-text {
+      font-size: 12px; color: #b07d10; margin-top: 8px;
+      background: #fff7e6; border-radius: 8px; padding: 7px 10px;
+    }
+    .my-link { font-size: 11px; color: #c2456a; margin-top: 6px; }
+    .my-link a { color: #c2456a; text-decoration: underline; }
+    .my-empty { text-align: center; color: #f0afc4; font-size: 13px; padding: 28px 0; }
+    .my-img { width: 52px; height: 52px; object-fit: cover; border-radius: 8px; border: 1px solid #f5c0d4; margin-top: 8px; }
+
+    /* ── 담당자 ── */
+    .admin-wrap { width: 100%; max-width: 460px; }
+    .admin-btn {
+      width: 100%; padding: 12px; background: #fff8fb;
+      border: 1.5px solid #f5c0d4; border-radius: 12px;
+      font-size: 14px; font-weight: 500; font-family: 'Noto Sans KR', sans-serif;
+      color: #d4637e; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .admin-btn:hover { background: #fff0f5; border-color: #e8728f; }
+    .admin-panel {
+      display: none; background: #fff8fb;
+      border: 1.5px solid #f5c0d4; border-radius: 16px;
+      padding: 22px; margin-top: 12px;
+      box-shadow: 0 4px 20px rgba(210,100,140,0.08);
+    }
+    .admin-panel.open { display: block; }
+    .admin-panel-title {
+      font-size: 16px; font-weight: 700; color: #c2456a; margin-bottom: 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .admin-title-btns { display: flex; gap: 8px; align-items: center; }
+    .close-admin {
+      font-size: 12px; color: #d4637e; cursor: pointer; padding: 4px 10px;
+      border: 1px solid #f5c0d4; border-radius: 8px; background: #fff0f5; font-weight: 400;
+    }
+    .close-admin:hover { background: #fad4e2; }
+    .clear-btn {
+      font-size: 12px; color: #aaa; cursor: pointer; padding: 4px 10px;
+      border: 1px solid #e0e0e0; border-radius: 8px; background: #f8f8f8; font-weight: 400;
+    }
+    .clear-btn:hover { background: #fdeaea; color: #c0392b; border-color: #f5aaaa; }
+    .save-notice {
+      display: flex; align-items: center; gap: 8px;
+      background: #fff3f7; border: 1px solid #fad4e2;
+      border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+      font-size: 12px; color: #c2456a;
+    }
+
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .req-table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 620px; }
+    .req-table th {
+      background: #fff0f5; color: #d4637e; font-weight: 600;
+      padding: 10px; text-align: left; border-bottom: 1px solid #fad4e2; white-space: nowrap;
+    }
+    .req-table td {
+      padding: 10px; color: #7a2040;
+      border-bottom: 1px solid #fff0f5; vertical-align: middle;
+    }
+    .req-table tr:last-child td { border-bottom: none; }
+    .empty-msg { text-align: center; color: #f0afc4; font-size: 13px; padding: 28px; }
+    .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid #f5c0d4; }
+    .link-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; color: #c2456a; background: #ffe4ef;
+      border-radius: 20px; padding: 3px 9px; text-decoration: none;
+      max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500;
+    }
+    .ball-dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; flex-shrink: 0; }
+
+    .status-cell { min-width: 180px; }
+    .status-btns { display: flex; gap: 5px; flex-wrap: wrap; }
+    .s-btn {
+      padding: 5px 10px; border-radius: 20px; border: 1.5px solid #e0e0e0;
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #f5f5f5; color: #aaa; transition: all 0.15s; white-space: nowrap;
+    }
+    .s-btn.done          { background: #eefaf3; color: #2e9e6a; border-color: #b0e4c8; }
+    .s-btn.done.active   { background: #2e9e6a; color: #fff;    border-color: #2e9e6a; }
+    .s-btn.reject        { background: #fdeaea; color: #c0392b; border-color: #f5aaaa; }
+    .s-btn.reject.active { background: #c0392b; color: #fff;    border-color: #c0392b; }
+    .s-btn.etc           { background: #fff7e6; color: #b07d10; border-color: #f5d48a; }
+    .s-btn.etc.active    { background: #b07d10; color: #fff;    border-color: #b07d10; }
+
+    .etc-input-row { display: none; margin-top: 7px; gap: 5px; align-items: center; }
+    .etc-input-row.show { display: flex; }
+    .etc-input {
+      flex: 1; padding: 5px 9px; border: 1.5px solid #f5c0d4; border-radius: 8px;
+      font-size: 12px; font-family: 'Noto Sans KR', sans-serif;
+      color: #7a2040; background: #fff8fb; outline: none; min-width: 0;
+    }
+    .etc-input:focus { border-color: #e8728f; }
+    .etc-save-btn {
+      padding: 5px 11px; background: #e8728f; color: #fff;
+      border: none; border-radius: 8px; font-size: 12px; font-weight: 600;
+      font-family: 'Noto Sans KR', sans-serif; cursor: pointer; white-space: nowrap;
+    }
+
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(120,30,60,0.35); z-index: 300;
+      align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #fff8fb; border-radius: 20px;
+      padding: 32px 28px; width: 90%; max-width: 360px;
+      border: 1.5px solid #f5c0d4;
+      box-shadow: 0 8px 40px rgba(200,80,120,0.18); text-align: center;
+    }
+    .modal-icon { font-size: 36px; margin-bottom: 12px; }
+    .modal-title { font-size: 17px; font-weight: 700; color: #c2456a; margin-bottom: 18px; }
+    .modal input[type="password"] {
+      width: 100%; padding: 12px; border: 1.5px solid #f5c0d4; border-radius: 10px;
+      font-size: 22px; text-align: center; letter-spacing: 12px;
+      color: #c2456a; background: #fff0f5; font-family: 'Noto Sans KR', sans-serif;
+      margin-bottom: 8px; outline: none;
+    }
+    .modal input[type="password"]:focus { border-color: #e8728f; box-shadow: 0 0 0 3px rgba(232,114,143,0.14); }
+    .pw-error { font-size: 12px; color: #e24b4a; margin-bottom: 12px; min-height: 18px; font-weight: 500; }
+    .modal-btns { display: flex; gap: 10px; }
+    .modal-confirm {
+      flex: 1; padding: 11px; background: linear-gradient(135deg, #e8728f, #c94d70);
+      color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700;
+      font-family: 'Noto Sans KR', sans-serif; cursor: pointer;
+    }
+    .modal-confirm:hover { opacity: 0.9; }
+    .modal-cancel {
+      flex: 1; padding: 11px; background: #fff0f5; border: 1.5px solid #f5c0d4;
+      border-radius: 10px; font-size: 14px; color: #d4637e; cursor: pointer;
+      font-family: 'Noto Sans KR', sans-serif; font-weight: 500;
+    }
+    .modal-cancel:hover { background: #fad4e2; }
+    .confirm-modal {
+      background: #fff8fb; border-radius: 20px; padding: 28px 24px; width: 90%; max-width: 320px;
+      border: 1.5px solid #f5c0d4; box-shadow: 0 8px 40px rgba(200,80,120,0.18); text-align: center;
+    }
+    .confirm-modal p { font-size: 14px; color: #7a2040; margin-bottom: 18px; line-height: 1.7; }
+    .confirm-modal strong { color: #c0392b; }
+
+    .toast {
+      position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #c94d70; color: #fff; padding: 12px 22px; border-radius: 50px;
+      font-size: 13px; font-weight: 500; opacity: 0; transition: opacity 0.3s, transform 0.3s;
+      pointer-events: none; z-index: 400; white-space: nowrap;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e8728f" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/>
+        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/>
+        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/>
+      </svg>
+      비품 소원함
+    </h1>
+    <p>원하는 물건을 소원함에 넣어보세요 🌸</p>
+  </div>
+
+  <!-- 신청 폼 -->
+  <div class="form-card">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('info',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        신청 정보
+      </button>
+      <button class="tab-btn" onclick="switchTab('attach',this)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        사진 / 링크 첨부
+      </button>
+    </div>
+
+    <div id="tab-info" class="tab-pane active">
+      <div class="auth-notice">
+        🔒 생년월일은 본인 인증용이에요. 신청 내역 조회 시 이름 + 생년월일이 일치해야만 확인할 수 있어요.
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">구매요청자 <span class="required">*</span></div>
+        <input type="text" id="requester" placeholder="이름을 입력하세요">
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">생년월일 <span class="required">*</span></div>
+        <input type="date" id="birthdate" max="2010-12-31">
+        <div class="hint">조회 시 본인 인증에 사용돼요. 다른 사람에게 노출되지 않아요.</div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">공 별명 <span class="optional">(선택 · 비워두면 랜덤 지정)</span></div>
+        <input type="text" id="nickname" placeholder="예: 갓생러, 오피스 바이브, 간식계 아이유">
+        <div class="hint">별명은 공에 표시돼요 (이름·생년월일은 공개되지 않아요)</div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">품명 <span class="required">*</span></div>
+        <input type="text" id="itemName" placeholder="원하는 물품명을 입력하세요">
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">수량 <span class="required">*</span></div>
+        <input type="number" id="quantity" placeholder="수량" min="1">
+      </div>
+    </div>
+
+    <div id="tab-attach" class="tab-pane">
+      <div class="field-wrap">
+        <div class="field-label">사진 첨부 <span class="optional">(선택)</span></div>
+        <div class="attach-area" onclick="document.getElementById('img-file').click()">
+          <input type="file" id="img-file" accept="image/*" onchange="previewImage(event)" style="display:none;">
+          <div id="attach-placeholder">
+            <div class="attach-icon">📎</div>
+            <div class="attach-text">클릭해서 이미지 선택</div>
+            <div class="attach-sub">JPG · PNG · GIF · WEBP 지원</div>
+          </div>
+          <img id="preview-img" alt="미리보기">
+        </div>
+        <div id="img-name" style="font-size:11px;color:#f0afc4;margin-top:6px;"></div>
+      </div>
+      <div class="divider">
+        <div class="divider-line"></div><div class="divider-text">또는</div><div class="divider-line"></div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">링크 첨부 <span class="optional">(선택)</span></div>
+        <input type="url" id="item-link" placeholder="https://example.com/product">
+        <div class="hint">쿠팡 · 네이버쇼핑 · 올리브영 등 상품 링크</div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submit-btn" onclick="addToBucket()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12l4 4 4-4"/></svg>
+      소원함에 넣기
+    </button>
+  </div>
+
+  <!-- 연결 상태 -->
+  <div class="conn-bar">
+    <div class="conn-dot" id="conn-dot"></div>
+    <span id="conn-text">Firebase 연결 중...</span>
+  </div>
+
+  <!-- 소원함 통 -->
+  <div class="bucket-wrap">
+    <div class="bucket-label" id="ball-count-label">소원을 넣으면 공이 굴러다녀요 🌸</div>
+    <div id="wish-bucket"></div>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#ccc;"></div> 검토 중</div>
+      <div class="legend-item"><div class="legend-ring" style="border-color:#2e9e6a;background:#eefaf3;"></div> 처리완료</div>
+      <div class="legend-item"><div class="legend-ring" style="border-color:#e24b4a;background:#fdeaea;"></div> 반려</div>
+      <div class="legend-item"><div class="legend-ring" style="border-color:#b07d10;background:#fff7e6;"></div> 기타</div>
+    </div>
+  </div>
+
+  <!-- 내 신청 확인 -->
+  <div class="my-wrap">
+    <button class="my-btn" onclick="toggleMyPanel()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      내 신청 진행상황 확인하기
+    </button>
+    <div class="my-panel" id="my-panel">
+      <div class="my-panel-title">
+        내 신청 현황
+        <span class="close-my" onclick="toggleMyPanel()">닫기</span>
+      </div>
+      <div class="my-search-notice">
+        🔒 이름과 생년월일이 모두 일치해야 내역이 표시돼요. 본인 것만 확인할 수 있어요.
+      </div>
+      <div class="my-search-grid">
+        <div class="my-search-row">
+          <input type="text" id="my-name-input" placeholder="신청할 때 입력한 이름"
+                 onkeydown="if(event.key==='Enter')document.getElementById('my-birth-input').focus()">
+        </div>
+        <div class="my-search-row">
+          <input type="date" id="my-birth-input" max="2010-12-31"
+                 onkeydown="if(event.key==='Enter')searchMyWishes()">
+          <button class="my-search-btn" onclick="searchMyWishes()">조회</button>
+        </div>
+      </div>
+      <div class="my-auth-error" id="my-auth-error">
+        ❌ 이름 또는 생년월일이 일치하지 않아요. 신청할 때 입력한 정보를 다시 확인해주세요.
+      </div>
+      <div id="my-results"></div>
+    </div>
+  </div>
+
+  <!-- 담당자 -->
+  <div class="admin-wrap">
+    <button class="admin-btn" onclick="openAdminModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      담당자 확인용
+    </button>
+    <div class="admin-panel" id="admin-panel">
+      <div class="admin-panel-title">
+        전체 신청 내역
+        <div class="admin-title-btns">
+          <button class="clear-btn" onclick="openClearConfirm()">🗑 전체 초기화</button>
+          <span class="close-admin" onclick="closeAdmin()">닫기</span>
+        </div>
+      </div>
+      <div class="save-notice">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e8728f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Firebase 실시간 저장 · 어느 PC에서 열어도 동일하게 보여요 🌸
+      </div>
+      <div class="table-scroll">
+        <div id="admin-table-wrap"><div class="empty-msg">아직 신청 내역이 없어요</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 비밀번호 모달 -->
+  <div class="modal-overlay" id="admin-modal">
+    <div class="modal">
+      <div class="modal-icon">🔐</div>
+      <div class="modal-title">담당자 비밀번호 입력</div>
+      <input type="password" id="pw-input" placeholder="••••" maxlength="10"
+             onkeydown="if(event.key==='Enter')checkPw()">
+      <div class="pw-error" id="pw-error"></div>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeModal()">취소</button>
+        <button class="modal-confirm" onclick="checkPw()">확인</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 전체 초기화 모달 -->
+  <div class="modal-overlay" id="clear-modal">
+    <div class="confirm-modal">
+      <div class="modal-icon">🗑</div>
+      <p>저장된 소원 내역을 <strong>전부 삭제</strong>할까요?<br>이 작업은 되돌릴 수 없어요.</p>
+      <div class="modal-btns">
+        <button class="modal-cancel" onclick="closeClearConfirm()">취소</button>
+        <button class="modal-confirm" style="background:linear-gradient(135deg,#e55,#c00);" onclick="clearAll()">전체 삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { initializeApp }    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, push, onValue, update, remove }
+      from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey:            "AIzaSyDva20HIs8jrmQ960gEBN7UaSuvjThayCo",
+      authDomain:        "office-supplies-minmin.firebaseapp.com",
+      databaseURL:       "https://office-supplies-minmin-default-rtdb.firebaseio.com",
+      projectId:         "office-supplies-minmin",
+      storageBucket:     "office-supplies-minmin.firebasestorage.app",
+      messagingSenderId: "266102763884",
+      appId:             "1:266102763884:web:d6cbf5dc80052dca614349",
+      measurementId:     "G-9MFYFCFM8J"
+    };
+
+    const app     = initializeApp(firebaseConfig);
+    const db      = getDatabase(app);
+    const wishRef = ref(db, 'wishes');
+
+    const ADMIN_PW = '1104';
+    const BS = 68;
+    const COLORS = [
+      ['#FF6B6B','#FFB3B3'],['#FF9F43','#FFCF9E'],['#FECA57','#FEE5A0'],
+      ['#48DBAA','#A8F0DC'],['#54A0FF','#A8CFFF'],['#5F27CD','#B39AF5'],
+      ['#E8728F','#FFC0D0'],['#00D2D3','#80E8E9'],['#FF6348','#FFB3A5'],
+      ['#1DD1A1','#85F0D1'],['#C56CF0','#E4AEFF'],['#FD79A8','#FEB9D1'],
+      ['#0ABDE3','#80DEFF'],['#EE5A24','#F7B293'],['#009432','#80CA98'],
+    ];
+    const MZ_NAMES = [
+      '갓생러','오피스핵인싸','복지계 BTS','사무실 바이브','간식계 아이유',
+      '문구류 덕후','야근의신','갓벽한탕비실','TMI요청자','현타온구매자',
+      '고요히갓생','무지출챌린지실패','일잘러인척','오피스루틴','사무용품FLEX',
+      '커피없인못살아','월급아어디가','복사지러버','B2B감성','퇴근시간카운터',
+      '팀워크빌더','갓성비픽커','스낵계인플루언서','워라밸수호자','오늘도출근',
+      '사무실분위기메이커','갓집중모드','드디어신청함','린이탈출각','오피스바이브체크',
+    ];
+    const STATUS_LABEL  = { none:'⏳ 검토 중', done:'✅ 처리완료', reject:'❌ 반려', etc:'✏️ 기타' };
+    const STATUS_ACCENT = { none:'#e8e8e8', done:'#2e9e6a', reject:'#e24b4a', etc:'#b07d10' };
+
+    /* ── 생년월일 해싱 (간단 단방향 변환 — 원본 노출 방지) ── */
+    async function hashBirth(birthStr) {
+      const enc  = new TextEncoder().encode(birthStr + '_wishbucket_salt');
+      const buf  = await crypto.subtle.digest('SHA-256', enc);
+      return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,32);
+    }
+
+    let requests  = {};
+    let balls     = [];
+    let animFrame = null;
+    let currentImageData = null;
+    let colorIdx  = 0;
+    let windX=0, windY=0, targetWindX=0, targetWindY=0;
+    let windPhase=0, gustTimer=0, gustActive=false, gustX=0, gustY=0;
+    let tooltip   = null;
+
+    const bucket = document.getElementById('wish-bucket');
+
+    function setConn(state, msg) {
+      const dot  = document.getElementById('conn-dot');
+      const text = document.getElementById('conn-text');
+      dot.className = 'conn-dot'+(state==='ok'?' connected':state==='err'?' error':'');
+      text.textContent = msg;
+    }
+
+    onValue(wishRef, (snapshot) => {
+      setConn('ok', 'Firebase 연결됨 · 실시간 동기화 중 🌸');
+      const data = snapshot.val() || {};
+
+      Object.entries(data).forEach(([key, val]) => {
+        if (!requests[key]) {
+          requests[key] = val;
+          spawnBall(key, val);
+        } else {
+          requests[key] = val;
+          updateBallStatus(key, val.status);
+        }
+      });
+
+      Object.keys(requests).forEach(key => {
+        if (!data[key]) { removeBall(key); delete requests[key]; }
+      });
+
+      updateLabel();
+      if (document.getElementById('admin-panel').classList.contains('open')) renderTable();
+    }, () => setConn('err', 'Firebase 연결 오류 · 인터넷을 확인해주세요'));
+
+    function spawnBall(key, val) {
+      const bg = val.color, light = findLight(bg);
+      const ballEl = document.createElement('div');
+      ballEl.className = 'ball';
+      ballEl.dataset.key = key;
+      ballEl.style.cssText = `background:radial-gradient(circle at 32% 28%, ${light}dd, ${bg}); box-shadow:inset -4px -5px 10px rgba(0,0,0,0.16),inset 3px 3px 7px rgba(255,255,255,0.45);`;
+      ballEl.innerText = val.nickname;
+      applyBallStatus(ballEl, val.status);
+      ballEl.addEventListener('mouseenter', () => showTooltip(key, ballEl));
+      ballEl.addEventListener('mouseleave', hideTooltip);
+      bucket.appendChild(ballEl);
+      const w=bucket.clientWidth, h=bucket.clientHeight;
+      balls.push({ el:ballEl, key, x:Math.random()*(w-BS), y:Math.random()*(h*0.4), dx:(Math.random()-0.5)*4, dy:(Math.random()-0.5)*3 });
+      if (!animFrame) loop();
+    }
+
+    function applyBallStatus(el, status) {
+      el.classList.remove('status-done','status-reject','status-etc');
+      if (status==='done')   el.classList.add('status-done');
+      if (status==='reject') el.classList.add('status-reject');
+      if (status==='etc')    el.classList.add('status-etc');
+    }
+
+    function updateBallStatus(key, status) {
+      const b = balls.find(b=>b.key===key);
+      if (b) applyBallStatus(b.el, status);
+    }
+
+    function removeBall(key) {
+      const idx = balls.findIndex(b=>b.key===key);
+      if (idx!==-1) { balls[idx].el.remove(); balls.splice(idx,1); }
+    }
+
+    function findLight(bg) { const f=COLORS.find(c=>c[0]===bg); return f?f[1]:'#FFB3B3'; }
+    function getNextColor() { const c=COLORS[colorIdx%COLORS.length]; colorIdx++; return c; }
+
+    function showTooltip(key, el) {
+      const r = requests[key]; if (!r) return;
+      hideTooltip();
+      const tip = document.createElement('div');
+      tip.className = 'ball-tooltip';
+      const st = STATUS_LABEL[r.status||'none'];
+      tip.innerHTML = `<b>${r.nickname}</b> · ${r.itemName} ${r.quantity}개<br>${st}${r.etcText?' ('+r.etcText+')':''}`;
+      bucket.appendChild(tip);
+      tooltip = tip;
+      const bRect=bucket.getBoundingClientRect(), eRect=el.getBoundingClientRect();
+      let left=eRect.left-bRect.left+BS/2-tip.offsetWidth/2;
+      let top =eRect.top -bRect.top -54;
+      if(left<4) left=4;
+      if(left+tip.offsetWidth>bucket.clientWidth-4) left=bucket.clientWidth-tip.offsetWidth-4;
+      if(top<4) top=eRect.top-bRect.top+BS+4;
+      tip.style.left=left+'px'; tip.style.top=top+'px';
+      setTimeout(()=>tip&&tip.classList.add('show'),10);
+    }
+    function hideTooltip() { if(tooltip){tooltip.remove();tooltip=null;} }
+
+    /* ── 탭 ── */
+    window.switchTab = (name, el) => {
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById('tab-'+name).classList.add('active');
+      el.classList.add('active');
+    };
+
+    window.previewImage = (e) => {
+      const file=e.target.files[0]; if(!file) return;
+      const reader=new FileReader();
+      reader.onload=ev=>{
+        currentImageData=ev.target.result;
+        const img=document.getElementById('preview-img');
+        img.src=currentImageData; img.style.display='block';
+        document.getElementById('attach-placeholder').style.display='none';
+        document.getElementById('img-name').textContent=file.name;
+      };
+      reader.readAsDataURL(file);
+    };
+
+    /* ── 소원 추가 ── */
+    window.addToBucket = async () => {
+      const requester = document.getElementById('requester').value.trim();
+      const birthdate = document.getElementById('birthdate').value;
+      const nickname  = document.getElementById('nickname').value.trim();
+      const itemName  = document.getElementById('itemName').value.trim();
+      const quantity  = document.getElementById('quantity').value.trim();
+      const link      = document.getElementById('item-link').value.trim();
+
+      if (!requester || !birthdate || !itemName || !quantity || parseInt(quantity)<1) {
+        showToast('필수 항목(이름, 생년월일, 품명, 수량)을 모두 입력해주세요!');
+        window.switchTab('info', document.querySelector('.tab-btn')); return;
+      }
+
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = true;
+
+      const displayName  = nickname || MZ_NAMES[Math.floor(Math.random()*MZ_NAMES.length)];
+      const [bg]         = getNextColor();
+      const birthdateHash = await hashBirth(birthdate); // 생년월일은 해시로만 저장
+
+      try {
+        await push(wishRef, {
+          requester,
+          birthdateHash,    // 원본 생년월일 저장 안 함
+          nickname: displayName,
+          itemName,
+          quantity: parseInt(quantity),
+          link: link||'',
+          img: currentImageData||'',
+          color: bg,
+          status: 'none',
+          etcText: '',
+          createdAt: Date.now()
+        });
+
+        // 편의를 위해 이름만 로컬에 저장 (생년월일은 저장 안 함)
+        localStorage.setItem('wishBucket_myName', requester);
+        showToast('소원함에 쏙! 저장됐어요 🎉');
+
+        document.getElementById('nickname').value='';
+        document.getElementById('itemName').value='';
+        document.getElementById('quantity').value='';
+        document.getElementById('item-link').value='';
+        document.getElementById('img-file').value='';
+        document.getElementById('preview-img').style.display='none';
+        document.getElementById('attach-placeholder').style.display='';
+        document.getElementById('img-name').textContent='';
+        currentImageData=null;
+      } catch(e) {
+        showToast('저장 실패 · 인터넷 연결을 확인해주세요');
+      } finally {
+        btn.disabled=false;
+      }
+    };
+
+    /* ── 내 신청 조회 ── */
+    window.toggleMyPanel = () => {
+      const panel = document.getElementById('my-panel');
+      panel.classList.toggle('open');
+      if (panel.classList.contains('open')) {
+        const saved = localStorage.getItem('wishBucket_myName');
+        if (saved) document.getElementById('my-name-input').value = saved;
+        document.getElementById('my-results').innerHTML = '';
+        document.getElementById('my-auth-error').classList.remove('show');
+      }
+    };
+
+    window.searchMyWishes = async () => {
+      const name  = document.getElementById('my-name-input').value.trim();
+      const birth = document.getElementById('my-birth-input').value;
+      const errEl = document.getElementById('my-auth-error');
+      const wrap  = document.getElementById('my-results');
+
+      errEl.classList.remove('show');
+      wrap.innerHTML = '';
+
+      if (!name || !birth) { showToast('이름과 생년월일을 모두 입력해주세요'); return; }
+
+      const inputHash = await hashBirth(birth);
+
+      // 이름 일치 항목 필터
+      const matched = Object.entries(requests)
+        .filter(([, r]) => r.requester === name)
+        .sort((a,b) => a[1].createdAt - b[1].createdAt);
+
+      if (matched.length === 0) {
+        errEl.classList.add('show');
+        return;
+      }
+
+      // 생년월일 해시 검증 — 첫 번째 항목으로 체크
+      const firstHash = matched[0][1].birthdateHash;
+      if (firstHash && firstHash !== inputHash) {
+        errEl.classList.add('show');
+        return;
+      }
+
+      // 이름 저장
+      localStorage.setItem('wishBucket_myName', name);
+
+      let h = '';
+      matched.forEach(([, r]) => {
+        const status = r.status || 'none';
+        const accent = STATUS_ACCENT[status];
+        const label  = STATUS_LABEL[status];
+        const dateStr = r.createdAt
+          ? new Date(r.createdAt).toLocaleDateString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})
+          : '';
+        const etcHtml  = (status==='etc'&&r.etcText) ? `<div class="my-etc-text">💬 담당자 메모: ${r.etcText}</div>` : '';
+        const linkHtml = r.link ? `<div class="my-link">🔗 <a href="${r.link}" target="_blank">첨부 링크 보기</a></div>` : '';
+        const imgHtml  = r.img  ? `<img src="${r.img}" class="my-img">` : '';
+
+        h += `<div class="my-card">
+          <div class="my-card-accent" style="background:${accent};"></div>
+          <div class="my-card-inner">
+            <div class="my-card-header">
+              <div class="my-card-name">${r.itemName}</div>
+              <div class="my-card-qty">${r.quantity}개</div>
+            </div>
+            <div class="my-card-meta">공 별명: ${r.nickname}${dateStr?' · '+dateStr:''}</div>
+            <div class="my-status-badge badge-${status}">${label}</div>
+            ${etcHtml}${linkHtml}${imgHtml}
+          </div>
+        </div>`;
+      });
+
+      wrap.innerHTML = h;
+    };
+
+    /* ── 상태 변경 (담당자) ── */
+    window.setStatus = async (key, status) => {
+      const r = requests[key]; if(!r) return;
+      const newStatus = (r.status===status && status!=='etc') ? 'none' : status;
+      const etcText   = newStatus!=='etc' ? '' : (r.etcText||'');
+      try { await update(ref(db,'wishes/'+key), {status:newStatus, etcText}); }
+      catch(e) { showToast('업데이트 실패'); }
+    };
+
+    window.saveEtc = async (key) => {
+      const inp = document.getElementById('etc-input-'+key);
+      const val = inp ? inp.value.trim() : '';
+      if (!val) { showToast('내용을 입력해주세요'); return; }
+      try { await update(ref(db,'wishes/'+key), {status:'etc', etcText:val}); showToast('저장됐어요 ✅'); }
+      catch(e) { showToast('업데이트 실패'); }
+    };
+
+    /* ── 전체 초기화 ── */
+    window.openClearConfirm  = () => document.getElementById('clear-modal').classList.add('open');
+    window.closeClearConfirm = () => document.getElementById('clear-modal').classList.remove('open');
+    window.clearAll = async () => {
+      try {
+        await remove(wishRef);
+        balls.forEach(b=>b.el.remove()); balls=[];
+        requests={};
+        if(animFrame){cancelAnimationFrame(animFrame);animFrame=null;}
+        updateLabel(); renderTable(); closeClearConfirm();
+        showToast('전체 초기화됐어요 🗑');
+      } catch(e) { showToast('초기화 실패'); }
+    };
+
+    /* ── 바람 ── */
+    function updateWind() {
+      windPhase+=0.013; gustTimer++;
+      targetWindX=Math.sin(windPhase)*0.6+Math.cos(windPhase*0.6)*0.4+Math.sin(windPhase*1.7)*0.2;
+      targetWindY=Math.cos(windPhase*0.5)*0.3+Math.sin(windPhase*1.3)*0.2;
+      if(!gustActive&&gustTimer>60+Math.random()*60){
+        gustActive=true; gustTimer=0;
+        const a=Math.random()*Math.PI*2;
+        gustX=Math.cos(a)*(1.5+Math.random()*1.5);
+        gustY=Math.sin(a)*(1.0+Math.random()*1.0);
+      }
+      if(gustActive){targetWindX+=gustX;targetWindY+=gustY;gustX*=0.9;gustY*=0.9;if(Math.abs(gustX)<0.05&&Math.abs(gustY)<0.05)gustActive=false;}
+      windX+=(targetWindX-windX)*0.08; windY+=(targetWindY-windY)*0.08;
+    }
+
+    function loop() {
+      const w=bucket.clientWidth,h=bucket.clientHeight,floor=h-BS-2;
+      updateWind();
+      for(let i=0;i<balls.length;i++){
+        const b=balls[i];
+        b.dx+=windX*0.18; b.dy+=windY*0.12+0.07;
+        const sp=Math.hypot(b.dx,b.dy); if(sp>6){b.dx=b.dx/sp*6;b.dy=b.dy/sp*6;}
+        b.x+=b.dx; b.y+=b.dy;
+        if(b.x<0)    {b.x=0;   b.dx= Math.abs(b.dx)*0.72+0.4;}
+        if(b.x>w-BS) {b.x=w-BS;b.dx=-Math.abs(b.dx)*0.72-0.4;}
+        if(b.y<0)    {b.y=0;   b.dy= Math.abs(b.dy)*0.62+0.3;}
+        if(b.y>=floor){b.y=floor;b.dy=-(Math.abs(b.dy)*0.68+0.25);b.dx+=(Math.random()-0.5)*1.2;}
+        for(let j=i+1;j<balls.length;j++){
+          const o=balls[j];
+          const cx=b.x+BS/2,cy=b.y+BS/2,ox=o.x+BS/2,oy=o.y+BS/2,d=Math.hypot(cx-ox,cy-oy);
+          if(d<BS&&d>0.5){
+            const nx=(cx-ox)/d,ny=(cy-oy)/d,ov=(BS-d)*0.5;
+            b.x+=nx*ov;b.y+=ny*ov;o.x-=nx*ov;o.y-=ny*ov;
+            const dot=(b.dx-o.dx)*nx+(b.dy-o.dy)*ny;
+            if(dot<0){b.dx-=dot*nx*0.65;b.dy-=dot*ny*0.65;o.dx+=dot*nx*0.65;o.dy+=dot*ny*0.65;}
+          }
+        }
+        b.el.style.left=Math.round(b.x)+'px'; b.el.style.top=Math.round(b.y)+'px';
+      }
+      animFrame=requestAnimationFrame(loop);
+    }
+
+    function updateLabel() {
+      const n=balls.length;
+      document.getElementById('ball-count-label').textContent=
+        n===0?'소원을 넣으면 공이 굴러다녀요 🌸':`현재 ${n}개의 소원이 바람에 날리는 중 💨`;
+    }
+
+    function showToast(msg) {
+      const t=document.getElementById('toast');
+      t.textContent=msg; t.classList.add('show');
+      setTimeout(()=>t.classList.remove('show'),2400);
+    }
+
+    /* ── 담당자 모달 ── */
+    window.openAdminModal = () => {
+      document.getElementById('admin-modal').classList.add('open');
+      document.getElementById('pw-input').value='';
+      document.getElementById('pw-error').textContent='';
+      setTimeout(()=>document.getElementById('pw-input').focus(),60);
+    };
+    window.closeModal = () => document.getElementById('admin-modal').classList.remove('open');
+    window.checkPw = () => {
+      if(document.getElementById('pw-input').value===ADMIN_PW){window.closeModal();openAdminPanel();}
+      else{document.getElementById('pw-error').textContent='비밀번호가 맞지 않아요 🔒';document.getElementById('pw-input').value='';document.getElementById('pw-input').focus();}
+    };
+    function openAdminPanel(){document.getElementById('admin-panel').classList.add('open');renderTable();}
+    window.closeAdmin = () => document.getElementById('admin-panel').classList.remove('open');
+
+    function renderTable() {
+      const wrap=document.getElementById('admin-table-wrap');
+      const list=Object.entries(requests).sort((a,b)=>a[1].createdAt-b[1].createdAt);
+      if(!list.length){wrap.innerHTML='<div class="empty-msg">아직 신청 내역이 없어요</div>';return;}
+      let h=`<table class="req-table"><thead><tr>
+        <th>요청자</th><th>별명</th><th>품명</th><th>수량</th><th>첨부</th><th>처리 상태</th>
+      </tr></thead><tbody>`;
+      list.forEach(([key,r])=>{
+        let attach='—';
+        if(r.img) attach=`<img src="${r.img}" class="thumb" alt="첨부">`;
+        else if(r.link){const d=r.link.replace(/^https?:\/\//,'').substring(0,14)+'…';attach=`<a href="${r.link}" target="_blank" class="link-chip">🔗 ${d}</a>`;}
+        const showEtcInput=r.status==='etc'&&!r.etcText;
+        const etcBtnLabel=(r.status==='etc'&&r.etcText)?`✏️ ${r.etcText}`:'✏️ 기타';
+        h+=`<tr>
+          <td>${r.requester}</td>
+          <td><span class="ball-dot" style="background:${r.color}"></span>${r.nickname}</td>
+          <td>${r.itemName}</td><td>${r.quantity}</td><td>${attach}</td>
+          <td class="status-cell">
+            <div class="status-btns">
+              <button class="s-btn done ${r.status==='done'?'active':''}" onclick="setStatus('${key}','done')">✅ 처리완료</button>
+              <button class="s-btn reject ${r.status==='reject'?'active':''}" onclick="setStatus('${key}','reject')">❌ 반려</button>
+              <button class="s-btn etc ${r.status==='etc'?'active':''}" onclick="setStatus('${key}','etc')">${etcBtnLabel}</button>
+            </div>
+            <div class="etc-input-row ${showEtcInput?'show':''}" id="etc-row-${key}">
+              <input class="etc-input" id="etc-input-${key}" type="text" placeholder="기타 내용 입력"
+                     onkeydown="if(event.key==='Enter')saveEtc('${key}')">
+              <button class="etc-save-btn" onclick="saveEtc('${key}')">저장</button>
+            </div>
+          </td>
+        </tr>`;
+      });
+      h+='</tbody></table>';
+      wrap.innerHTML=h;
+    }
+
+    document.getElementById('admin-modal').addEventListener('click',e=>{if(e.target===document.getElementById('admin-modal'))window.closeModal();});
+    document.getElementById('clear-modal').addEventListener('click',e=>{if(e.target===document.getElementById('clear-modal'))window.closeClearConfirm();});
+
+    window.addEventListener('load', () => {
+      const saved = localStorage.getItem('wishBucket_myName');
+      if (saved) document.getElementById('requester').value = saved;
+    });
+  </script>
+</body>
+</html>
