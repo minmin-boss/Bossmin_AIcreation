@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOSS-AI Creation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: linear-gradient(160deg, #fff0f5 0%, #ffe4ef 50%, #ffd6e8 100%);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 48px 16px 60px; gap: 32px;
+    }
+
+    .header { text-align: center; }
+    .header h1 {
+      font-size: 28px; font-weight: 700; color: #c2456a;
+      letter-spacing: -0.5px;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .header p { font-size: 13px; color: #e08aaa; margin-top: 8px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      width: 100%;
+      max-width: 500px;
+    }
+
+    .card {
+      background: #fff8fb;
+      border: 1.5px solid #f5c0d4;
+      border-radius: 20px;
+      padding: 28px 20px;
+      text-align: center;
+      text-decoration: none;
+      color: inherit;
+      box-shadow: 0 4px 24px rgba(210,100,140,0.10);
+      transition: transform 0.18s, box-shadow 0.18s, border-color 0.18s;
+      cursor: pointer;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 32px rgba(210,100,140,0.18);
+      border-color: #e8728f;
+    }
+    .card:active { transform: scale(0.97); }
+
+    .card-icon { font-size: 38px; margin-bottom: 12px; }
+    .card-title {
+      font-size: 15px; font-weight: 700; color: #c2456a;
+      margin-bottom: 6px;
+    }
+    .card-desc {
+      font-size: 12px; color: #e08aaa; line-height: 1.6;
+    }
+
+    .footer {
+      font-size: 11px; color: #f0afc4; text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🌸 BOSS-AI Creation</h1>
+    <p>원하는 메뉴를 클릭해서 들어가세요</p>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="office_supplies.html">
+      <div class="card-icon">🖊️</div>
+      <div class="card-title">비품 소원함</div>
+      <div class="card-desc">필요한 비품을 신청하고 처리 현황을 확인해요</div>
+    </a>
+    <a class="card" href="dayoff-worklife_balance.html">
+      <div class="card-icon">🌴</div>
+      <div class="card-title">휴가 / 워라밸</div>
+      <div class="card-desc">휴가 신청 및 워크라이프 밸런스 관리</div>
+    </a>
+  </div>
+
+  <div class="footer">ⓒ 민민사사 내부 도구</div>
+
+</body>
+</html>
