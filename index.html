@@ -2,126 +2,98 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>BOSS-AI 통합 대시보드</title>
+    <title>BOSS-AI 대시보드</title>
     <style>
-        /* 기본 레이아웃 및 폰트 설정 */
-        body { background-color: #f0f2f5; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Pretendard', -apple-system, sans-serif; }
-        .pw { width: 400px; position: relative; }
+        /* 기본 레이아웃 */
+        body { background-color: #fff; margin: 0; display: flex; flex-direction: column; align-items: center; min-height: 100vh; font-family: 'Pretendard', sans-serif; }
+        .pw { width: 1000px; margin-top: 50px; position: relative; }
 
-        /* 테마 스위처 (우측 상단 플로팅) */
-        .tsw { position: absolute; top: 10px; right: -80px; display: flex; flex-direction: column; gap: 12px; z-index: 1000; }
-        .tsw-btn { width: 55px; height: 55px; border-radius: 50%; border: 3px solid #fff; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; display: flex; align-items: center; justify-content: center; }
-        .tsw-btn:hover { transform: scale(1.1); }
-        .tsw-btn.on { border-color: #ff4081; box-shadow: 0 0 15px rgba(255,64,129,0.4); }
+        /* 상단 핑크 배너 및 리본 섹션 */
+        .header-banner { background-color: #ff4081; width: 100%; height: 180px; border-radius: 50px 50px 0 0; position: relative; text-align: center; color: #fff; padding-top: 30px; }
+        .ribbon-icon { font-size: 80px; filter: drop-shadow(0 4px 5px rgba(0,0,0,0.2)); margin-bottom: 10px; display: block; }
+        .title { font-size: 32px; font-weight: 900; letter-spacing: 1px; }
 
-        .theme-panel { display: none; width: 100%; animation: fadeIn 0.4s ease-out; }
-        .theme-panel.on { display: block; }
+        /* 테마 스위처 (우측 상단) */
+        .tsw { position: absolute; top: 20px; right: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .tsw-btn { width: 65px; height: 65px; border-radius: 50%; border: 3px solid #fff; cursor: pointer; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.15); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .tsw-btn img { width: 100%; height: 100%; object-fit: cover; }
+        .tsw-btn.on { border-color: #fff; transform: scale(1.1); box-shadow: 0 0 20px rgba(255,255,255,0.6); }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        /* 내비게이션 바 */
+        .nav-bar { display: flex; justify-content: center; gap: 15px; margin-top: -30px; position: relative; z-index: 10; }
+        .nav-item { background: #fff; padding: 12px 25px; border-radius: 30px; border: 2px solid #ffb3c8; font-weight: bold; color: #ff4081; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .nav-item.active { background: #ff4081; color: #fff; border-color: #ff4081; }
 
-        /* --- 공통 카드 그리드 (키티 테마 내 예시) --- */
-        .k-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 20px; background: #fff0f5; }
-        .k-card { background: #fff; border-radius: 15px; border: 2px solid #ffb3c8; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; }
-        .k-card:hover { transform: translateY(-5px); box-shadow: 0 5px 15px rgba(255,128,171,0.2); }
-        .k-ico { font-size: 28px; display: block; margin-bottom: 5px; }
-        .k-ct { font-weight: 800; color: #c2185b; font-size: 14px; }
+        /* 메인 카드 영역 */
+        .main-container { background: #fce4ec; border-radius: 0 0 50px 50px; padding: 40px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; width: 100%; box-sizing: border-box; }
+        .card { background: #fff; border-radius: 25px; padding: 30px; text-align: center; border: 1px solid #ffcfdf; transition: 0.3s; position: relative; overflow: hidden; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(255,128,171,0.15); }
+        .card-icon { font-size: 40px; margin-bottom: 15px; display: block; }
+        .card-title { font-size: 18px; font-weight: bold; color: #d81b60; margin-bottom: 10px; }
+        .card-desc { font-size: 13px; color: #888; line-height: 1.5; margin-bottom: 20px; }
+        .btn-enter { background: #ff4081; color: #fff; padding: 8px 20px; border-radius: 20px; font-size: 12px; border: none; cursor: pointer; }
+        
+        /* 하단 푸터 */
+        .footer { width: 100%; background: #ff4081; padding: 15px 0; border-radius: 0 0 50px 50px; text-align: center; color: #fff; font-size: 14px; margin-top: -20px; }
     </style>
 </head>
 <body>
 
 <div class="pw">
-    <!-- 테마 전환 버튼 세트 -->
-    <div class="tsw">
-        <button class="tsw-btn on" onclick="sw('k')" id="btn-k" style="background:#ff80ab;">🎀</button>
-        <button class="tsw-btn" onclick="sw('i')" id="btn-i" style="background:#fff;">📸</button>
-        <button class="tsw-btn" onclick="sw('c')" id="btn-c" style="background:#f5f5f5;">🧡</button>
-    </div>
-
-    <!-- 1. 헬로키티 패널 (기본) -->
-    <div class="theme-panel on" id="p-k">
-        <!-- 기존의 .k-wrap 내용 삽입 -->
-        <div style="background:#fff0f5; border-radius:20px; border:3px solid #ff80ab; overflow:hidden;">
-            <div style="background:linear-gradient(180deg,#ff80ab, #ff4081); padding:20px; text-align:center; color:#fff;">
-                <h2 style="margin:0;">🎀 BOSS-AI 🎀</h2>
-                <small>민민사사 전용 업무지원 도구</small>
-            </div>
-            <div class="k-cards">
-                <div class="k-card" onclick="alert('비품 소원함으로 이동합니다!')">
-                    <span class="k-ico">✏️</span>
-                    <div class="k-ct">비품 소원함</div>
-                </div>
-                <div class="k-card" onclick="alert('휴가 관리 시스템으로 이동합니다!')">
-                    <span class="k-ico">🌴</span>
-                    <div class="k-ct">연차 / 워라밸</div>
-                </div>
-            </div>
-            <div style="padding:10px; text-align:center; background:#ff80ab; color:#fff; font-size:10px;">ⓒ MINMINSASA INTERNAL</div>
+    <!-- 헤더 영역 -->
+    <div class="header-banner">
+        <span class="ribbon-icon">🎀</span>
+        <div class="title">BOSS-AI Creation</div>
+        <div style="font-size: 14px; margin-top: 5px; opacity: 0.9;">✨ 원하는 메뉴를 클릭해서 들어가세요 ✨</div>
+        
+        <!-- 테마 전환 버튼 -->
+        <div class="tsw">
+            <div class="tsw-btn on"><img src="https://i.imgur.com/8N7fX8t.png" alt="Kitty"></div>
+            <div class="tsw-btn"><img src="https://i.imgur.com/uC3G2o7.png" alt="Insta"></div>
+            <div class="tsw-btn"><img src="https://i.imgur.com/6S3Yf9u.png" alt="Cyworld"></div>
         </div>
     </div>
 
-    <!-- 2. 인스타그램 패널 -->
-    <div class="theme-panel" id="p-i">
-        <!-- 인스타그램 스타일 UI -->
-        <div style="background:#fff; border:1px solid #dbdbdb; border-radius:15px; overflow:hidden;">
-            <div style="padding:15px; border-bottom:1px solid #dbdbdb; font-weight:bold; text-align:center;">bossmin_ai</div>
-            <div style="padding:20px; display:flex; align-items:center; gap:20px;">
-                <div style="width:70px; height:70px; border-radius:50%; background:linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7); padding:3px;">
-                    <div style="width:100%; height:100%; background:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px;">🌸</div>
-                </div>
-                <div style="flex:1; display:flex; justify-content:space-around; text-align:center;">
-                    <div><strong>2</strong><br><small>게시물</small></div>
-                    <div><strong>137</strong><br><small>팔로워</small></div>
-                    <div><strong>42</strong><br><small>팔로잉</small></div>
-                </div>
-            </div>
-            <div style="padding:0 20px 15px;">
-                <strong>BOSS-AI Creation 🤖</strong><br>
-                <span style="font-size:13px; color:#555;">우리 팀을 위한 스마트 업무 도우미</span>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px;">
-                <div style="aspect-ratio:1; background:#ffe0b2; display:flex; align-items:center; justify-content:center;">✏️</div>
-                <div style="aspect-ratio:1; background:#e0f7fa; display:flex; align-items:center; justify-content:center;">🌴</div>
-                <div style="aspect-ratio:1; background:#f9f9f9;"></div>
-            </div>
+    <!-- 내비게이션 -->
+    <div class="nav-bar">
+        <div class="nav-item active">🏠 홈</div>
+        <div class="nav-item">🎁 비품소원함</div>
+        <div class="nav-item">🌸 연차/워라밸</div>
+        <div class="nav-item">📊 업무현황</div>
+        <div class="nav-item">💬 팀 채팅</div>
+    </div>
+
+    <!-- 메인 카드 섹션 -->
+    <div class="main-container">
+        <div class="card">
+            <span class="card-icon">✏️</span>
+            <div class="card-title">비품 소원함</div>
+            <div class="card-desc">필요한 비품을 신청하고<br>처리 현황을 확인해요</div>
+            <button class="btn-enter">🎀 클릭해서 입장</button>
+        </div>
+        <div class="card">
+            <span class="card-icon">🌴</span>
+            <div class="card-title">휴가 / 워라밸</div>
+            <div class="card-desc">휴가 신청 및 워크라이프<br>밸런스 관리</div>
+            <button class="btn-enter">🌸 클릭해서 입장</button>
+        </div>
+        <div class="card" style="opacity: 0.6;">
+            <span class="card-icon">📊</span>
+            <div class="card-title">업무 현황</div>
+            <div class="card-desc">팀 전체 업무 진행 현황<br><small>[준비중]</small></div>
+        </div>
+        <div class="card" style="opacity: 0.6;">
+            <span class="card-icon">💬</span>
+            <div class="card-title">팀 채팅</div>
+            <div class="card-desc">팀원들과 빠르게 소통해요<br><small>[준비중]</small></div>
         </div>
     </div>
 
-    <!-- 3. 싸이월드 패널 -->
-    <div class="theme-panel" id="p-c">
-        <!-- 싸이월드 스타일 UI -->
-        <div style="background:#8b7355; padding:10px; border-radius:10px; color:#fff;">
-            <div style="background:#fff; border-radius:5px; color:#333; min-height:300px; display:flex; flex-direction:column;">
-                <div style="background:#ff9eb5; padding:5px; font-weight:bold; color:#fff; font-size:12px;">Cy◎world | 민민이의 미니홈피</div>
-                <div style="flex:1; padding:15px;">
-                    <div style="border:1px solid #ddd; padding:10px; margin-bottom:10px; text-align:center;">
-                        <span style="font-size:40px;">( ◡‿◡ *)</span><br>
-                        <small>오늘의 기분: 맑음</small>
-                    </div>
-                    <ul style="list-style:none; padding:0; font-size:13px;">
-                        <li style="padding:5px 0; border-bottom:1px dashed #ccc;">📝 [비품] 저소음 키보드 신청.. (1)</li>
-                        <li style="padding:5px 0; border-bottom:1px dashed #ccc;">🌴 [휴가] 9월 호주 여행 계획! (5)</li>
-                    </ul>
-                </div>
-                <div style="background:#eee; padding:5px; font-size:11px; text-align:right;">
-                    BGM: 프리스타일 - Y (Please Tell Me Why) ♬
-                </div>
-            </div>
-        </div>
+    <!-- 푸터 -->
+    <div class="footer">
+        🎀 © 민민사사 내부 도구 🎀
     </div>
 </div>
-
-<script>
-    function sw(theme) {
-        // 모든 패널 닫기
-        document.querySelectorAll('.theme-panel').forEach(p => p.classList.remove('on'));
-        // 선택한 패널 열기
-        document.getElementById('p-' + theme).classList.add('on');
-        
-        // 버튼 활성화 표시
-        document.querySelectorAll('.tsw-btn').forEach(b => b.classList.remove('on'));
-        document.getElementById('btn-' + theme).classList.add('on');
-    }
-</script>
 
 </body>
 </html>
