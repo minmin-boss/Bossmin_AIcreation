@@ -171,6 +171,9 @@ tr:hover td{background:#fafaf8}
         <div id="member-pw-err" style="font-size:.74rem;color:var(--danger);margin-top:.6rem;min-height:1rem"></div>
       </div>
     </div>
+    <div id="admin-overview-banner" style="display:none" class="admin-banner">
+      🔓 메인 담당자 모드 활성화 — 모든 사원 데이터 수정 가능
+    </div>
     <div id="team-sections-wrap" style="display:none"></div>
   </div>
 
@@ -401,7 +404,11 @@ function renderMemberCards() {
 
   const TEAM_COLORS = {'1팀':'#2d6a4f','2팀':'#1d6091','경영팀':'#7c3aed','미지정':'#6b7280'};
 
-  const cards = entries.map(([uid, m], i) => {
+  // 설정(이름)이 없는 사원은 표시하지 않음
+  const validEntries = entries.filter(([,m]) => m.settings && m.settings.name);
+  if (!validEntries.length) { wrap.innerHTML = '<div class="empty">등록된 사원이 없습니다</div>'; return; }
+
+  const cards = validEntries.map(([uid, m], i) => {
     const s = m.settings || {};
     const leaves = m.leaves || [];
     const curYear = new Date().getFullYear();
@@ -473,11 +480,37 @@ function renderMemberCards() {
           <span>사용 ${used}일</span><span>사용률 ${usedPct}%</span>
         </div>
         ${miniChartHtml(leaves, col)}
+        ${adminMode ? `
+        <div style="display:flex;gap:6px;padding:.75rem 1rem .75rem;border-top:1px solid #fee2e2;background:#fff5f5;flex-wrap:wrap">
+          <button class="btn btn-sm" style="background:#fee2e2;color:#dc2626;font-weight:600;flex:1;min-width:80px" onclick="openAdminEditMember('${uid}')">✏️ 정보 수정</button>
+          <button class="btn btn-sm" style="background:#dcfce7;color:#166534;font-weight:600;flex:1;min-width:60px" onclick="openAdminAddLeave('${uid}')">+ 휴가</button>
+          <button class="btn btn-sm" style="background:#fef3c7;color:#d97706;font-weight:600;flex:1;min-width:70px" onclick="openAdminAddWlb('${uid}')">+ 워라밸</button>
+        </div>
+        ${(leaves.length>0||(m.wlb||[]).length>0)?`
+        <details style="border-top:1px solid var(--border)">
+          <summary style="cursor:pointer;color:var(--muted);padding:.5rem 1rem;font-size:.72rem;background:#fafaf8">내역 보기 / 수정 ▾</summary>
+          <div style="padding:.5rem 1rem">
+            ${leaves.length>0?`<div style="font-size:.7rem;font-weight:700;color:var(--accent);margin:.5rem 0 .25rem">연차 내역</div>
+            ${[...leaves].sort((a,b)=>b.date.localeCompare(a.date)).map(l=>`
+              <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+                <span style="font-size:.7rem;flex:1;min-width:100px">${fmtDateRange(l.date,l.dateEnd)} <span class="badge badge-${l.type}" style="font-size:.6rem">${l.type}</span>${l.memo?` <span style="color:var(--muted)">${l.memo}</span>`:''} <b>${l.deduct}일</b></span>
+                <button class="btn btn-sm" style="font-size:.65rem;padding:3px 8px;background:#f0f0ed;flex-shrink:0" onclick="openAdminEditLeave('${uid}','${l.id}')">수정</button>
+                <button class="btn btn-sm btn-danger" style="font-size:.65rem;padding:3px 8px;flex-shrink:0" onclick="adminDeleteLeave('${uid}','${l.id}')">삭제</button>
+              </div>`).join('')}`:''}
+            ${(m.wlb||[]).length>0?`<div style="font-size:.7rem;font-weight:700;color:#d97706;margin:.75rem 0 .25rem">워라밸 내역</div>
+            ${[...(m.wlb||[])].sort((a,b)=>b.date.localeCompare(a.date)).map(w=>`
+              <div style="display:flex;align-items:center;gap:6px;padding:5px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
+                <span style="font-size:.7rem;flex:1;min-width:100px">${fmtDate(w.date)} <b style="color:#d97706">${w.hours}시간</b>${w.memo?` <span style="color:var(--muted)">${w.memo}</span>`:''}</span>
+                <button class="btn btn-sm" style="font-size:.65rem;padding:3px 8px;background:#f0f0ed;flex-shrink:0" onclick="openAdminEditWlb('${uid}','${w.id}')">수정</button>
+                <button class="btn btn-sm btn-danger" style="font-size:.65rem;padding:3px 8px;flex-shrink:0" onclick="adminDeleteWlb('${uid}','${w.id}')">삭제</button>
+              </div>`).join('')}`:''}
+          </div>
+        </details>`:''}`:''}
       </div>
     </div>`;
   }).join('');
 
-  wrap.innerHTML = `<div class="section-title"><span class="dot"></span>사원별 현황</div><div class="member-grid">${cards}</div>`;
+  wrap.innerHTML = `<div class="section-title"><span class="dot"></span>사원별 현황${adminMode?'<span style="font-size:.72rem;color:#dc2626;font-weight:600;margin-left:8px;background:#fee2e2;padding:2px 8px;border-radius:99px">🔓 관리자 모드</span>':''}</div><div class="member-grid">${cards}</div>`;
 }
 
 // ── Admin mode ───────────────────────────────────────────
@@ -692,6 +725,9 @@ function renderAll() {
   renderPersonal();
   renderTeam();
   renderSettings();
+  // 관리자 배너 토글
+  const banner = document.getElementById('admin-overview-banner');
+  if (banner) banner.style.display = adminMode ? 'flex' : 'none';
 }
 
 // ── Personal ──────────────────────────────────────────────
@@ -1217,8 +1253,14 @@ function listenMember(uid) {
   listenedUids.add(uid);
   // Settings
   onSnapshot(doc(db,'members',uid,'meta','settings'), snap=>{
-    if (!allMembers[uid]) allMembers[uid]={settings:{},leaves:[]};
-    allMembers[uid].settings = snap.exists() ? snap.data() : {};
+    if (!snap.exists()) {
+      // 설정 없는 사용자는 allMembers에서 제거 (이름없음 방지)
+      if (uid !== MY_ID) delete allMembers[uid];
+      renderAll();
+      return;
+    }
+    if (!allMembers[uid]) allMembers[uid]={settings:{},leaves:[],wlb:[]};
+    allMembers[uid].settings = snap.data();
     if (uid===MY_ID) mySettings = {...allMembers[uid].settings};
     renderAll();
   });
@@ -1261,13 +1303,18 @@ document.getElementById('today-str').textContent =
 
 (async()=>{
   try {
-    // Register self
-    await setDoc(doc(db,'memberIndex',MY_ID),{lastSeen:new Date().toISOString()},{merge:true});
+    // 내 설정이 Firebase에 있는지 먼저 확인 (있으면 기존 사용자, 없으면 신규)
+    const mySetSnap = await getDoc(doc(db,'members',MY_ID,'meta','settings'));
+    if (mySetSnap.exists()) {
+      // 기존 사용자: memberIndex 갱신
+      await setDoc(doc(db,'memberIndex',MY_ID),{lastSeen:new Date().toISOString()},{merge:true});
+      mySettings = {...mySetSnap.data()};
+    }
+    // 신규 사용자는 설정 저장 시에만 memberIndex 등록 (이름없음 방지)
 
     // Load initial data for all members
     const idxSnap = await getDocs(collection(db,'memberIndex'));
     const uids = idxSnap.docs.map(d=>d.id);
-    if (!uids.includes(MY_ID)) uids.push(MY_ID);
 
     await Promise.all(uids.map(async uid=>{
       const [setSnap, leavesSnap] = await Promise.all([
@@ -1295,7 +1342,7 @@ document.getElementById('today-str').textContent =
     document.getElementById('main-app').style.display='block';
     renderAll();
 
-    // Start real-time listeners
+    // Start real-time listeners (본인은 memberIndex에 있을 때만)
     uids.forEach(uid=>listenMember(uid));
     listenMemberIndex();
     listenTeam();
