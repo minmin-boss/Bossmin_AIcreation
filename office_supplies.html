@@ -1017,9 +1017,9 @@
     document.getElementById('clear-modal').addEventListener('click',e=>{if(e.target===document.getElementById('clear-modal'))window.closeClearConfirm();});
 
     window.addEventListener('load', () => {
-      const saved = localStorage.getItem('wishBucket_myName');
-      if (saved) document.getElementById('requester').value = saved;
+      // placeholder만 표시, 자동완성 없음
     });
+
   </script>
 </body>
 </html>
