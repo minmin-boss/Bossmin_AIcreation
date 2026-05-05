@@ -3,210 +3,214 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tax Management Hub - Advanced</title>
+    <title>Tax Master Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --sidebar-width: 280px;
             --primary-blue: #2c3e50;
             --accent-gold: #f39c12;
-            --bg-light: #f8f9fa;
+            --bg-light: #f4f7f6;
             --success-green: #27ae60;
-            --notice-red: #e74c3c;
         }
         body { font-family: 'Pretendard', sans-serif; display: flex; height: 100vh; margin: 0; background: var(--bg-light); }
         
-        /* 사이드바 */
+        /* 사이드바 스타일 */
         #sidebar { width: var(--sidebar-width); background: var(--primary-blue); color: white; display: flex; flex-direction: column; }
-        .sidebar-header { padding: 20px; border-bottom: 1px solid #34495e; }
-        .btn-container { display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-header { padding: 15px; border-bottom: 1px solid #34495e; }
+        .btn-container { display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
         
         button { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn-add { background: #34495e; color: white; font-size: 0.8rem; border: 1px solid #5d6d7e; }
-        .btn-excel { background: var(--success-green); color: white; font-size: 0.8rem; text-align: center; cursor: pointer; display: block; padding: 10px; border-radius: 6px; }
+        .btn-excel { background: var(--success-green); color: white; font-size: 0.8rem; }
+        .btn-global-tab { background: #e67e22; color: white; font-size: 0.9rem; margin-top: 5px; }
         
-        #clientList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        .client-item { padding: 15px 20px; border-bottom: 1px solid #34495e; cursor: pointer; }
+        #clientList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; border-top: 1px solid #34495e; }
+        .client-item { padding: 12px 20px; border-bottom: 1px solid #34495e; cursor: pointer; font-size: 0.9rem; }
         .client-item:hover { background: #3e5871; }
-        .client-item.active { background: var(--accent-gold); font-weight: bold; }
+        .client-item.active { background: var(--accent-gold); }
 
-        /* 메인 콘텐츠 */
+        /* 메인 콘텐츠 영역 */
         #main-content { flex: 1; padding: 30px; overflow-y: auto; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 20px; }
         h2 { margin-top: 0; color: var(--primary-blue); border-bottom: 2px solid var(--accent-gold); display: inline-block; padding-bottom: 5px; }
 
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
-
-        /* 메시지 도구 */
-        .msg-box { background: #eef2f7; padding: 15px; border-radius: 8px; white-space: pre-wrap; margin: 10px 0; border: 1px solid #d1d9e4; min-height: 50px; }
-        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
-        .btn-save { background: var(--primary-blue); color: white; }
-        .btn-copy { background: #25d366; color: white; width: 100%; margin-top: 10px; }
+        /* 공지 탭 스타일 */
+        .tab-menu { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; padding-bottom: 10px; }
+        .tab-btn { background: #ddd; color: #333; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+        .tab-btn.active { background: var(--primary-blue); color: white; }
         
-        /* 공지 탭 전용 */
-        .notice-btn { background: #ecf0f1; color: #2c3e50; font-size: 0.85rem; border: 1px solid #bdc3c7; }
-        .notice-btn:hover { background: #dce4e6; }
+        .sub-menu { display: flex; gap: 8px; margin-bottom: 15px; flex-wrap: wrap; }
+        .sub-btn { background: #f8f9fa; border: 1px solid #ccc; font-size: 0.85rem; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .sub-btn:hover { background: #e9ecef; }
+
+        .msg-box { background: #eef2f7; padding: 20px; border-radius: 8px; white-space: pre-wrap; margin: 15px 0; border: 1px solid #d1d9e4; line-height: 1.6; }
+        .date-input { width: 100%; padding: 12px; border: 2px solid var(--accent-gold); border-radius: 6px; margin-bottom: 15px; font-size: 1rem; }
     </style>
 </head>
 <body>
 
 <div id="sidebar">
     <div class="sidebar-header">
-        <h3>나의 업체 리스트</h3>
         <div class="btn-container">
-            <button class="btn-add" onclick="addClient()">+ 개별 업체 추가</button>
-            <label for="excelInput" class="btn-excel">📊 위하고 엑셀 반영</label>
+            <label for="excelInput" class="btn-excel" style="text-align: center; cursor:pointer; padding:10px; border-radius:6px;">📊 위하고 엑셀 반영</label>
             <input type="file" id="excelInput" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelUpload(event)">
+            
+            <button class="btn-global-tab" onclick="showGlobalNotice()">📢 전 체 공 지 탭</button>
         </div>
+        <h4 style="margin: 10px 0 5px 0; color: #bdc3c7;">업체 개별 관리</h4>
     </div>
     <ul id="clientList"></ul>
 </div>
 
 <div id="main-content">
-    <!-- 업체 상세 관리 -->
-    <div id="clientDetail" style="display: none;">
+    <!-- 1. 업체 개별 관리 화면 -->
+    <div id="clientSection" style="display: none;">
         <h2 id="view-clientName">업체 정보</h2>
         <div class="card">
-            <div class="form-group">
-                <label>업체 특이사항</label>
-                <textarea id="edit-memo" rows="3"></textarea>
-            </div>
-            <div class="form-group">
-                <label>이 업체 전용 메모/문구</label>
-                <textarea id="edit-customMsg" rows="2"></textarea>
-            </div>
-            <button class="btn-save" onclick="updateClientData()">변경내역 저장</button>
+            <textarea id="edit-memo" rows="3" placeholder="업체 특이사항 입력"></textarea>
+            <button class="btn-excel" style="margin-top:10px; width:100%" onclick="updateClientData()">변경내역 저장</button>
         </div>
         <div class="card">
-            <h3>🚀 개별 퀵 메시지</h3>
-            <div id="finalMsg" class="msg-box">업체를 선택하고 버튼을 누르세요.</div>
-            <button class="btn-copy" onclick="copyToClipboard('finalMsg')">카톡 문구 복사하기</button>
+            <h3>개별 문구</h3>
+            <div id="individualMsg" class="msg-box"></div>
+            <button class="btn-excel" style="width:100%; background:#25d366" onclick="copyText('individualMsg')">카톡 복사</button>
         </div>
     </div>
 
-    <!-- 전체 공지 관리 섹션 -->
-    <div class="card" style="border: 2px solid var(--notice-red);">
-        <h2 style="color: var(--notice-red); border-bottom-color: var(--notice-red);">📢 전체 공지 메시지 생성</h2>
-        
-        <div class="form-group" style="margin-top: 15px;">
-            <label>📅 마감/납부 기한 입력</label>
-            <input type="text" id="global-date" placeholder="예: 5월 10일(월)" oninput="updateNoticePreview()">
-        </div>
+    <!-- 2. 전체 공지 관리 화면 -->
+    <div id="globalSection">
+        <h2>📢 전체 공지 대시보드</h2>
+        <div class="card">
+            <label>📅 날짜/기한 입력</label>
+            <input type="text" id="global-date" class="date-input" placeholder="예: 5월 12일(화)" oninput="refreshNotice()">
+            
+            <div class="tab-menu">
+                <div class="tab-btn active" onclick="changeCategory('원천세', this)">원천세</div>
+                <div class="tab-btn" onclick="changeCategory('부가세', this)">부가세</div>
+                <div class="tab-btn" onclick="changeCategory('법인세', this)">법인세</div>
+                <div class="tab-btn" onclick="changeCategory('종소세', this)">종소세</div>
+            </div>
 
-        <div class="btn-group">
-            <button class="notice-btn" onclick="setNoticeType('원천세')">원천세 신고납부</button>
-            <button class="notice-btn" onclick="setNoticeType('부가세')">부가세 신고납부</button>
-            <button class="notice-btn" onclick="setNoticeType('법인세')">법인세 신고납부</button>
-            <button class="notice-btn" onclick="setNoticeType('소득세')">소득세 신고납부</button>
-            <button class="notice-btn" onclick="setNoticeType('예정고지')">부가세 예정고지</button>
-        </div>
+            <div id="subMenuArea" class="sub-menu">
+                <!-- 자바스크립트에서 세부 탭 생성 -->
+            </div>
 
-        <div id="globalMsgPreview" class="msg-box" style="margin-top: 20px; background: #fff5f5;">날짜를 입력하고 항목을 선택하세요.</div>
-        <button class="btn-copy" style="background: var(--notice-red);" onclick="copyToClipboard('globalMsgPreview')">전체 공지 복사하기</button>
+            <div id="globalPreview" class="msg-box">항목을 선택해 주세요.</div>
+            <button class="btn-excel" style="width:100%; background:#e74c3c; font-size:1.1rem; padding:15px;" onclick="copyText('globalPreview')">공지 문구 복사하기</button>
+        </div>
     </div>
 </div>
 
 <script>
     let clients = JSON.parse(localStorage.getItem('taxClients')) || [];
-    let currentClientId = null;
-    let currentNoticeType = '';
+    let currentCategory = '원천세';
+    let currentSubAction = '납부서전달';
 
-    // 1. 리스트 렌더링
-    function renderList() {
-        const listEl = document.getElementById('clientList');
-        listEl.innerHTML = "";
-        clients.sort((a, b) => a.name.localeCompare(b.name));
-        clients.forEach(c => {
-            const li = document.createElement('li');
-            li.className = `client-item ${currentClientId === c.id ? 'active' : ''}`;
-            li.innerText = c.name;
-            li.onclick = () => selectClient(c.id);
-            listEl.appendChild(li);
-        });
+    const noticeData = {
+        '원천세': {
+            '납부서전달': "안녕하세요 사장님, 세무법인입니다.\n이번 달 원천세 납부서를 전달드립니다.\n납부 기한은 {date}까지이오니 확인 부탁드립니다.",
+            '마감안내': "안녕하세요 사장님!\n원천세 신고 및 납부 마감일({date})이 다가왔습니다.\n아직 납부 전이시라면 기한 내 납부 부탁드립니다.",
+            '급여요청': "안녕하세요 사장님, 급여 신고 안내입니다.\n이번 달 급여 변동 내역을 전달해 주시면 {date}까지 신고 진행하겠습니다."
+        },
+        '부가세': {
+            '자료요청': "안녕하세요 사장님!\n부가세 신고를 위해 매출/매입 자료 준비를 부탁드립니다.\n{date}까지 사무실로 전달해 주시면 감사하겠습니다.",
+            '납부서전달': "안녕하세요 사장님, 부가세 납부서를 보내드립니다.\n납부 기한은 {date}까지입니다. 가산세가 발생하지 않도록 유의하세요.",
+            '예정고지': "안녕하세요 사장님!\n이번 부가세 예정고지 납부 기한은 {date}까지입니다.\n은행 방문 혹은 가상계좌로 납부 부탁드립니다."
+        },
+        '법인세': {
+            '납부서전달': "안녕하세요 사장님, 법인세 납부서 전달드립니다.\n{date}까지 납부 완료 부탁드립니다.",
+            '마감공지': "안녕하세요 사장님! 법인세 신고 마감일은 {date}입니다.\n관련 서류 확인 후 기한 내 납부 바랍니다."
+        },
+        '종소세': {
+            '자료요청': "안녕하세요 사장님! 5월은 종합소득세 신고의 달입니다.\n안내문과 자료를 {date}까지 보내주시면 검토하겠습니다.",
+            '결과안내': "안녕하세요 사장님, 종소세 신고 결과입니다.\n납부 기한인 {date}까지 아래 계좌로 납부 부탁드립니다."
+        }
+    };
+
+    function showGlobalNotice() {
+        document.getElementById('clientSection').style.display = 'none';
+        document.getElementById('globalSection').style.display = 'block';
+        changeCategory('원천세', document.querySelector('.tab-btn'));
     }
 
-    // 2. 업체 선택
+    function changeCategory(cat, el) {
+        currentCategory = cat;
+        // 탭 UI 변경
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        el.classList.add('active');
+        
+        // 서부 메뉴 생성
+        const subArea = document.getElementById('subMenuArea');
+        subArea.innerHTML = '';
+        Object.keys(noticeData[cat]).forEach((sub, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'sub-btn';
+            btn.innerText = sub;
+            btn.onclick = () => {
+                currentSubAction = sub;
+                refreshNotice();
+            };
+            subArea.appendChild(btn);
+            if(idx === 0) currentSubAction = sub; // 첫 번째 메뉴 자동 선택
+        });
+        refreshNotice();
+    }
+
+    function refreshNotice() {
+        const date = document.getElementById('global-date').value || "____";
+        let text = noticeData[currentCategory][currentSubAction].replace("{date}", date);
+        document.getElementById('globalPreview').innerText = text;
+    }
+
+    // --- 기존 로직 통합 ---
     function selectClient(id) {
-        currentClientId = id;
+        document.getElementById('globalSection').style.display = 'none';
+        document.getElementById('clientSection').style.display = 'block';
         const client = clients.find(c => c.id === id);
-        document.getElementById('clientDetail').style.display = "block";
         document.getElementById('view-clientName').innerText = client.name;
         document.getElementById('edit-memo').value = client.memo || "";
-        document.getElementById('edit-customMsg').value = client.customMsg || "";
-        document.getElementById('finalMsg').innerText = `안녕하세요 ${client.name} 사장님, 세무법인입니다.\n\n${client.customMsg || '신고 관련 안내드립니다.'}`;
+        document.getElementById('individualMsg').innerText = `안녕하세요 ${client.name} 사장님!`;
         renderList();
     }
 
-    // 3. 전체 공지 로직
-    const noticeTemplates = {
-        '원천세': "안녕하세요 사장님, 세무법인입니다.\n이번 달 원천세 신고 및 납부 기한은 {date}까지입니다.\n급여 변동 내역이 있으시면 미리 말씀 부탁드립니다.",
-        '부가세': "안녕하세요 사장님!\n부가세 신고 기간입니다. 자료 제출 및 납부 기한은 {date}까지입니다.\n준비하신 서류는 사무실로 전달 부탁드립니다.",
-        '법인세': "안녕하세요 사장님, 법인세 신고 안내입니다.\n{date}까지 법인세 납부를 완료해주셔야 합니다.\n관련 납부서를 송부해드리오니 확인 부탁드립니다.",
-        '소득세': "안녕하세요 사장님, 종합소득세 신고 안내입니다.\n신고 및 납부 기한인 {date}를 넘기지 않도록 주의 부탁드립니다.",
-        '예정고지': "안녕하세요 사장님!\n이번 부가세 예정고지 납부 기한은 {date}까지입니다.\n카톡으로 보내드린 고지서 확인 후 납부 부탁드립니다."
-    };
-
-    function setNoticeType(type) {
-        currentNoticeType = type;
-        updateNoticePreview();
-    }
-
-    function updateNoticePreview() {
-        if (!currentNoticeType) return;
-        const date = document.getElementById('global-date').value || "____";
-        let text = noticeTemplates[currentNoticeType].replace("{date}", date);
-        document.getElementById('globalMsgPreview').innerText = text;
-    }
-
-    // 4. 데이터 관리 (엑셀, 저장 등)
     function handleExcelUpload(event) {
         const file = event.target.files[0];
         const reader = new FileReader();
-        reader.onload = function(e) {
-            const data = new Uint8Array(e.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+        reader.onload = (e) => {
+            const workbook = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
             const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-            let count = 0;
             rows.forEach(row => {
-                const name = row['거래처명'] || row['상호'] || row['사업자명'];
-                if (name && !clients.find(c => c.name === name.trim())) {
-                    clients.push({ id: Date.now() + Math.random(), name: name.trim(), memo: "", customMsg: "" });
-                    count++;
+                const name = row['거래처명'] || row['상호'];
+                if(name && !clients.find(c => c.name === name.trim())) {
+                    clients.push({id: Date.now()+Math.random(), name: name.trim(), memo: ""});
                 }
             });
             localStorage.setItem('taxClients', JSON.stringify(clients));
             renderList();
-            alert(count + "개 업체 추가 완료!");
+            alert("반영 완료!");
         };
         reader.readAsArrayBuffer(file);
     }
 
-    function updateClientData() {
-        const idx = clients.findIndex(c => c.id === currentClientId);
-        clients[idx].memo = document.getElementById('edit-memo').value;
-        clients[idx].customMsg = document.getElementById('edit-customMsg').value;
-        localStorage.setItem('taxClients', JSON.stringify(clients));
-        alert("저장되었습니다.");
-        selectClient(currentClientId);
+    function renderList() {
+        const list = document.getElementById('clientList');
+        list.innerHTML = "";
+        clients.sort((a,b)=>a.name.localeCompare(b.name)).forEach(c => {
+            const li = document.createElement('li');
+            li.className = 'client-item';
+            li.innerText = c.name;
+            li.onclick = () => selectClient(c.id);
+            list.appendChild(li);
+        });
     }
 
-    function addClient() {
-        const name = prompt("업체명 입력:");
-        if(name) {
-            clients.push({ id: Date.now(), name: name.trim(), memo: "", customMsg: "" });
-            localStorage.setItem('taxClients', JSON.stringify(clients));
-            renderList();
-        }
-    }
-
-    function copyToClipboard(elementId) {
-        const text = document.getElementById(elementId).innerText;
-        navigator.clipboard.writeText(text).then(() => alert("복사되었습니다!"));
+    function copyText(id) {
+        navigator.clipboard.writeText(document.getElementById(id).innerText);
+        alert("클립보드에 복사되었습니다!");
     }
 
     renderList();
+    showGlobalNotice(); // 첫 시작은 전체 공지 탭
 </script>
 </body>
 </html>
