@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tax Management Hub - WEHAGO Connect</title>
-    <!-- 엑셀 파일 처리를 위한 SheetJS 라이브러리 -->
+    <title>Tax Management Hub - Advanced</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
@@ -13,27 +12,25 @@
             --accent-gold: #f39c12;
             --bg-light: #f8f9fa;
             --success-green: #27ae60;
+            --notice-red: #e74c3c;
         }
         body { font-family: 'Pretendard', sans-serif; display: flex; height: 100vh; margin: 0; background: var(--bg-light); }
         
-        /* 사이드바: 업체 리스트 */
+        /* 사이드바 */
         #sidebar { width: var(--sidebar-width); background: var(--primary-blue); color: white; display: flex; flex-direction: column; }
         .sidebar-header { padding: 20px; border-bottom: 1px solid #34495e; }
-        .sidebar-header h3 { margin-top: 0; text-align: center; }
-        
-        /* 버튼 스타일 */
         .btn-container { display: flex; flex-direction: column; gap: 8px; }
-        button { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         
+        button { padding: 10px; border-radius: 6px; border: none; cursor: pointer; font-weight: bold; transition: 0.2s; }
         .btn-add { background: #34495e; color: white; font-size: 0.8rem; border: 1px solid #5d6d7e; }
         .btn-excel { background: var(--success-green); color: white; font-size: 0.8rem; text-align: center; cursor: pointer; display: block; padding: 10px; border-radius: 6px; }
         
         #clientList { flex: 1; overflow-y: auto; list-style: none; padding: 0; margin: 0; }
-        .client-item { padding: 15px 20px; border-bottom: 1px solid #34495e; cursor: pointer; transition: 0.2s; }
+        .client-item { padding: 15px 20px; border-bottom: 1px solid #34495e; cursor: pointer; }
         .client-item:hover { background: #3e5871; }
         .client-item.active { background: var(--accent-gold); font-weight: bold; }
 
-        /* 메인 콘텐츠: 업체 상세 정보 */
+        /* 메인 콘텐츠 */
         #main-content { flex: 1; padding: 30px; overflow-y: auto; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; }
         h2 { margin-top: 0; color: var(--primary-blue); border-bottom: 2px solid var(--accent-gold); display: inline-block; padding-bottom: 5px; }
@@ -42,13 +39,15 @@
         label { display: block; margin-bottom: 5px; font-weight: bold; }
         input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-family: inherit; }
 
-        .msg-box { background: #eef2f7; padding: 15px; border-radius: 8px; white-space: pre-wrap; margin: 10px 0; border: 1px solid #d1d9e4; }
-        .btn-group { display: flex; gap: 10px; margin-top: 10px; }
+        /* 메시지 도구 */
+        .msg-box { background: #eef2f7; padding: 15px; border-radius: 8px; white-space: pre-wrap; margin: 10px 0; border: 1px solid #d1d9e4; min-height: 50px; }
+        .btn-group { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
         .btn-save { background: var(--primary-blue); color: white; }
-        .btn-copy { background: #25d366; color: white; }
-        .btn-global { background: #e74c3c; color: white; }
-
-        #global-section { border-top: 2px dashed #ccc; padding-top: 20px; }
+        .btn-copy { background: #25d366; color: white; width: 100%; margin-top: 10px; }
+        
+        /* 공지 탭 전용 */
+        .notice-btn { background: #ecf0f1; color: #2c3e50; font-size: 0.85rem; border: 1px solid #bdc3c7; }
+        .notice-btn:hover { background: #dce4e6; }
     </style>
 </head>
 <body>
@@ -58,7 +57,6 @@
         <h3>나의 업체 리스트</h3>
         <div class="btn-container">
             <button class="btn-add" onclick="addClient()">+ 개별 업체 추가</button>
-            <!-- 위하고 엑셀 업로드 라벨 -->
             <label for="excelInput" class="btn-excel">📊 위하고 엑셀 반영</label>
             <input type="file" id="excelInput" accept=".xlsx, .xls" style="display: none;" onchange="handleExcelUpload(event)">
         </div>
@@ -67,54 +65,59 @@
 </div>
 
 <div id="main-content">
+    <!-- 업체 상세 관리 -->
     <div id="clientDetail" style="display: none;">
-        <h2 id="view-clientName">업체를 선택하세요</h2>
-        
+        <h2 id="view-clientName">업체 정보</h2>
         <div class="card">
             <div class="form-group">
-                <label>업체 특이사항 (급여일, 사장님 성향 등)</label>
-                <textarea id="edit-memo" rows="4"></textarea>
+                <label>업체 특이사항</label>
+                <textarea id="edit-memo" rows="3"></textarea>
             </div>
             <div class="form-group">
-                <label>이 업체 전용 카톡 문구 (개인화)</label>
-                <textarea id="edit-customMsg" rows="3"></textarea>
+                <label>이 업체 전용 메모/문구</label>
+                <textarea id="edit-customMsg" rows="2"></textarea>
             </div>
             <button class="btn-save" onclick="updateClientData()">변경내역 저장</button>
         </div>
-
         <div class="card">
-            <h3>🚀 퀵 메시지 보내기</h3>
-            <div id="finalMsg" class="msg-box">문구를 생성하려면 아래 버튼을 누르세요.</div>
-            <div class="btn-group">
-                <button class="btn-copy" onclick="generateAndCopy('custom')">전용 문구 복사</button>
-                <button class="btn-copy" onclick="generateAndCopy('basic')">기본 인사말 복사</button>
-            </div>
+            <h3>🚀 개별 퀵 메시지</h3>
+            <div id="finalMsg" class="msg-box">업체를 선택하고 버튼을 누르세요.</div>
+            <button class="btn-copy" onclick="copyToClipboard('finalMsg')">카톡 문구 복사하기</button>
         </div>
     </div>
 
-    <div id="global-section" class="card">
-        <h3>📢 전업체 일괄 공지 (신고기한 등)</h3>
-        <textarea id="global-msg-input" rows="3" placeholder="예: [안내] 5월 종합소득세 신고 기간입니다. 자료 준비 부탁드립니다."></textarea>
-        <div class="btn-group">
-            <button class="btn-global" onclick="copyGlobalMsg()">일괄 공지 문구 복사</button>
+    <!-- 전체 공지 관리 섹션 -->
+    <div class="card" style="border: 2px solid var(--notice-red);">
+        <h2 style="color: var(--notice-red); border-bottom-color: var(--notice-red);">📢 전체 공지 메시지 생성</h2>
+        
+        <div class="form-group" style="margin-top: 15px;">
+            <label>📅 마감/납부 기한 입력</label>
+            <input type="text" id="global-date" placeholder="예: 5월 10일(월)" oninput="updateNoticePreview()">
         </div>
-        <p style="font-size: 0.8rem; color: #666; margin-top: 10px;">* 모든 업체에 동일하게 적용되는 공지사항입니다.</p>
+
+        <div class="btn-group">
+            <button class="notice-btn" onclick="setNoticeType('원천세')">원천세 신고납부</button>
+            <button class="notice-btn" onclick="setNoticeType('부가세')">부가세 신고납부</button>
+            <button class="notice-btn" onclick="setNoticeType('법인세')">법인세 신고납부</button>
+            <button class="notice-btn" onclick="setNoticeType('소득세')">소득세 신고납부</button>
+            <button class="notice-btn" onclick="setNoticeType('예정고지')">부가세 예정고지</button>
+        </div>
+
+        <div id="globalMsgPreview" class="msg-box" style="margin-top: 20px; background: #fff5f5;">날짜를 입력하고 항목을 선택하세요.</div>
+        <button class="btn-copy" style="background: var(--notice-red);" onclick="copyToClipboard('globalMsgPreview')">전체 공지 복사하기</button>
     </div>
 </div>
 
 <script>
-    // 데이터 로드 (기존 데이터가 없으면 샘플 데이터 사용)
-    let clients = JSON.parse(localStorage.getItem('taxClients')) || [
-        { id: 1, name: "(주)샘플상사", memo: "예시 데이터입니다.", customMsg: "샘플 메시지입니다." }
-    ];
-
+    let clients = JSON.parse(localStorage.getItem('taxClients')) || [];
     let currentClientId = null;
+    let currentNoticeType = '';
 
     // 1. 리스트 렌더링
     function renderList() {
         const listEl = document.getElementById('clientList');
         listEl.innerHTML = "";
-        clients.sort((a, b) => a.name.localeCompare(b.name)); // 가나다순 정렬
+        clients.sort((a, b) => a.name.localeCompare(b.name));
         clients.forEach(c => {
             const li = document.createElement('li');
             li.className = `client-item ${currentClientId === c.id ? 'active' : ''}`;
@@ -128,102 +131,82 @@
     function selectClient(id) {
         currentClientId = id;
         const client = clients.find(c => c.id === id);
-        
         document.getElementById('clientDetail').style.display = "block";
         document.getElementById('view-clientName').innerText = client.name;
         document.getElementById('edit-memo').value = client.memo || "";
         document.getElementById('edit-customMsg').value = client.customMsg || "";
-        document.getElementById('finalMsg').innerText = "업체 전용 문구를 생성하려면 버튼을 누르세요.";
-        
+        document.getElementById('finalMsg').innerText = `안녕하세요 ${client.name} 사장님, 세무법인입니다.\n\n${client.customMsg || '신고 관련 안내드립니다.'}`;
         renderList();
     }
 
-    // 3. 엑셀 파일 업로드 처리 (위하고 연동용)
+    // 3. 전체 공지 로직
+    const noticeTemplates = {
+        '원천세': "안녕하세요 사장님, 세무법인입니다.\n이번 달 원천세 신고 및 납부 기한은 {date}까지입니다.\n급여 변동 내역이 있으시면 미리 말씀 부탁드립니다.",
+        '부가세': "안녕하세요 사장님!\n부가세 신고 기간입니다. 자료 제출 및 납부 기한은 {date}까지입니다.\n준비하신 서류는 사무실로 전달 부탁드립니다.",
+        '법인세': "안녕하세요 사장님, 법인세 신고 안내입니다.\n{date}까지 법인세 납부를 완료해주셔야 합니다.\n관련 납부서를 송부해드리오니 확인 부탁드립니다.",
+        '소득세': "안녕하세요 사장님, 종합소득세 신고 안내입니다.\n신고 및 납부 기한인 {date}를 넘기지 않도록 주의 부탁드립니다.",
+        '예정고지': "안녕하세요 사장님!\n이번 부가세 예정고지 납부 기한은 {date}까지입니다.\n카톡으로 보내드린 고지서 확인 후 납부 부탁드립니다."
+    };
+
+    function setNoticeType(type) {
+        currentNoticeType = type;
+        updateNoticePreview();
+    }
+
+    function updateNoticePreview() {
+        if (!currentNoticeType) return;
+        const date = document.getElementById('global-date').value || "____";
+        let text = noticeTemplates[currentNoticeType].replace("{date}", date);
+        document.getElementById('globalMsgPreview').innerText = text;
+    }
+
+    // 4. 데이터 관리 (엑셀, 저장 등)
     function handleExcelUpload(event) {
         const file = event.target.files[0];
-        if (!file) return;
-
         const reader = new FileReader();
         reader.onload = function(e) {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet);
-            
-            let addCount = 0;
+            const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            let count = 0;
             rows.forEach(row => {
-                // 위하고 엑셀의 헤더 이름(거래처명, 상호, 고객명 등)에 맞춰 자동 매칭
-                const name = row['거래처명'] || row['상호'] || row['고객명'] || row['사업자명']; 
-                
+                const name = row['거래처명'] || row['상호'] || row['사업자명'];
                 if (name && !clients.find(c => c.name === name.trim())) {
-                    clients.push({
-                        id: Date.now() + Math.random(),
-                        name: name.trim(),
-                        memo: "",
-                        customMsg: ""
-                    });
-                    addCount++;
+                    clients.push({ id: Date.now() + Math.random(), name: name.trim(), memo: "", customMsg: "" });
+                    count++;
                 }
             });
-
             localStorage.setItem('taxClients', JSON.stringify(clients));
             renderList();
-            alert(`${addCount}개의 새로운 업체가 반영되었습니다!`);
-            event.target.value = ""; // 파일 입력 초기화
+            alert(count + "개 업체 추가 완료!");
         };
         reader.readAsArrayBuffer(file);
     }
 
-    // 4. 데이터 저장 및 수정
     function updateClientData() {
         const idx = clients.findIndex(c => c.id === currentClientId);
-        if(idx > -1) {
-            clients[idx].memo = document.getElementById('edit-memo').value;
-            clients[idx].customMsg = document.getElementById('edit-customMsg').value;
-            localStorage.setItem('taxClients', JSON.stringify(clients));
-            alert("변경사항이 저장되었습니다.");
-        }
+        clients[idx].memo = document.getElementById('edit-memo').value;
+        clients[idx].customMsg = document.getElementById('edit-customMsg').value;
+        localStorage.setItem('taxClients', JSON.stringify(clients));
+        alert("저장되었습니다.");
+        selectClient(currentClientId);
     }
 
     function addClient() {
-        const name = prompt("추가할 업체명을 입력하세요.");
-        if(name && name.trim()) {
-            if(clients.find(c => c.name === name.trim())) return alert("이미 존재하는 업체입니다.");
-            const newClient = { id: Date.now(), name: name.trim(), memo: "", customMsg: "" };
-            clients.push(newClient);
+        const name = prompt("업체명 입력:");
+        if(name) {
+            clients.push({ id: Date.now(), name: name.trim(), memo: "", customMsg: "" });
             localStorage.setItem('taxClients', JSON.stringify(clients));
             renderList();
         }
     }
 
-    // 5. 메시지 생성 및 클립보드 복사
-    function generateAndCopy(type) {
-        const client = clients.find(c => c.id === currentClientId);
-        let text = "";
-        if(type === 'custom') {
-            text = `[${client.name}] 사장님, 안녕하세요!\n\n${client.customMsg}\n\n바쁘시겠지만 확인 부탁드립니다.`;
-        } else {
-            text = `안녕하세요 ${client.name} 사장님, 세무법인입니다.\n신고 관련하여 안내드릴 내용이 있으니 확인 부탁드립니다.`;
-        }
-        document.getElementById('finalMsg').innerText = text;
-        copyToClipboard(text);
+    function copyToClipboard(elementId) {
+        const text = document.getElementById(elementId).innerText;
+        navigator.clipboard.writeText(text).then(() => alert("복사되었습니다!"));
     }
 
-    function copyGlobalMsg() {
-        const text = document.getElementById('global-msg-input').value;
-        if(!text) return alert("공지 내용을 입력해주세요.");
-        copyToClipboard(text);
-    }
-
-    function copyToClipboard(val) {
-        navigator.clipboard.writeText(val).then(() => {
-            alert("클립보드에 복사되었습니다!");
-        });
-    }
-
-    // 초기 실행
     renderList();
 </script>
-
 </body>
 </html>
