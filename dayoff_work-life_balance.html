@@ -300,15 +300,30 @@ const app = initializeApp({
 const db = getFirestore(app);
 
 // ── Device ID ─────────────────────────────────────────────
-const DEVICE_KEY = 'leave-tracker-uid';
+const DEVICE_KEY   = 'leave-tracker-uid';
+const LEGACY_KEY   = 'leave-tracker-uid-legacy'; // 마이그레이션용 이전 ID 보관
 const AVATAR_COLORS = ['#2d6a4f','#1d6091','#7c3aed','#c45f3a','#0f766e','#b45309','#9d174d','#1e40af','#065f46','#92400e'];
 
+// 이름+입사일로 고정 ID 생성 (어느 기기에서 열어도 동일)
+async function makeStableId(name, join) {
+  const raw = (name + '|' + (join||'')).trim().toLowerCase();
+  const buf = new TextEncoder().encode(raw);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  const arr = Array.from(new Uint8Array(hash));
+  return 'uid_' + arr.slice(0,10).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// 현재 저장된 ID 반환 (없으면 임시 ID)
 function getMyId() {
   let id = localStorage.getItem(DEVICE_KEY);
-  if (!id) { id = 'uid_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); localStorage.setItem(DEVICE_KEY, id); }
+  if (!id) {
+    // 임시 ID - 설정 저장 시 안정된 ID로 교체됨
+    id = 'tmp_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+    localStorage.setItem(DEVICE_KEY, id);
+  }
   return id;
 }
-const MY_ID = getMyId();
+let MY_ID = getMyId();
 
 // ── State ─────────────────────────────────────────────────
 let allMembers  = {};   // { [uid]: { settings, leaves[] } }
