@@ -1346,20 +1346,62 @@ function renderSettings() {
 
 window.saveSettings = async function() {
   const s = {
-    name:  document.getElementById('set-name').value.trim()  || '이름없음',
+    name:  document.getElementById('set-name').value.trim()  || '',
     total: +document.getElementById('set-total').value        || 15,
     wlb:   +document.getElementById('set-wlb').value          || 0,
     join:  document.getElementById('set-join').value          || '',
     team:  document.getElementById('set-team').value          || '',
     rank:  document.getElementById('set-rank').value          || '',
   };
+  if (!s.name) { toast('이름을 입력해주세요.'); return; }
+
   try {
+    // 이름+입사일로 안정된 ID 생성 (어느 기기에서나 동일)
+    const stableId = await makeStableId(s.name, s.join);
+    const oldId    = MY_ID;
+    const isNewId  = stableId !== oldId;
+
+    if (isNewId) {
+      // 기존 데이터를 새 ID로 마이그레이션
+      const [oldLeaves, oldWlb, oldTenure] = await Promise.all([
+        getDocs(collection(db,'members',oldId,'leaves')),
+        getDocs(collection(db,'members',oldId,'wlb')),
+        getDocs(collection(db,'members',oldId,'tenure'))
+      ]);
+      const writes = [];
+      oldLeaves.docs.forEach(d=>writes.push(setDoc(doc(db,'members',stableId,'leaves',d.id),d.data())));
+      oldWlb.docs.forEach(d=>writes.push(setDoc(doc(db,'members',stableId,'wlb',d.id),d.data())));
+      oldTenure.docs.forEach(d=>writes.push(setDoc(doc(db,'members',stableId,'tenure',d.id),d.data())));
+      await Promise.all(writes);
+
+      // 임시 ID(tmp_ 또는 uid_ 랜덤)면 기존 데이터 정리
+      if (!oldId.startsWith('stable_')) {
+        const deletes = [];
+        oldLeaves.docs.forEach(d=>deletes.push(deleteDoc(d.ref)));
+        oldWlb.docs.forEach(d=>deletes.push(deleteDoc(d.ref)));
+        oldTenure.docs.forEach(d=>deletes.push(deleteDoc(d.ref)));
+        await deleteDoc(doc(db,'members',oldId,'meta','settings')).catch(()=>{});
+        await deleteDoc(doc(db,'memberIndex',oldId)).catch(()=>{});
+        await Promise.all(deletes);
+      }
+
+      // MY_ID를 새 ID로 업데이트
+      MY_ID = stableId;
+      localStorage.setItem('leave-tracker-uid', stableId);
+    }
+
+    // 설정 저장 + memberIndex 등록
     await setDoc(doc(db,'members',MY_ID,'meta','settings'), s);
+    await setDoc(doc(db,'memberIndex',MY_ID),{lastSeen:new Date().toISOString()},{merge:true});
+
     mySettings = {...s};
-    if (!allMembers[MY_ID]) allMembers[MY_ID]={settings:{},leaves:[]};
+    if (!allMembers[MY_ID]) allMembers[MY_ID]={settings:{},leaves:[],wlb:[],tenure:[]};
     allMembers[MY_ID].settings = {...s};
+
+    if (isNewId) listenMember(MY_ID);
+
     toast('저장되었습니다.'); renderAll();
-  } catch(e) { toast('저장 실패: '+e.message); }
+  } catch(e) { toast('저장 실패: '+e.message); console.error(e); }
 };
 
 // ── Modal ─────────────────────────────────────────────────
