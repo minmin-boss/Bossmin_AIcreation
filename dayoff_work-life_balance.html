@@ -343,8 +343,8 @@ function calcTenureVacation(joinDate, targetYear) {
   if (!joinDate) return { eligible: false };
   const joinYear = new Date(joinDate + 'T00:00:00').getFullYear();
 
-  // 첫 부여: 만 3년 완료 = 4년차 시작 연도 (joinYear + 3)
-  const firstEligibleYear = joinYear + 3;
+  // 첫 부여: 만 3년 완료 후 4년차 = joinYear + 4
+  const firstEligibleYear = joinYear + 4;
 
   if (targetYear < firstEligibleYear) return { eligible: false };
 
