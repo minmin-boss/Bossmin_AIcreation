@@ -308,6 +308,12 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
         <div class="k-cd">휴가 신청 및 워크라이프<br>밸런스 관리</div>
         <div class="k-card-tag">🌸 클릭해서 입장</div>
       </div>
+      <div class="k-card" onclick="location.href='휴가신청서_연동.html'" style="cursor:pointer;">
+        <span class="k-ico">📋</span>
+        <div class="k-ct">휴가신청서</div>
+        <div class="k-cd">휴가 신청하고<br>자동으로 내 휴가에 반영</div>
+        <div class="k-card-tag">💌 클릭해서 입장</div>
+      </div>
       <div class="k-card off">
         <span class="k-ico">📊</span>
         <div class="k-ct">업무 현황</div>
@@ -382,6 +388,7 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
       </div>
       <div class="ig-hl"><div class="ig-hl-ring"><div class="ig-hl-inner">✏️</div></div><span class="ig-hl-label">비품신청</span></div>
       <div class="ig-hl"><div class="ig-hl-ring"><div class="ig-hl-inner">🌴</div></div><span class="ig-hl-label">연차관리</span></div>
+      <div class="ig-hl" onclick="location.href='휴가신청서_연동.html'" style="cursor:pointer;"><div class="ig-hl-ring" style="background:linear-gradient(45deg,#ce93d8,#ab47bc);"><div class="ig-hl-inner">📋</div></div><span class="ig-hl-label">휴가신청</span></div>
       <div class="ig-hl"><div class="ig-hl-ring" style="background:#dbdbdb;"><div class="ig-hl-inner">📊</div></div><span class="ig-hl-label">업무현황</span></div>
       <div class="ig-hl"><div class="ig-hl-ring" style="background:#dbdbdb;"><div class="ig-hl-inner">💬</div></div><span class="ig-hl-label">공지</span></div>
     </div>
@@ -405,7 +412,13 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
         </div>
         <div class="ig-ov"><span>연차/워라밸 이동</span></div>
       </div>
-      <div class="ig-cell" style="background:#f9f9f9;"></div>
+      <div class="ig-cell" onclick="location.href='휴가신청서_연동.html'" style="background:linear-gradient(135deg,#f3e5f5,#ab47bc);cursor:pointer;">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;height:100%;">
+          <span style="font-size:32px;">📋</span>
+          <span style="font-size:10px;font-weight:700;color:#3d0052;text-align:center;padding:0 6px;">휴가신청서</span>
+        </div>
+        <div class="ig-ov"><span>휴가신청서 이동</span></div>
+      </div>
       <div class="ig-cell" style="background:#f9f9f9;"></div>
       <div class="ig-cell" style="background:#f9f9f9;"></div>
       <div class="ig-cell" style="background:#f9f9f9;"></div>
@@ -541,6 +554,11 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
           <div class="cy-board-hd">🌴 연차 / 워라밸 <span onclick="location.href='dayoff_work-life_balance.html'">+ 신청하러가기 ▶</span></div>
           <div class="cy-board-row"><span class="cy-board-ico">📅</span><span class="cy-board-txt"><b>남은 연차</b> 8.5일 / 15일</span><span class="cy-board-badge ok">정상</span></div>
           <div class="cy-board-row"><span class="cy-board-ico">⏰</span><span class="cy-board-txt"><b>이번달 초과근무</b> 12시간</span><span class="cy-board-badge">확인요</span></div>
+        </div>
+        <div class="cy-board">
+          <div class="cy-board-hd">📋 휴가신청서 <span onclick="location.href='휴가신청서_연동.html'">+ 신청하러가기 ▶</span></div>
+          <div class="cy-board-row"><span class="cy-board-ico">📝</span><span class="cy-board-txt"><b>휴가 신청</b> — 작성 후 자동 반영</span><span class="cy-board-badge ok">연동됨</span></div>
+          <div class="cy-board-row"><span class="cy-board-ico">✅</span><span class="cy-board-txt"><b>장기근속 특별휴가</b> 신청 가능</span><span class="cy-board-badge">확인</span></div>
         </div>
 
         <!-- 다이어리 -->
