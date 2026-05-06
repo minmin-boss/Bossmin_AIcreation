@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>휴가신청서</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --ink: #1a1a1a;
+    --ink-light: #444;
+    --border: #1a1a1a;
+    --border-light: #ccc;
+    --bg: #f9f7f2;
+    --paper: #ffffff;
+    --accent: #8b1a1a;
+    --cell-bg: #f5f3ee;
+  }
+
+  body {
+    background: var(--bg);
+    font-family: 'Noto Sans KR', sans-serif;
+    color: var(--ink);
+    min-height: 100vh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 20px;
+  }
+
+  .page {
+    background: var(--paper);
+    width: 210mm;
+    max-width: 100%;
+    padding: 20mm 20mm 20mm 20mm;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.06);
+    position: relative;
+  }
+
+  /* 결재란 */
+  .approval-wrap {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 20px;
+  }
+
+  .approval-table {
+    border-collapse: collapse;
+    font-size: 11px;
+    font-family: 'Noto Serif KR', serif;
+  }
+
+  .approval-table td {
+    border: 1.5px solid var(--border);
+    text-align: center;
+    padding: 4px 8px;
+  }
+
+  .approval-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    letter-spacing: 4px;
+    font-weight: 600;
+    width: 22px;
+    height: 70px;
+    font-size: 12px;
+  }
+
+  .approval-name-cell {
+    width: 55px;
+    height: 24px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .approval-sign-cell {
+    width: 55px;
+    height: 46px;
+  }
+
+  /* 제목 */
+  .title-wrap {
+    text-align: center;
+    margin: 28px 0 28px;
+  }
+
+  .title {
+    font-family: 'Noto Serif KR', serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 14px;
+    color: var(--ink);
+  }
+
+  /* 제출일 */
+  .submit-section {
+    margin-bottom: 20px;
+  }
+
+  .submit-text {
+    font-size: 13px;
+    color: var(--ink-light);
+    margin-bottom: 10px;
+    letter-spacing: 0.3px;
+  }
+
+  .submit-date-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    justify-content: flex-end;
+  }
+
+  .submit-date-row input[type="date"] {
+    border: none;
+    border-bottom: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    padding: 2px 4px;
+    color: var(--ink);
+    outline: none;
+    cursor: pointer;
+  }
+
+  /* 메인 테이블 */
+  .main-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+
+  .main-table td {
+    border: 1.5px solid var(--border);
+    padding: 10px 12px;
+    vertical-align: middle;
+  }
+
+  .main-table .label-cell {
+    background: var(--cell-bg);
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    letter-spacing: 1px;
+    font-size: 12px;
+    width: 72px;
+  }
+
+  .main-table .section-label {
+    background: var(--cell-bg);
+    font-family: 'Noto Serif KR', serif;
+    font-weight: 700;
+    text-align: center;
+    letter-spacing: 2px;
+    font-size: 12px;
+    width: 72px;
+    writing-mode: horizontal-tb;
+  }
+
+  /* 입력 필드 공통 */
+  input[type="text"], input[type="tel"], textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12.5px;
+    color: var(--ink);
+    outline: none;
+    padding: 0;
+  }
+
+  input[type="text"]::placeholder,
+  input[type="tel"]::placeholder,
+  textarea::placeholder {
+    color: #bbb;
+    font-size: 11.5px;
+  }
+
+  textarea {
+    resize: none;
+    line-height: 1.6;
+  }
+
+  /* 구분 선택 */
+  .category-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 20px;
+  }
+
+  .category-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .category-item input[type="radio"] {
+    display: none;
+  }
+
+  .category-item .radio-custom {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    transition: all 0.15s ease;
+  }
+
+  .category-item input[type="radio"]:checked + .radio-custom {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  .category-item input[type="radio"]:checked + .radio-custom::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    background: white;
+    border-radius: 50%;
+  }
+
+  .category-label {
+    font-size: 12.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* 일수 뱃지 */
+  .days-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--cell-bg);
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink-light);
+    min-width: 36px;
+  }
+
+  .days-badge.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .days-badge.fixed {
+    background: #f0e8e8;
+    border-color: #c9a0a0;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* 날짜 입력 */
+  .period-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .period-row input[type="date"] {
+    border: none;
+    border-bottom: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 12.5px;
+    padding: 2px 4px;
+    color: var(--ink);
+    outline: none;
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .period-sep {
+    color: var(--ink-light);
+    font-size: 13px;
+  }
+
+  /* 일수 카운터 */
+  .days-counter {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-left: 10px;
+  }
+
+  .days-counter button {
+    width: 22px;
+    height: 22px;
+    border: 1.5px solid var(--border);
+    background: var(--cell-bg);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.1s;
+    font-family: monospace;
+    color: var(--ink);
+  }
+
+  .days-counter button:hover {
+    background: #e8e4dc;
+  }
+
+  .days-counter .count-display {
+    width: 36px;
+    height: 22px;
+    border-top: 1.5px solid var(--border);
+    border-bottom: 1.5px solid var(--border);
+    background: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  .days-counter .count-label {
+    font-size: 11.5px;
+    color: var(--ink-light);
+    margin-left: 6px;
+  }
+
+  /* 반차 표시 */
+  .half-day-note {
+    font-size: 11px;
+    color: var(--accent);
+    margin-left: 8px;
+    font-style: italic;
+  }
+
+  /* 하단 */
+  .footer-note {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--ink-light);
+  }
+
+  /* 인쇄 버튼 */
+  .action-bar {
+    margin-top: 32px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .btn {
+    padding: 10px 28px;
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: white;
+    border: 2px solid var(--ink);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--ink);
+    border: 2px solid var(--ink);
+  }
+
+  .btn-outline:hover {
+    background: var(--cell-bg);
+  }
+
+  .save-msg {
+    margin-top: 12px;
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    white-space: pre-line;
+    line-height: 1.6;
+    display: none;
+  }
+  .save-msg-success { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+  .save-msg-error   { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+  .save-msg-loading { background: #fef3c7; border: 1px solid #fde68a; color: #92400e; }
+
+  @media print {
+    body { padding: 0; background: white; }
+    .page { box-shadow: none; }
+    .action-bar { display: none; }
+    input, textarea { border-bottom-color: transparent !important; }
+  }
+
+  @media (max-width: 600px) {
+    .page { padding: 14mm 10mm; }
+    .category-grid { grid-template-columns: 1fr; gap: 6px; }
+    .period-row { flex-wrap: wrap; }
+  }
+</style>
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getFirestore, collection, getDocs, addDoc, doc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyC7Qv2Piu4E0YgpEsS606CzYZlYK6oHxwA",
+  authDomain: "coworker-daydo.firebaseapp.com",
+  projectId: "coworker-daydo",
+  storageBucket: "coworker-daydo.firebasestorage.app",
+  messagingSenderId: "56974474790",
+  appId: "1:56974474790:web:5007a844ea581ff58e70e7",
+  measurementId: "G-FDF14885J5"
+});
+const db = getFirestore(app);
+
+// 이름+입사일로 stable ID 생성 (휴가 관리와 동일한 로직)
+async function makeStableId(name, join) {
+  const raw = (name + '|' + (join||'')).trim().toLowerCase();
+  const buf = new TextEncoder().encode(raw);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  const arr = Array.from(new Uint8Array(hash));
+  return 'uid_' + arr.slice(0,10).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// 카테고리 → 휴가 관리 종류 매핑
+function mapCategory(cat) {
+  const map = { '휴가':'연차', '반차':'반차', '병가':'병가', '장기특별휴가':'특별', '출산휴가':'특별', '기타':'특별' };
+  return map[cat] || '연차';
+}
+
+// 평일 계산
+function countWeekdays(start, end) {
+  const s = new Date(start + 'T00:00:00');
+  const e = end ? new Date(end + 'T00:00:00') : s;
+  let cnt = 0;
+  const cur = new Date(s);
+  while (cur <= e) {
+    const day = cur.getDay();
+    if (day !== 0 && day !== 6) cnt++;
+    cur.setDate(cur.getDate() + 1);
+  }
+  return cnt;
+}
+
+// 휴가 관리에 저장
+window.saveToLeaveManager = async function() {
+  const name      = document.getElementById('name').value.trim();
+  const startDate = document.getElementById('startDate').value;
+  const endDate   = document.getElementById('endDate').value;
+  const reason    = document.getElementById('reason').value.trim();
+  const cat       = document.querySelector('input[name="category"]:checked')?.value;
+
+  if (!name)      { showSaveMsg('이름을 입력해주세요.', 'error'); return; }
+  if (!cat)       { showSaveMsg('구분을 선택해주세요.', 'error'); return; }
+  if (!startDate) { showSaveMsg('기간을 입력해주세요.', 'error'); return; }
+
+  // 이름으로 Firebase에서 사원 찾기
+  try {
+    showSaveMsg('저장 중...', 'loading');
+
+    // memberIndex에서 이름이 일치하는 사원 찾기
+    const idxSnap = await getDocs(collection(db, 'memberIndex'));
+    let foundUid = null;
+
+    for (const d of idxSnap.docs) {
+      const uid = d.id;
+      const { getDoc } = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
+      const setSnap = await getDoc(doc(db, 'members', uid, 'meta', 'settings'));
+      if (setSnap.exists() && setSnap.data().name === name) {
+        foundUid = uid;
+        break;
+      }
+    }
+
+    if (!foundUid) {
+      showSaveMsg(`"${name}" 사원을 찾을 수 없습니다.
+휴가 관리에서 설정 저장을 먼저 해주세요.`, 'error');
+      return;
+    }
+
+    // 차감 일수 계산
+    let deduct;
+    if (cat === '반차') {
+      deduct = 0.5;
+    } else {
+      deduct = endDate ? countWeekdays(startDate, endDate) : (window.currentDays || 1);
+    }
+
+    // 장기특별휴가는 tenure 컬렉션에 저장, 나머지는 leaves
+    const type = mapCategory(cat);
+    const leaveData = {
+      date:    startDate,
+      dateEnd: endDate || '',
+      type,
+      memo:    reason || cat,
+      deduct,
+    };
+
+    if (cat === '장기특별휴가') {
+      await addDoc(collection(db, 'members', foundUid, 'tenure'), leaveData);
+    } else {
+      await addDoc(collection(db, 'members', foundUid, 'leaves'), leaveData);
+    }
+
+    showSaveMsg(`✅ ${name}님의 휴가가 저장되었습니다!
+(${startDate}${endDate&&endDate!==startDate?' ~ '+endDate:''} / ${deduct}일)`, 'success');
+
+  } catch(e) {
+    showSaveMsg('저장 실패: ' + e.message, 'error');
+    console.error(e);
+  }
+};
+
+function showSaveMsg(msg, type) {
+  const el = document.getElementById('save-msg');
+  el.textContent = msg;
+  el.style.display = 'block';
+  el.className = 'save-msg save-msg-' + type;
+}
+</script>
+</head>
+<body>
+
+<div class="page">
+
+  <!-- 결재란 -->
+  <div class="approval-wrap">
+    <table class="approval-table">
+      <tr>
+        <td rowspan="2" class="approval-label">결&nbsp;&nbsp;&nbsp;재</td>
+        <td class="approval-name-cell">팀 장</td>
+        <td class="approval-name-cell">관리이사</td>
+      </tr>
+      <tr>
+        <td class="approval-sign-cell"></td>
+        <td class="approval-sign-cell"></td>
+      </tr>
+    </table>
+  </div>
+
+  <!-- 제목 -->
+  <div class="title-wrap">
+    <div class="title">휴 가 신 청 서</div>
+  </div>
+
+  <!-- 제출일 + 안내문 -->
+  <div class="submit-section">
+    <p class="submit-text">　　 아래와 같이 휴가신청서를 제출합니다.</p>
+    <div class="submit-date-row">
+      <input type="date" id="submitDate">
+    </div>
+  </div>
+
+  <!-- 본문 테이블 -->
+  <table class="main-table">
+    <!-- 신청자 -->
+    <tr>
+      <td class="label-cell" rowspan="1">휴가신청자</td>
+      <td class="label-cell">성&nbsp;&nbsp;&nbsp;명</td>
+      <td style="width:105px;">
+        <input type="text" id="name" placeholder="홍길동 (인)">
+      </td>
+      <td class="label-cell">소속 및 직위</td>
+      <td>
+        <input type="text" id="dept" placeholder="○팀 직위">
+      </td>
+    </tr>
+
+    <!-- 구분 -->
+    <tr>
+      <td class="section-label" rowspan="3">휴&nbsp;가<br>내&nbsp;용</td>
+      <td class="label-cell">구&nbsp;&nbsp;&nbsp;분</td>
+      <td colspan="3">
+        <div class="category-grid">
+          <label class="category-item">
+            <input type="radio" name="category" value="휴가" id="cat_vacation">
+            <span class="radio-custom"></span>
+            <span class="category-label">
+              휴가
+              <span class="days-badge" id="badge_vacation">0일</span>
+            </span>
+          </label>
+          <label class="category-item">
+            <input type="radio" name="category" value="반차" id="cat_half">
+            <span class="radio-custom"></span>
+            <span class="category-label">
+              반차
+              <span class="days-badge fixed" id="badge_half">0.5일</span>
+            </span>
+          </label>
+          <label class="category-item">
+            <input type="radio" name="category" value="병가" id="cat_sick">
+            <span class="radio-custom"></span>
+            <span class="category-label">
+              병가
+              <span class="days-badge" id="badge_sick">0일</span>
+            </span>
+          </label>
+          <label class="category-item">
+            <input type="radio" name="category" value="출산휴가" id="cat_maternity">
+            <span class="radio-custom"></span>
+            <span class="category-label">
+              출산휴가
+              <span class="days-badge" id="badge_maternity">0일</span>
+            </span>
+          </label>
+          <label class="category-item">
+            <input type="radio" name="category" value="장기특별휴가" id="cat_special">
+            <span class="radio-custom"></span>
+            <span class="category-label">
+              장기특별휴가
+              <span class="days-badge" id="badge_special">0일</span>
+            </span>
+          </label>
+          <label class="category-item">
+            <input type="radio" name="category" value="기타" id="cat_etc">
+            <span class="radio-custom"></span>
+            <span class="category-label">
+              기타
+              <span class="days-badge" id="badge_etc">0일</span>
+            </span>
+          </label>
+        </div>
+
+        <!-- 일수 조절기 (반차 제외) -->
+        <div id="days-control" style="margin-top:10px; display:flex; align-items:center; gap:6px; display:none;">
+          <span style="font-size:12px; color:var(--ink-light);">일수</span>
+          <div class="days-counter">
+            <button type="button" onclick="changeDays(-1)">−</button>
+            <div class="count-display" id="daysDisplay">1</div>
+            <button type="button" onclick="changeDays(1)">+</button>
+          </div>
+          <span class="count-label">일</span>
+        </div>
+        <div id="half-note" style="display:none; margin-top:8px;">
+          <span class="half-day-note">※ 반차는 0.5일로 고정됩니다.</span>
+        </div>
+      </td>
+    </tr>
+
+    <!-- 사유 -->
+    <tr>
+      <td class="label-cell">사&nbsp;&nbsp;&nbsp;유</td>
+      <td colspan="3">
+        <textarea id="reason" rows="3" placeholder="휴가 사유를 입력하세요"></textarea>
+      </td>
+    </tr>
+
+    <!-- 기간 -->
+    <tr>
+      <td class="label-cell">기&nbsp;&nbsp;&nbsp;간</td>
+      <td colspan="3">
+        <div class="period-row">
+          <input type="date" id="startDate">
+          <span class="period-sep">~</span>
+          <input type="date" id="endDate">
+        </div>
+      </td>
+    </tr>
+
+    <!-- 긴급연락처 -->
+    <tr>
+      <td class="label-cell" colspan="2">긴급연락처</td>
+      <td colspan="3">
+        <input type="tel" id="contact" placeholder="010-0000-0000">
+      </td>
+    </tr>
+  </table>
+
+  <p class="footer-note">　* 첨부 : 관련 증빙 자료</p>
+
+  <!-- 액션 버튼 -->
+  <div class="action-bar">
+    <button class="btn btn-outline" onclick="resetForm()">초기화</button>
+    <button class="btn btn-outline" onclick="saveToLeaveManager()" style="border-color:#2d6a4f;color:#2d6a4f;" onmouseover="this.style.background='#f0fdf4'" onmouseout="this.style.background='transparent'">📋 휴가 관리에 저장</button>
+    <button class="btn btn-primary" onclick="window.print()">인쇄 / PDF 저장</button>
+  </div>
+  <div id="save-msg" class="save-msg"></div>
+
+</div>
+
+<script>
+  window.currentDays = 1;
+let currentDays = 1;
+  let selectedCategory = null;
+
+  // 오늘 날짜를 제출일로 기본 설정
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('submitDate').value = today;
+
+  const radioButtons = document.querySelectorAll('input[name="category"]');
+
+  radioButtons.forEach(radio => {
+    radio.addEventListener('change', function() {
+      selectedCategory = this.value;
+      updateUI();
+    });
+  });
+
+  function updateUI() {
+    const daysControl = document.getElementById('days-control');
+    const halfNote = document.getElementById('half-note');
+
+    // 모든 뱃지 초기화
+    document.querySelectorAll('.days-badge').forEach(b => {
+      b.classList.remove('active');
+    });
+
+    if (selectedCategory === '반차') {
+      daysControl.style.display = 'none';
+      halfNote.style.display = 'block';
+      const badge = document.getElementById('badge_half');
+      badge.classList.add('active');
+      badge.textContent = '0.5일';
+    } else if (selectedCategory) {
+      daysControl.style.display = 'flex';
+      halfNote.style.display = 'none';
+      currentDays = 1;
+      document.getElementById('daysDisplay').textContent = currentDays;
+      updateActiveBadge();
+    } else {
+      daysControl.style.display = 'none';
+      halfNote.style.display = 'none';
+    }
+  }
+
+  function changeDays(delta) {
+    if (!selectedCategory || selectedCategory === '반차') return;
+    currentDays = Math.max(1, currentDays + delta);
+    window.currentDays = currentDays;
+    document.getElementById('daysDisplay').textContent = currentDays;
+    updateActiveBadge();
+  }
+
+  function updateActiveBadge() {
+    const map = {
+      '휴가': 'badge_vacation',
+      '병가': 'badge_sick',
+      '출산휴가': 'badge_maternity',
+      '장기특별휴가': 'badge_special',
+      '기타': 'badge_etc'
+    };
+    const badgeId = map[selectedCategory];
+    if (badgeId) {
+      const badge = document.getElementById(badgeId);
+      badge.textContent = currentDays + '일';
+      badge.classList.add('active');
+    }
+  }
+
+  function resetForm() {
+    document.querySelectorAll('input[type="text"], input[type="tel"], textarea').forEach(el => el.value = '');
+    document.querySelectorAll('input[type="date"]').forEach(el => el.value = '');
+    document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
+    document.querySelectorAll('.days-badge').forEach(b => {
+      b.classList.remove('active');
+      if (b.id === 'badge_half') b.textContent = '0.5일';
+      else b.textContent = '0일';
+    });
+    document.getElementById('days-control').style.display = 'none';
+    document.getElementById('half-note').style.display = 'none';
+    document.getElementById('submitDate').value = today;
+    currentDays = 1;
+    selectedCategory = null;
+  }
+</script>
+</body>
+</html>
