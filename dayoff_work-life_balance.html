@@ -109,6 +109,7 @@ tr:hover td{background:#fafaf8}
 .year-tab.active{background:#3e2a10;color:#fff;border-color:#3e2a10;box-shadow:0 2px 8px rgba(62,42,16,.3)}
 .year-tab.active-current{background:#3e2a10;color:#fff;border-color:#3e2a10;box-shadow:0 2px 8px rgba(62,42,16,.3)}
 .year-tab:hover:not(.active):not(.active-current){background:#5e4528;border-color:#5e4528}
+.tenure-banner{display:flex;align-items:center;gap:8px;font-size:.76rem;color:#1e3a5f;background:#dbeafe;border:1px solid #93c5fd;border-radius:8px;padding:8px 12px;margin-bottom:1rem;font-weight:500}
 .readonly-banner{display:flex;align-items:center;gap:8px;font-size:.76rem;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:1rem}
 .admin-banner{display:flex;align-items:center;gap:8px;font-size:.76rem;color:#fff;background:#dc2626;border-radius:8px;padding:8px 14px;margin-bottom:1rem;font-weight:600}
 .admin-card{border:2px solid #dc2626!important}
@@ -153,7 +154,15 @@ tr:hover td{background:#fafaf8}
 
   <!-- 전체 휴가 현황 -->
   <div class="page active" id="page-overview">
-    <div class="section-title" style="margin-top:0"><span class="dot"></span>전체 사원 월별 사용 현황 (<span id="chart-year"></span>년 1월~12월)</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:.75rem;margin-top:0">
+      <div class="section-title" style="margin:0"><span class="dot"></span>전체 사원 사용 현황 (<span id="chart-year"></span>년)</div>
+      <div style="display:flex;gap:4px;background:#e8e5dc;border-radius:8px;padding:3px">
+        <button id="chart-mode-month" onclick="switchChartMode('month')"
+          style="padding:5px 14px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;font-family:var(--font);background:var(--card);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)">월별</button>
+        <button id="chart-mode-quarter" onclick="switchChartMode('quarter')"
+          style="padding:5px 14px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;font-family:var(--font);background:transparent;color:var(--muted)">분기별</button>
+      </div>
+    </div>
     <div class="card" id="company-chart-card"><div class="empty">데이터 불러오는 중...</div></div>
 
     <!-- 사원별 현황 잠금 -->
@@ -184,8 +193,24 @@ tr:hover td{background:#fafaf8}
       <button class="team-filter-btn" onclick="filterTeam('2팀')" id="btn-2팀">2팀</button>
       <button class="team-filter-btn" onclick="filterTeam('경영팀')" id="btn-경영팀">경영팀</button>
     </div>
-    <div class="card"><div id="team-list"></div></div>
-    <p style="font-size:.74rem;color:var(--muted);margin-top:.75rem;text-align:center">각자 설정에서 팀을 선택하고 저장하면 자동으로 표시됩니다</p>
+    <!-- 팀 잠금 화면 -->
+    <div id="team-lock-wrap" class="card" style="text-align:center;padding:2.5rem 1.5rem">
+      <div style="font-size:1.8rem;margin-bottom:.75rem">🔒</div>
+      <div style="font-size:.9rem;font-weight:700;margin-bottom:.4rem" id="team-lock-title">1팀</div>
+      <div style="font-size:.78rem;color:var(--muted);margin-bottom:1.25rem">비밀번호를 입력하면 확인할 수 있습니다</div>
+      <div style="display:flex;gap:8px;justify-content:center;max-width:280px;margin:0 auto">
+        <input type="password" id="team-pw-input" placeholder="비밀번호 입력"
+          style="flex:1;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;font-family:var(--font);outline:none"
+          onkeydown="if(event.key==='Enter')checkTeamPw()">
+        <button class="btn btn-primary btn-sm" onclick="checkTeamPw()">확인</button>
+      </div>
+      <div id="team-pw-err" style="font-size:.74rem;color:var(--danger);margin-top:.6rem;min-height:1rem"></div>
+    </div>
+    <!-- 팀 컨텐츠 -->
+    <div id="team-content-wrap" style="display:none">
+      <div class="card"><div id="team-list"></div></div>
+      <p style="font-size:.74rem;color:var(--muted);margin-top:.75rem;text-align:center">각자 설정에서 팀을 선택하고 저장하면 자동으로 표시됩니다</p>
+    </div>
   </div>
 
   <!-- 내 휴가 -->
@@ -288,6 +313,7 @@ const MY_ID = getMyId();
 // ── State ─────────────────────────────────────────────────
 let allMembers  = {};   // { [uid]: { settings, leaves[] } }
 let mySettings  = { name:'', total:15, wlb:0, join:'', team:'', rank:'' };
+let myTenureLeaves = []; // 장기근속 휴가 내역
 let myLeaves    = [];
 let myWlb       = [];  // { id, date, hours, memo }
 let teamMembers = [];
@@ -295,6 +321,37 @@ const listenedUids = new Set();
 
 // ── Helpers ───────────────────────────────────────────────
 function todayStr() { return new Date().toISOString().split('T')[0]; }
+
+// ── 장기근속 특별휴가 로직 ──────────────────────────────────
+// 입사일 기준: 만 2년 완료(3년차 시작)에 첫 부여, 이후 3년마다
+function calcTenureVacation(joinDate, targetYear) {
+  if (!joinDate) return { eligible: false };
+  const joinYear = new Date(joinDate + 'T00:00:00').getFullYear();
+
+  // 첫 부여: 만 3년 완료 = 4년차 시작 연도 (joinYear + 3)
+  const firstEligibleYear = joinYear + 3;
+
+  if (targetYear < firstEligibleYear) return { eligible: false };
+
+  // 이후 2년마다
+  const yearsSinceFirst = targetYear - firstEligibleYear;
+  const eligible = yearsSinceFirst % 2 === 0;
+  if (!eligible) return { eligible: false };
+
+  return {
+    eligible: true,
+    days: 10,
+    maxExtra: 5,
+    maxTotal: 15,
+    carryover: 5,
+    year: targetYear,
+  };
+}
+
+// 해당 연도 장기근속 정보
+function getMyTenureInfo(year) {
+  return calcTenureVacation(mySettings.join, year);
+}
 function fmtDate(d) { const [y,m,dd]=d.split('-'); return `${y.slice(2)}.${m}.${dd}`; }
 function fmtDateRange(startDate, endDate) {
   if (!endDate || endDate === startDate) return fmtDate(startDate);
@@ -355,42 +412,176 @@ function miniChartHtml(leaves, accentColor) {
     </div>`;
 }
 
-// ── Company-wide chart (Jan-Dec fixed) ───────────────────
-function renderCompanyChart() {
-  const months = yearMonths();
-  const thisKey = todayStr().slice(0,7);
-  document.getElementById('chart-year').textContent = thisYear();
+// ── Company-wide chart ───────────────────────────────────
+let chartMode = 'month'; // 'month' | 'quarter'
 
-  const counts = months.map(m=>{
-    let cnt=0;
-    Object.values(allMembers).forEach(mb=>{
-      if(mb.leaves) cnt+=mb.leaves.filter(l=>l.date.startsWith(m.key)).reduce((a,l)=>a+(+l.deduct),0);
-    });
-    return cnt;
-  });
-  const mx = Math.max(...counts, 1);
+window.switchChartMode = function(mode) {
+  chartMode = mode;
+  // 버튼 스타일 토글
+  const mBtn = document.getElementById('chart-mode-month');
+  const qBtn = document.getElementById('chart-mode-quarter');
+  if (mBtn && qBtn) {
+    if (mode === 'month') {
+      mBtn.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;font-family:var(--font);background:var(--card);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)';
+      qBtn.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;font-family:var(--font);background:transparent;color:var(--muted)';
+    } else {
+      qBtn.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;font-family:var(--font);background:var(--card);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)';
+      mBtn.style.cssText = 'padding:5px 14px;border-radius:6px;border:none;font-size:.76rem;font-weight:600;cursor:pointer;font-family:var(--font);background:transparent;color:var(--muted)';
+    }
+  }
+  renderCompanyChart();
+};
 
-  document.getElementById('company-chart-card').innerHTML = `
-    <div style="display:flex;align-items:flex-end;gap:5px;height:150px;padding-bottom:26px;position:relative">
-      ${months.map((m,i)=>{
-        const cnt=counts[i];
-        const h = cnt>0 ? Math.max(Math.round(cnt/mx*100),6) : 0;
-        const isThis = m.key===thisKey;
-        const bg = isThis ? 'var(--accent)' : (cnt>0 ? 'var(--accent2)' : '#e5e7eb');
-        return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-          <div style="font-size:.6rem;font-weight:600;color:${isThis?'var(--accent)':'var(--muted)'};margin-bottom:2px;min-height:13px">${cnt>0?cnt+'일':''}</div>
-          <div style="width:100%;background:${bg};border-radius:4px 4px 0 0;height:${h}%;min-height:${cnt>0?'4px':'0'};transition:height .5s ease"></div>
-          <div style="font-size:.6rem;color:${isThis?'var(--accent)':'var(--muted)'};font-weight:${isThis?700:400};position:absolute;bottom:2px">${m.label}</div>
-        </div>`;
-      }).join('')}
-    </div>
-    <div style="display:flex;gap:14px;margin-top:8px;font-size:.72rem;color:var(--muted);flex-wrap:wrap">
-      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block"></span>이번달</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent2);display:inline-block"></span>사용 있음</span>
-      <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:#e5e7eb;display:inline-block"></span>사용 없음</span>
-      <span style="margin-left:auto;font-weight:600;color:var(--text)">전체 ${Object.keys(allMembers).length}명</span>
-    </div>`;
+// 전체 사원 총 연차 합산 (설정된 사원만)
+function totalCompanyDays() {
+  return Object.values(allMembers)
+    .filter(m=>m.settings&&m.settings.name)
+    .reduce((a,m)=>a+(+(m.settings.total||15)),0);
 }
+
+function renderCompanyChart() {
+  document.getElementById('chart-year').textContent = thisYear();
+  const thisKey = todayStr().slice(0,7);
+  const members = Object.values(allMembers).filter(m=>m.settings&&m.settings.name);
+  const memberCount = members.length;
+
+  if (chartMode === 'month') {
+    // ── 월별 ──
+    const months = yearMonths();
+    // 각 월 사용일수 & 사용률 계산
+    const data = months.map(m=>{
+      let usedDays = 0;
+      let totalDays = 0;
+      members.forEach(mb=>{
+        const tot = +(mb.settings.total||15);
+        const used = (mb.leaves||[]).filter(l=>l.date&&l.date.startsWith(m.key)).reduce((a,l)=>a+(+l.deduct),0);
+        usedDays += used;
+        totalDays += tot;
+      });
+      // 월별 사용률: 해당 월 사용일 / (총 연차 / 12) * 100
+      const monthlyTotal = totalDays / 12;
+      const pct = monthlyTotal > 0 ? Math.min(Math.round(usedDays / monthlyTotal * 100), 999) : 0;
+      return { label: m.label, key: m.key, usedDays, pct };
+    });
+    const maxPct = Math.max(...data.map(d=>d.pct), 1);
+
+    document.getElementById('company-chart-card').innerHTML = `
+      <div style="display:flex;align-items:flex-end;gap:5px;height:170px;padding-bottom:26px;position:relative">
+        ${data.map(d=>{
+          const h = d.pct>0 ? Math.max(Math.round(d.pct/maxPct*100),6) : 0;
+          const isThis = d.key===thisKey;
+          const barCol = d.pct>80?'#ef4444':d.pct>50?'#f59e0b':'var(--accent2)';
+          const bg = isThis ? 'var(--accent)' : (d.pct>0 ? barCol : '#e5e7eb');
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+            <div style="font-size:.58rem;font-weight:700;color:${isThis?'var(--accent)':d.pct>80?'#dc2626':d.pct>50?'#d97706':'var(--muted)'};margin-bottom:2px;min-height:14px;text-align:center">${d.pct>0?d.pct+'%':''}</div>
+            <div style="width:100%;background:${bg};border-radius:4px 4px 0 0;height:${h}%;min-height:${d.pct>0?'4px':'0'};transition:height .5s ease"></div>
+            <div style="font-size:.6rem;color:${isThis?'var(--accent)':'var(--muted)'};font-weight:${isThis?700:400};position:absolute;bottom:2px">${d.label}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:14px;margin-top:8px;font-size:.72rem;color:var(--muted);flex-wrap:wrap;align-items:center">
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:var(--accent);display:inline-block"></span>이번달</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:6px;border-radius:2px;background:#ef4444;display:inline-block"></span>80% 초과</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:6px;border-radius:2px;background:#f59e0b;display:inline-block"></span>50~80%</span>
+        <span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:6px;border-radius:2px;background:var(--accent2);display:inline-block"></span>50% 미만</span>
+        <span style="margin-left:auto;font-weight:600;color:var(--text)">전체 ${memberCount}명</span>
+      </div>`;
+
+  } else {
+    // ── 분기별 ──
+    const quarters = [
+      { label:'1분기\n1~3월', months:['01','02','03'], color:'#2d6a4f' },
+      { label:'2분기\n4~6월', months:['04','05','06'], color:'#1d6091' },
+      { label:'3분기\n7~9월', months:['07','08','09'], color:'#7c3aed' },
+      { label:'4분기\n10~12월', months:['10','11','12'], color:'#c45f3a' },
+    ];
+    const y = String(thisYear());
+    const thisMonth = todayStr().slice(5,7);
+
+    const data = quarters.map(q=>{
+      let usedDays=0, totalDays=0;
+      members.forEach(mb=>{
+        const tot = +(mb.settings.total||15);
+        q.months.forEach(mo=>{
+          const key = `${y}-${mo}`;
+          usedDays += (mb.leaves||[]).filter(l=>l.date&&l.date.startsWith(key)).reduce((a,l)=>a+(+l.deduct),0);
+        });
+        totalDays += tot;
+      });
+      const qTotal = totalDays / 4;
+      const pct = qTotal>0 ? Math.min(Math.round(usedDays/qTotal*100), 999) : 0;
+      const isCurrent = q.months.includes(thisMonth);
+      // 사원별 데이터
+      const memberData = members.map(mb=>{
+        const s = mb.settings||{};
+        const tot = +(s.total||15);
+        let used = 0;
+        q.months.forEach(mo=>{
+          const key = `${y}-${mo}`;
+          used += (mb.leaves||[]).filter(l=>l.date&&l.date.startsWith(key)).reduce((a,l)=>a+(+l.deduct),0);
+        });
+        // 해당 분기 사용일 / 총 연차 * 100
+        const mPct = tot>0 ? Math.min(Math.round(used/tot*100), 100) : 0;
+        return { name: s.name||'?', rank: s.rank||'', used, tot, pct: mPct };
+      }).sort((a,b)=>b.used-a.used || b.tot-a.tot);
+      return { ...q, usedDays, pct, isCurrent, memberData };
+    });
+
+    const quarterDetailHtml = (q) => {
+      if (!q.memberData.length) return '<div style="font-size:.75rem;color:var(--muted);padding:.5rem 0">데이터 없음</div>';
+      const maxPct = Math.max(...q.memberData.map(m=>m.pct), 1);
+      return q.memberData.map(m=>{
+        const barW = Math.max(Math.round(m.pct/maxPct*100), m.pct>0?4:0);
+        const barCol = m.pct>80?'#ef4444':m.pct>50?'#f59e0b':q.color;
+        return `<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid ${q.color}18">
+          <div style="font-size:.7rem;min-width:52px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m.rank?`<span style="font-size:.6rem;color:var(--muted)">${m.rank}</span> `:''} ${m.name}</div>
+          <div style="flex:1;background:#f0f0ed;border-radius:99px;height:8px;overflow:hidden">
+            <div style="height:100%;background:${barCol};border-radius:99px;width:${barW}%;transition:width .5s ease"></div>
+          </div>
+          <div style="font-size:.7rem;font-weight:700;color:${barCol};min-width:38px;text-align:right">${m.pct}%</div>
+          <div style="font-size:.65rem;color:var(--muted);min-width:32px;text-align:right">${m.used}일</div>
+        </div>`;
+      }).join('');
+    };
+
+    document.getElementById('company-chart-card').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:8px">
+        ${data.map((q,qi)=>{
+          const barCol = q.pct>80?'#ef4444':q.pct>50?'#f59e0b':q.color;
+          const borderStyle = q.isCurrent ? `border:2px solid ${q.color}` : 'border:1px solid var(--border)';
+          return `<div style="border-radius:12px;background:${q.isCurrent?q.color+'0d':'#fafaf8'};${borderStyle};overflow:hidden">
+            <div style="padding:.875rem;cursor:pointer;user-select:none" onclick="toggleQuarterDetail(${qi})">
+              <div style="font-size:.68rem;font-weight:700;color:${q.color};margin-bottom:4px;white-space:pre-line;line-height:1.4">${q.label}${q.isCurrent?' 📍':''}</div>
+              <div style="font-size:1.6rem;font-weight:700;color:${barCol};line-height:1">${q.pct}<span style="font-size:.8rem;font-weight:400;color:var(--muted)">%</span></div>
+              <div style="font-size:.62rem;color:var(--muted);margin-top:4px">사용 ${q.usedDays}일</div>
+              <div style="background:#eee;border-radius:99px;height:5px;margin-top:8px;overflow:hidden">
+                <div style="height:100%;background:${barCol};border-radius:99px;width:${Math.min(q.pct,100)}%;transition:width .5s ease"></div>
+              </div>
+              <div style="font-size:.62rem;color:${q.color};margin-top:6px;text-align:center">▾ 사원별 보기</div>
+            </div>
+            <div id="q-detail-${qi}" style="display:none;padding:0 .875rem .875rem">
+              <div style="font-size:.68rem;font-weight:700;color:${q.color};margin-bottom:6px;border-top:1px solid ${q.color}33;padding-top:.5rem">사원별 사용률</div>
+              ${quarterDetailHtml(q)}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:.72rem;color:var(--muted);text-align:right">전체 ${memberCount}명 · 분기별 사용률 = 해당 분기 사용일 / (총 연차 ÷ 4)</div>`;
+  }
+}
+
+// ── Quarter detail toggle ─────────────────────────────────
+window.toggleQuarterDetail = function(qi) {
+  const el = document.getElementById('q-detail-'+qi);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  // 다른 분기 닫기
+  [0,1,2,3].forEach(i=>{
+    const d = document.getElementById('q-detail-'+i);
+    if (d) d.style.display = 'none';
+  });
+  if (!isOpen) el.style.display = 'block';
+};
 
 // ── Member cards grouped by team ─────────────────────────
 function renderMemberCards() {
@@ -715,6 +906,29 @@ window.switchTab = function(t) {
   document.querySelectorAll('.tab').forEach((el,i)=>el.classList.toggle('active',ids[i]===t));
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.getElementById('page-'+t).classList.add('active');
+
+  // 탭 이동 시 비밀번호 잠금 초기화
+  if (t !== 'overview') {
+    memberUnlocked = false;
+    const lockWrap = document.getElementById('member-lock-wrap');
+    const sectionsWrap = document.getElementById('team-sections-wrap');
+    if (lockWrap) lockWrap.style.display = 'block';
+    if (sectionsWrap) sectionsWrap.style.display = 'none';
+    const pwInput = document.getElementById('member-pw-input');
+    if (pwInput) pwInput.value = '';
+  }
+  if (t !== 'team') {
+    unlockedTeams.clear();
+    const lockWrap = document.getElementById('team-lock-wrap');
+    const contentWrap = document.getElementById('team-content-wrap');
+    if (lockWrap) lockWrap.style.display = 'block';
+    if (contentWrap) contentWrap.style.display = 'none';
+    const pwInput = document.getElementById('team-pw-input');
+    if (pwInput) pwInput.value = '';
+    const lockTitle = document.getElementById('team-lock-title');
+    if (lockTitle) lockTitle.textContent = selectedTeam;
+  }
+
   renderAll();
 };
 
@@ -723,7 +937,25 @@ function renderAll() {
   renderCompanyChart();
   renderMemberCards();
   renderPersonal();
-  renderTeam();
+  // 팀 탭: 잠금 상태 동기화
+  const needsPw = TEAM_PASSWORDS.hasOwnProperty(selectedTeam);
+  const isUnlocked = !needsPw || unlockedTeams.has(selectedTeam) || adminMode;
+  const lockWrap    = document.getElementById('team-lock-wrap');
+  const contentWrap = document.getElementById('team-content-wrap');
+  if (lockWrap && contentWrap) {
+    if (isUnlocked) {
+      lockWrap.style.display    = 'none';
+      contentWrap.style.display = 'block';
+      renderTeam();
+    } else {
+      lockWrap.style.display    = 'block';
+      contentWrap.style.display = 'none';
+      const lockTitle = document.getElementById('team-lock-title');
+      if (lockTitle) lockTitle.textContent = selectedTeam;
+    }
+  } else {
+    renderTeam();
+  }
   renderSettings();
   // 관리자 배너 토글
   const banner = document.getElementById('admin-overview-banner');
@@ -812,6 +1044,60 @@ function renderPersonal() {
       </tr>`).join('')
     : `<tr><td colspan="5" class="empty">${selectedYear}년 워라밸 내역이 없습니다</td></tr>`;
 
+  // 장기근속 계산
+  const tenureInfo = getMyTenureInfo(selectedYear);
+  const tenureLeaves = myTenureLeaves.filter(t=>t.date&&t.date.startsWith(yStr));
+  const tenureUsed = tenureLeaves.reduce((a,t)=>a+(+t.deduct),0);
+  const tenureDays = tenureInfo.eligible ? tenureInfo.days : 0;
+  const tenureRem  = Math.max(0, tenureDays - tenureUsed);
+  const tenureUsedPct = tenureDays>0 ? Math.round(tenureUsed/tenureDays*100) : 0;
+  const tenureRemPct  = tenureDays>0 ? Math.round(tenureRem/tenureDays*100) : 0;
+
+  const tenureRows = tenureLeaves.length
+    ? tenureLeaves.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<tr>
+        <td style="white-space:nowrap">${fmtDateRange(t.date, t.dateEnd)}</td>
+        <td><span class="badge" style="background:#dbeafe;color:#1e3a5f">장기근속</span></td>
+        <td style="color:var(--muted)">${t.memo||'—'}</td>
+        <td style="font-weight:600">${t.deduct}일</td>
+        ${isCurrent?`<td><button class="btn btn-secondary btn-sm" onclick="openEditTenureModal('${t.id}')">수정</button></td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteTenure('${t.id}')">삭제</button></td>`:'<td colspan="2"></td>'}
+      </tr>`).join('')
+    : `<tr><td colspan="6" class="empty">${selectedYear}년 장기근속 휴가 내역이 없습니다</td></tr>`;
+
+  const addTenureBtn = (isCurrent && tenureInfo.eligible)
+    ? `<button class="btn btn-sm" style="background:#dbeafe;color:#1e40af;font-weight:600" onclick="openAddTenureModal()">+ 장기근속 추가</button>`
+    : '';
+
+  const tenureSection = tenureInfo.eligible ? `
+    <div class="section-title" style="justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:7px">
+        <span class="dot" style="background:#1d6091"></span>장기근속 특별휴가
+        <span style="font-size:.65rem;background:#dbeafe;color:#1e40af;padding:1px 7px;border-radius:99px;font-weight:600">${selectedYear}년 대상</span>
+      </div>
+      ${addTenureBtn}
+    </div>
+    <div class="tenure-banner">🏆 ${selectedYear}년 장기근속 특별휴가 10일이 부여되었습니다. 본인 연차 5일 추가 사용 시 최대 15일 사용 가능합니다.</div>
+    <div class="grid2" style="margin-bottom:1rem">
+      <div class="card" style="border-top:3px solid #1d6091">
+        <div class="card-title">잔여 장기근속</div>
+        <div class="card-val" style="color:#1d6091">${tenureRem}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">일</span></div>
+        <div class="card-sub">총 ${tenureDays}일 중 ${tenureRemPct}% 남음</div>
+        <div class="bar-wrap"><div class="bar" style="background:#1d6091;width:${tenureRemPct}%"></div></div>
+      </div>
+      <div class="card" style="border-top:3px solid #60a5fa">
+        <div class="card-title">사용한 장기근속</div>
+        <div class="card-val" style="color:#60a5fa">${tenureUsed}<span style="font-size:.9rem;font-weight:400;color:var(--muted)">일</span></div>
+        <div class="card-sub">사용률 ${tenureUsedPct}%</div>
+        <div class="bar-wrap"><div class="bar" style="background:#60a5fa;width:${tenureUsedPct}%"></div></div>
+      </div>
+    </div>
+    <div class="card card-flush" style="margin-bottom:1.5rem">
+      <table>
+        <thead><tr><th>날짜</th><th>종류</th><th>메모</th><th>차감</th><th colspan="2"></th></tr></thead>
+        <tbody>${tenureRows}</tbody>
+      </table>
+    </div>` : '';
+
   document.getElementById('personal-year-content').innerHTML = `
     ${readonlyBanner}
 
@@ -865,21 +1151,65 @@ function renderPersonal() {
         <thead><tr><th>날짜</th><th>사용시간</th><th>메모</th><th colspan="2"></th></tr></thead>
         <tbody>${wlbRows}</tbody>
       </table>
-    </div>`;
+    </div>
+
+    ${tenureSection}`;
 }
 
 // ── Team tab (with filter buttons) ───────────────────────
 let selectedTeam = '1팀';
+const TEAM_PASSWORDS = { '1팀': '0000', '2팀': '1111' };
+let unlockedTeams = new Set(); // 잠금 해제된 팀 목록
 
 window.filterTeam = function(team) {
   selectedTeam = team;
   document.querySelectorAll('.team-filter-btn').forEach(btn => {
     btn.classList.toggle('active', btn.id === 'btn-'+team);
   });
-  renderTeam();
+
+  // 경영팀은 비밀번호 없음, 나머지는 잠금 체크
+  const needsPw = TEAM_PASSWORDS.hasOwnProperty(team);
+  const isUnlocked = !needsPw || unlockedTeams.has(team);
+
+  const lockWrap    = document.getElementById('team-lock-wrap');
+  const contentWrap = document.getElementById('team-content-wrap');
+  const lockTitle   = document.getElementById('team-lock-title');
+  const pwInput     = document.getElementById('team-pw-input');
+
+  if (isUnlocked) {
+    lockWrap.style.display    = 'none';
+    contentWrap.style.display = 'block';
+    renderTeam();
+  } else {
+    lockWrap.style.display    = 'block';
+    contentWrap.style.display = 'none';
+    if (lockTitle) lockTitle.textContent = team;
+    if (pwInput) pwInput.value = '';
+    document.getElementById('team-pw-err').textContent = '';
+  }
+};
+
+window.checkTeamPw = function() {
+  const val = document.getElementById('team-pw-input').value;
+  const correct = TEAM_PASSWORDS[selectedTeam];
+  if (val === correct || adminMode) {
+    unlockedTeams.add(selectedTeam);
+    document.getElementById('team-lock-wrap').style.display    = 'none';
+    document.getElementById('team-content-wrap').style.display = 'block';
+    renderTeam();
+  } else {
+    document.getElementById('team-pw-err').textContent = '비밀번호가 틀렸습니다.';
+    document.getElementById('team-pw-input').value = '';
+    setTimeout(()=>{ document.getElementById('team-pw-err').textContent=''; }, 2000);
+  }
 };
 
 function renderTeam() {
+  // 잠금 상태면 렌더링 스킵
+  const needsPw = TEAM_PASSWORDS.hasOwnProperty(selectedTeam);
+  const isUnlocked = !needsPw || unlockedTeams.has(selectedTeam) || adminMode;
+  if (!isUnlocked) return;
+
   const list = document.getElementById('team-list');
   const entries = Object.entries(allMembers);
 
@@ -1148,13 +1478,90 @@ window.deleteLeave = async function(id) {
   } catch(e) { toast('삭제 실패: '+e.message); }
 };
 
+// ── 장기근속 CRUD ────────────────────────────────────────
+function tenureModalHtml(title, btnLabel, btnFn, d={}) {
+  const initDays = d.deduct || 5;
+  return `
+    <div class="modal-title" style="color:#1d6091">${title}</div>
+    <div class="form-grid2">
+      <div class="form-group"><label>시작일</label><input type="date" id="tn-date" value="${d.date||todayStr()}"></div>
+      <div class="form-group"><label>종료일 <span style="font-size:.7rem;color:var(--muted)">(생략 시 당일)</span></label><input type="date" id="tn-date-end" value="${d.dateEnd||''}"></div>
+    </div>
+    <div class="form-group"><label>차감 일수</label>
+      <div style="display:flex;gap:8px">
+        ${[5,10].map(n=>`<button type="button" onclick="selectTenureDays(${n})" id="tn-d-${n}"
+          style="flex:1;padding:9px 0;border-radius:8px;border:1.5px solid ${initDays===n?'#1d6091':'var(--border)'};
+          background:${initDays===n?'#dbeafe':'var(--card)'};color:${initDays===n?'#1d6091':'var(--muted)'};
+          font-size:.88rem;font-weight:600;cursor:pointer;font-family:var(--font)">${n}일</button>`).join('')}
+        <input type="hidden" id="tn-deduct" value="${initDays}">
+      </div>
+      <div style="font-size:.7rem;color:var(--muted);margin-top:5px">* 10일을 2회로 나눠 사용 가능 (5일+5일)</div>
+    </div>
+    <div class="form-group"><label>메모</label><input id="tn-memo" placeholder="선택 입력" value="${d.memo||''}"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" style="background:#1d6091" onclick="${btnFn}">${btnLabel}</button>
+    </div>`;
+}
+window.selectTenureDays = function(n) {
+  document.getElementById('tn-deduct').value = n;
+  [5,10].forEach(d=>{
+    const btn = document.getElementById('tn-d-'+d);
+    if (!btn) return;
+    btn.style.border = d===n ? '1.5px solid #1d6091' : '1.5px solid var(--border)';
+    btn.style.background = d===n ? '#dbeafe' : 'var(--card)';
+    btn.style.color = d===n ? '#1d6091' : 'var(--muted)';
+  });
+};
+window.openAddTenureModal = function() { openModal(tenureModalHtml('장기근속 휴가 추가','추가하기','addTenure()')); };
+window.openEditTenureModal = function(id) {
+  const t = myTenureLeaves.find(t=>t.id===id); if(!t) return;
+  openModal(tenureModalHtml('장기근속 휴가 수정','저장하기',`updateTenure('${id}')`,t));
+};
+window.addTenure = async function() {
+  const date    = document.getElementById('tn-date').value;
+  const dateEnd = document.getElementById('tn-date-end').value||'';
+  const deduct  = +document.getElementById('tn-deduct').value;
+  const memo    = document.getElementById('tn-memo').value.trim();
+  if (!date) { toast('날짜를 선택해주세요.'); return; }
+  if (dateEnd && dateEnd < date) { toast('종료일이 시작일보다 빠릅니다.'); return; }
+  try {
+    await addDoc(collection(db,'members',MY_ID,'tenure'), {date,dateEnd,deduct,memo});
+    closeModal(); toast('장기근속 휴가가 추가되었습니다.');
+  } catch(e) { toast('추가 실패: '+e.message); }
+};
+window.updateTenure = async function(id) {
+  const date    = document.getElementById('tn-date').value;
+  const dateEnd = document.getElementById('tn-date-end').value||'';
+  const deduct  = +document.getElementById('tn-deduct').value;
+  const memo    = document.getElementById('tn-memo').value.trim();
+  if (!date) { toast('날짜를 선택해주세요.'); return; }
+  try {
+    await updateDoc(doc(db,'members',MY_ID,'tenure',id), {date,dateEnd,deduct,memo});
+    closeModal(); toast('수정되었습니다.');
+  } catch(e) { toast('수정 실패: '+e.message); }
+};
+window.deleteTenure = async function(id) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  try {
+    await deleteDoc(doc(db,'members',MY_ID,'tenure',id));
+    toast('삭제되었습니다.');
+  } catch(e) { toast('삭제 실패: '+e.message); }
+};
+
 // ── WLB CRUD ──────────────────────────────────────────────
 function wlbModalHtml(title, btnLabel, btnFn, w={}) {
   return `
     <div class="modal-title" style="color:#d97706">${title}</div>
-    <div class="form-grid2">
-      <div class="form-group"><label>날짜</label><input type="date" id="w-date" value="${w.date||todayStr()}"></div>
-      <div class="form-group"><label>사용 시간</label><input type="number" id="w-hours" value="${w.hours||1}" min="0.5" max="200" step="0.5"></div>
+    <div class="form-group"><label>날짜</label><input type="date" id="w-date" value="${w.date||todayStr()}"></div>
+    <div class="form-group"><label>사용 시간</label>
+      <div style="display:flex;gap:8px">
+        ${[1,2,3].map(h=>`<button type="button" onclick="selectWlbHours(${h})" id="wlb-h-${h}"
+          style="flex:1;padding:9px 0;border-radius:8px;border:1.5px solid ${(w.hours||1)===h?'#d97706':'var(--border)'};
+          background:${(w.hours||1)===h?'#fef3c7':'var(--card)'};color:${(w.hours||1)===h?'#d97706':'var(--muted)'};
+          font-size:.88rem;font-weight:600;cursor:pointer;font-family:var(--font)">${h}시간</button>`).join('')}
+        <input type="hidden" id="w-hours" value="${w.hours||1}">
+      </div>
     </div>
     <div class="form-group"><label>메모</label><input id="w-memo" placeholder="선택 입력" value="${w.memo||''}"></div>
     <div class="modal-footer">
@@ -1162,6 +1569,16 @@ function wlbModalHtml(title, btnLabel, btnFn, w={}) {
       <button class="btn btn-primary" style="background:#d97706" onclick="${btnFn}">${btnLabel}</button>
     </div>`;
 }
+window.selectWlbHours = function(h) {
+  document.getElementById('w-hours').value = h;
+  [1,2,3].forEach(n=>{
+    const btn = document.getElementById('wlb-h-'+n);
+    if (!btn) return;
+    btn.style.border = n===h ? '1.5px solid #d97706' : '1.5px solid var(--border)';
+    btn.style.background = n===h ? '#fef3c7' : 'var(--card)';
+    btn.style.color = n===h ? '#d97706' : 'var(--muted)';
+  });
+};
 window.openAddWlbModal = function() {
   openModal(wlbModalHtml('워라밸 사용 추가', '추가하기', 'addWlb()'));
 };
@@ -1272,12 +1689,20 @@ function listenMember(uid) {
     if (uid===MY_ID) myLeaves = [...leaves];
     renderAll();
   });
-  // WLB - 전체 멤버 리스너 (팀원 현황 워라밸 표시용)
+  // WLB
   onSnapshot(collection(db,'members',uid,'wlb'), snap=>{
-    if (!allMembers[uid]) allMembers[uid]={settings:{},leaves:[],wlb:[]};
+    if (!allMembers[uid]) allMembers[uid]={settings:{},leaves:[],wlb:[],tenure:[]};
     const wlbData = snap.docs.map(d=>({id:d.id,...d.data()}));
     allMembers[uid].wlb = wlbData;
     if (uid===MY_ID) myWlb = [...wlbData];
+    renderAll();
+  });
+  // Tenure (장기근속)
+  onSnapshot(collection(db,'members',uid,'tenure'), snap=>{
+    if (!allMembers[uid]) allMembers[uid]={settings:{},leaves:[],wlb:[],tenure:[]};
+    const tenureData = snap.docs.map(d=>({id:d.id,...d.data()}));
+    allMembers[uid].tenure = tenureData;
+    if (uid===MY_ID) myTenureLeaves = [...tenureData];
     renderAll();
   });
 }
@@ -1321,16 +1746,21 @@ document.getElementById('today-str').textContent =
         getDoc(doc(db,'members',uid,'meta','settings')),
         getDocs(collection(db,'members',uid,'leaves'))
       ]);
-      const wlbSnap = await getDocs(collection(db,'members',uid,'wlb'));
+      const [wlbSnap, tenureSnap] = await Promise.all([
+        getDocs(collection(db,'members',uid,'wlb')),
+        getDocs(collection(db,'members',uid,'tenure'))
+      ]);
       allMembers[uid] = {
         settings: setSnap.exists() ? setSnap.data() : {},
         leaves:   leavesSnap.docs.map(d=>({id:d.id,...d.data()})),
-        wlb:      wlbSnap.docs.map(d=>({id:d.id,...d.data()}))
+        wlb:      wlbSnap.docs.map(d=>({id:d.id,...d.data()})),
+        tenure:   tenureSnap.docs.map(d=>({id:d.id,...d.data()}))
       };
       if (uid===MY_ID) {
-        mySettings = {...allMembers[uid].settings};
-        myLeaves   = [...allMembers[uid].leaves];
-        myWlb      = [...allMembers[uid].wlb];
+        mySettings      = {...allMembers[uid].settings};
+        myLeaves        = [...allMembers[uid].leaves];
+        myWlb           = [...allMembers[uid].wlb];
+        myTenureLeaves  = [...allMembers[uid].tenure];
       }
     }));
 
