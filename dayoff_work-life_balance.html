@@ -1728,18 +1728,20 @@ document.getElementById('today-str').textContent =
 
 (async()=>{
   try {
-    // 내 설정이 Firebase에 있는지 먼저 확인 (있으면 기존 사용자, 없으면 신규)
+    // 내 설정이 Firebase에 있는지 먼저 확인
     const mySetSnap = await getDoc(doc(db,'members',MY_ID,'meta','settings'));
     if (mySetSnap.exists()) {
       // 기존 사용자: memberIndex 갱신
       await setDoc(doc(db,'memberIndex',MY_ID),{lastSeen:new Date().toISOString()},{merge:true});
       mySettings = {...mySetSnap.data()};
     }
-    // 신규 사용자는 설정 저장 시에만 memberIndex 등록 (이름없음 방지)
 
     // Load initial data for all members
     const idxSnap = await getDocs(collection(db,'memberIndex'));
     const uids = idxSnap.docs.map(d=>d.id);
+
+    // MY_ID가 memberIndex에 없어도 반드시 포함
+    if (!uids.includes(MY_ID)) uids.push(MY_ID);
 
     await Promise.all(uids.map(async uid=>{
       const [setSnap, leavesSnap] = await Promise.all([
@@ -1757,7 +1759,7 @@ document.getElementById('today-str').textContent =
         tenure:   tenureSnap.docs.map(d=>({id:d.id,...d.data()}))
       };
       if (uid===MY_ID) {
-        mySettings      = {...allMembers[uid].settings};
+        mySettings      = setSnap.exists() ? {...setSnap.data()} : mySettings;
         myLeaves        = [...allMembers[uid].leaves];
         myWlb           = [...allMembers[uid].wlb];
         myTenureLeaves  = [...allMembers[uid].tenure];
@@ -1772,7 +1774,7 @@ document.getElementById('today-str').textContent =
     document.getElementById('main-app').style.display='block';
     renderAll();
 
-    // Start real-time listeners (본인은 memberIndex에 있을 때만)
+    // 실시간 리스너 - MY_ID는 항상 포함
     uids.forEach(uid=>listenMember(uid));
     listenMemberIndex();
     listenTeam();
