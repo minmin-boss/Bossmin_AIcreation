@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>세무비서 — 세린이 공유 노트</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Nanum+Gothic:wght@400;700;800&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #fffdf0;
+  --surface: #ffffff;
+  --surface2: #fef9d0;
+  --border: #e8d84a;
+  --border2: #d4c020;
+  --accent: #3a6ef5;
+  --accent-light: #eef2ff;
+  --accent2: #6c47e8;
+  --green: #12a67a;
+  --green-light: #e8faf4;
+  --orange: #e8860a;
+  --orange-light: #fff7ec;
+  --red: #e03c3c;
+  --red-light: #fff0f0;
+  --purple: #7c3aed;
+  --purple-light: #f3f0ff;
+  --text: #1a1f36;
+  --text2: #5a6282;
+  --text3: #9aa0be;
+  --sidebar-w: 230px;
+  --header-h: 60px;
+  --sans: 'Nanum Gothic', sans-serif;
+  --serif: 'Jua', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--text); font-family: 'Nanum Gothic', sans-serif; font-size: 14px; line-height: 1.8; min-height: 100vh; }
+
+/* ── 헤더 ── */
+header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: var(--header-h);
+  background: linear-gradient(135deg, #fffbe0 0%, #fff8c0 100%);
+  border-bottom: 2px solid #ddc800;
+  display: flex; align-items: center; padding: 0 20px;
+  box-shadow: 0 1px 8px rgba(200,180,0,.12);
+}
+.header-logo { display: flex; align-items: center; gap: 10px; }
+.header-logo .icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: linear-gradient(135deg, #f5c400, #e8a000);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; color: #fff; flex-shrink: 0;
+}
+.header-logo h1 { font-family: 'Jua', sans-serif; font-size: 19px; font-weight: 400; color: #5c3d00; letter-spacing: 0.5px; }
+.header-logo p { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.header-search {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 12px; font-size: 13px; color: var(--text2);
+  cursor: pointer; transition: border .15s;
+}
+.header-search:focus-within { border-color: var(--accent); }
+.header-search input { border: none; background: none; outline: none; color: var(--text); font-family: var(--sans); font-size: 13px; width: 180px; }
+.header-search input::placeholder { color: var(--text3); }
+
+/* ── 사이드바 ── */
+nav {
+  position: fixed; top: var(--header-h); left: 0; bottom: 0;
+  width: var(--sidebar-w); background: #fffcde;
+  border-right: 2px solid #ddc800;
+  overflow-y: auto; padding: 14px 0 20px;
+  z-index: 100;
+}
+.nav-label {
+  font-size: 11px; font-weight: 400; font-family: 'Jua', sans-serif; letter-spacing: 0.5px;
+  color: #a07030; text-transform: none;
+  padding: 14px 16px 4px;
+}
+.nav-label:first-child { padding-top: 4px; }
+nav a {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 16px; color: #6b4c00; text-decoration: none;
+  font-size: 13px; font-weight: 400; font-family: 'Nanum Gothic', sans-serif;
+  border-left: 3px solid transparent;
+  transition: all .13s; cursor: pointer;
+}
+nav a:hover { background: #fef08a; color: #713f00; border-left-color: #ca8a04; }
+nav a.active { background: #fde047; color: #713f00; border-left-color: #ca8a04; font-weight: 600; }
+nav a .ni { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+/* ── 메인 ── */
+main {
+  margin-left: var(--sidebar-w);
+  padding-top: var(--header-h);
+  min-height: 100vh;
+}
+.section { display: none; padding: 28px 36px 48px; max-width: 980px; animation: fadeUp .25s ease; }
+.section.active { display: block; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+
+/* ── 섹션 헤더 ── */
+.sec-head { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 2px solid var(--border); }
+.sec-head h2 { font-family: 'Jua', sans-serif; font-size: 24px; font-weight: 400; letter-spacing: 0.5px; color: #5c3d00; }
+.sec-head p { color: var(--text2); font-size: 13px; margin-top: 5px; }
+
+/* ── 카드 ── */
+.card {
+  background: #ffffff; border: 1px solid #e8d84a;
+  border-radius: 12px; padding: 20px 22px; margin-bottom: 14px;
+  box-shadow: 0 2px 8px rgba(200,180,0,.08);
+}
+.card-title {
+  font-size: 14px; font-weight: 400; font-family: 'Jua', sans-serif; color: #5c3d00;
+  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  letter-spacing: 0.3px;
+}
+.card-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+/* ── 알림 박스 ── */
+.alert {
+  border-radius: 8px; padding: 11px 14px; font-size: 12.5px;
+  margin-bottom: 10px; display: flex; gap: 9px; align-items: flex-start;
+  line-height: 1.6;
+}
+.alert-icon { font-size: 14px; flex-shrink: 0; margin-top: 2px; }
+.alert.info { background: #fefce8; border: 1px solid #fde047; color: #713f00; }
+.alert.warn { background: var(--orange-light); border: 1px solid #fcd9a0; color: #995500; }
+.alert.success { background: var(--green-light); border: 1px solid #9de8cf; color: #0a6b4e; }
+.alert.danger { background: var(--red-light); border: 1px solid #f8b4b4; color: #c02020; }
+.alert.purple { background: var(--purple-light); border: 1px solid #c9b8f5; color: #5b21b6; }
+
+/* ── 스텝 리스트 ── */
+.steps { list-style: none; }
+.step-item { display: flex; gap: 13px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.step-item:last-child { border-bottom: none; }
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #fef9c3; border: 1.5px solid #fde047;
+  color: #854d0e; font-size: 11px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+}
+.step-content strong { color: #5c3d00; font-weight: 800; font-size: 13px; }
+.step-content p { color: var(--text2); font-size: 12.5px; margin-top: 3px; }
+
+/* ── 테이블 ── */
+.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+.tbl th {
+  background: #fef9c3; color: #713f00;
+  font-weight: 400; font-family: 'Jua', sans-serif; text-align: left; padding: 9px 13px;
+  border-bottom: 2px solid #fde047;
+  font-size: 12px; letter-spacing: 0.3px; text-transform: none;
+}
+.tbl td { padding: 9px 13px; border-bottom: 1px solid var(--border); color: var(--text2); vertical-align: top; }
+.tbl tr:last-child td { border-bottom: none; }
+.tbl td:first-child { color: var(--text); font-weight: 500; white-space: nowrap; }
+.tbl tr:hover td { background: #fefce8; }
+
+/* ── 배지 ── */
+.badge { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; letter-spacing: .2px; }
+.badge-blue { background: var(--accent-light); color: var(--accent); }
+.badge-green { background: var(--green-light); color: var(--green); }
+.badge-orange { background: var(--orange-light); color: var(--orange); }
+.badge-red { background: var(--red-light); color: var(--red); }
+.badge-purple { background: var(--purple-light); color: var(--purple); }
+
+/* ── 메시지 박스 ── */
+.msgbox {
+  background: #fffdf0; border: 1px solid #fde047;
+  border-radius: 8px; padding: 14px 15px; font-size: 13px;
+  line-height: 1.8; white-space: pre-wrap; position: relative; margin-top: 8px;
+  color: var(--text);
+}
+.copy-btn {
+  position: absolute; top: 9px; right: 9px;
+  background: #fff; border: 1px solid var(--border2);
+  color: var(--accent); font-size: 11px; padding: 3px 10px;
+  border-radius: 6px; cursor: pointer; transition: all .13s;
+  font-family: var(--sans);
+}
+.copy-btn:hover { background: var(--accent-light); border-color: var(--accent); }
+
+/* ── 공식 박스 ── */
+.formula {
+  background: #fefce8; border: 1px solid #fde047; border-radius: 8px;
+  padding: 13px 15px; font-size: 13px; color: #713f00;
+  margin: 10px 0; line-height: 1.9;
+}
+.formula strong { color: #92400e; }
+
+/* ── 계산기 ── */
+.calc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.calc-field label { display: block; font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 5px; }
+.calc-field input {
+  width: 100%; background: var(--surface2); border: 1.5px solid var(--border);
+  border-radius: 7px; padding: 9px 12px; color: var(--text); font-size: 13px;
+  font-family: var(--sans); outline: none; transition: border .13s;
+}
+.calc-field input:focus { border-color: var(--accent); background: #fff; }
+.calc-field input::placeholder { color: var(--text3); }
+.calc-btn {
+  width: 100%; background: linear-gradient(135deg, #f5c400, #e8a000);
+  color: #2a1a00; border: none; border-radius: 8px; padding: 11px;
+  font-size: 14px; font-weight: 400; font-family: 'Jua', sans-serif;
+  cursor: pointer; transition: opacity .13s;
+}
+.calc-btn:hover { opacity: .88; }
+.calc-result { background: var(--surface2); border: 1px solid var(--border2); border-radius: 8px; padding: 14px; margin-top: 12px; display: none; }
+.calc-result.show { display: block; }
+.res-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.res-row:last-child { border-bottom: none; }
+.res-label { color: var(--text2); }
+.res-val { color: var(--text); font-weight: 700; }
+.res-val.big { color: var(--accent); font-size: 16px; }
+
+/* ── 홈 그리드 ── */
+.home-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; margin-top: 6px; }
+.home-card {
+  background: #fffdf5; border: 1.5px solid #e8d84a; border-radius: 12px;
+  padding: 20px 18px; cursor: pointer; transition: all .18s;
+  text-decoration: none; color: inherit; display: block;
+}
+.home-card:hover { border-color: #ca8a04; box-shadow: 0 4px 16px rgba(202,138,4,.2); transform: translateY(-2px); }
+.home-card .hci { font-size: 26px; margin-bottom: 10px; }
+.home-card h3 { font-size: 15px; font-weight: 400; font-family: 'Jua', sans-serif; color: #5c3d00; margin-bottom: 5px; }
+.home-card p { font-size: 12px; color: var(--text2); line-height: 1.5; }
+.home-card .hc-badge { margin-top: 10px; }
+
+/* ── 2단 ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+/* ── 분리선 ── */
+hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+/* ── 검색 하이라이트 ── */
+.hl { background: #fff176; border-radius: 2px; }
+
+/* ── 스크롤바 ── */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #fef9c3; }
+::-webkit-scrollbar-thumb { background: #fde047; border-radius: 3px; }
+
+@media (max-width: 800px) {
+  nav { display: none; }
+  main { margin-left: 0; }
+  .home-grid, .two-col, .three-col { grid-template-columns: 1fr; }
+  .calc-grid { grid-template-columns: 1fr; }
+  .section { padding: 20px; }
+}
+
+/* ── 편집 모드 ── */
+.edit-bar {
+  position: fixed; bottom: 24px; right: 24px; z-index: 300;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+}
+.edit-toggle-btn {
+  background: linear-gradient(135deg, #f5c400, #e8a000);
+  color: #2a1a00; border: none; border-radius: 50px;
+  padding: 12px 22px; font-size: 13px; font-weight: 700;
+  font-family: 'Jua', sans-serif; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(200,150,0,.35);
+  display: flex; align-items: center; gap: 8px;
+  transition: all .18s;
+}
+.edit-toggle-btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(200,150,0,.45); }
+.edit-toggle-btn.active { background: linear-gradient(135deg, #22c55e, #16a34a); color: #fff; }
+.edit-hint {
+  background: rgba(245,196,0,.95); color: #2a1a00;
+  font-size: 12px; font-weight: 600; border-radius: 8px;
+  padding: 8px 14px; box-shadow: 0 2px 10px rgba(0,0,0,.15);
+  display: none;
+}
+.edit-hint.show { display: block; }
+
+/* 편집 모드일 때 편집 가능 요소 스타일 */
+body.edit-mode [data-edit] {
+  outline: 2px dashed #f5c400 !important;
+  border-radius: 4px !important;
+  cursor: text !important;
+  position: relative;
+  min-height: 1.4em;
+}
+body.edit-mode [data-edit]:hover {
+  outline-color: #e8a000 !important;
+  background: rgba(245,196,0,.06) !important;
+}
+body.edit-mode [data-edit]:focus {
+  outline: 2.5px solid #e8a000 !important;
+  background: rgba(245,196,0,.1) !important;
+  box-shadow: 0 0 0 4px rgba(245,196,0,.15) !important;
+}
+body.edit-mode .card-title .dot { pointer-events: none; }
+
+/* 저장 표시 */
+.save-toast {
+  position: fixed; top: 80px; right: 20px; z-index: 400;
+  background: #22c55e; color: #fff; font-size: 13px; font-weight: 600;
+  padding: 10px 18px; border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  transform: translateY(-10px); opacity: 0;
+  transition: all .25s; pointer-events: none;
+}
+.save-toast.show { transform: none; opacity: 1; }
+
+/* 편집모드 상단 배너 */
+.edit-banner {
+  display: none; position: fixed; top: 60px; left: var(--sidebar-w);
+  right: 0; z-index: 150; background: linear-gradient(135deg, #f5c400, #e8a000);
+  color: #2a1a00; font-size: 13px; font-weight: 400; font-family: 'Jua', sans-serif;
+  padding: 7px 20px; letter-spacing: .3px;
+  box-shadow: 0 2px 8px rgba(200,150,0,.2);
+}
+.edit-banner.show { display: block; }
+body.edit-mode main { padding-top: calc(var(--header-h) + 34px); }
+
+</style>
+</head>
+<body>
+
+<!-- ▒▒ 헤더 ▒▒ -->
+<header>
+  <div class="header-logo">
+    <div class="icon">🐥</div>
+    <div>
+      <h1>세무비서 AI</h1>
+      <p data-edit="sp_1">세린이 공유 노트</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-search">
+      <span>🔍</span>
+      <input type="text" id="searchInput" placeholder="내용 검색..." oninput="searchContent(this.value)">
+    </div>
+  </div>
+</header>
+
+<!-- ▒▒ 사이드바 ▒▒ -->
+<nav id="sidebar">
+  <div class="nav-label">홈</div>
+  <a onclick="show('home',this)" class="active"><span class="ni">🏠</span>전체 메뉴</a>
+
+  <div class="nav-label">사무 & 기초</div>
+  <a onclick="show('company',this)"><span class="ni">🏢</span>회사 운영</a>
+  <a onclick="show('docs',this)"><span class="ni">📄</span>서류발급 및 조회</a>
+  <a onclick="show('new_client',this)"><span class="ni">🤝</span>신규 및 이관</a>
+
+  <div class="nav-label">원천세 & 연말정산</div>
+  <a onclick="show('withhold',this)"><span class="ni">💳</span>원천세</a>
+  <a onclick="show('yearend',this)"><span class="ni">📋</span>연말정산</a>
+
+  <div class="nav-label">4대보험 & 노무</div>
+  <a onclick="show('entry',this)"><span class="ni">👤</span>입사 처리</a>
+  <a onclick="show('exit',this)"><span class="ni">🚪</span>퇴사 처리</a>
+  <a onclick="show('bonus_tax',this)"><span class="ni">💰</span>상여금 소득세</a>
+  <a onclick="show('midleave',this)"><span class="ni">📊</span>중도퇴사 4대보험</a>
+  <a onclick="show('severance',this)"><span class="ni">🧮</span>퇴직금 계산</a>
+  <a onclick="show('region_ins',this)"><span class="ni">🏥</span>지역가입자 건강보험</a>
+
+  <div class="nav-label">부가세</div>
+  <a onclick="show('vat',this)"><span class="ni">🧾</span>부가세 정기신고</a>
+  <a onclick="show('vat_detail',this)"><span class="ni">📑</span>신고서별 안내</a>
+  <a onclick="show('vat_pc',this)"><span class="ni">🎮</span>PC방 부가세</a>
+
+  <div class="nav-label">법인세 & 소득세</div>
+  <a onclick="show('corporate',this)"><span class="ni">🏦</span>법인세</a>
+  <a onclick="show('corp_interim',this)"><span class="ni">⏳</span>법인세 중간예납</a>
+  <a onclick="show('income',this)"><span class="ni">📈</span>종합소득세</a>
+
+  <div class="nav-label">기타</div>
+  <a onclick="show('exempt',this)"><span class="ni">🎓</span>면세사업장 현황신고</a>
+  <a onclick="show('vehicle',this)"><span class="ni">🚗</span>비영업용 차량</a>
+  <a onclick="show('stock',this)"><span class="ni">📉</span>주식 양도양수</a>
+</nav>
+
+<!-- ▒▒ 메인 ▒▒ -->
+<main>
+
+<!-- ===== 홈 ===== -->
+<div id="home" class="section active">
+  <div class="sec-head">
+    <h2>세무비서 AI 👋</h2>
+    <p data-edit="sp_2">세린이 공유 노트 — 전체 15개 탭을 세목별로 정리했습니다.</p>
+  </div>
+  <div class="home-grid">
+    <a class="home-card" href="javascript:void(0)" onclick="show('company',getSideLink('company')); return false;">
+      <div class="hci">🏢</div><h3>회사 운영</h3>
+      <p data-edit="sp_3">공인인증서, 기장료 문의, 현금영수증 발행, 월간 세금박사 등</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('docs',getSideLink('docs')); return false;">
+      <div class="hci">📄</div><h3>서류발급 및 조회</h3>
+      <p data-edit="sp_4">재무제표, 소득금액증명원, 납세증명서, 메타게이트 전송 등</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('withhold',getSideLink('withhold')); return false;">
+      <div class="hci">💳</div><h3>원천세</h3>
+      <p data-edit="sp_5">급여대장, 신고서 작성, 두루누리, 가산세 계산, 환급 처리</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('yearend',getSideLink('yearend')); return false;">
+      <div class="hci">📋</div><h3>연말정산</h3>
+      <p data-edit="sp_6">근로소득·종교인소득 연말정산, 간소화 업로드, 지급명세서 제출</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('entry',getSideLink('entry')); return false;">
+      <div class="hci">👤</div><h3>입사 처리</h3>
+      <p data-edit="sp_7">취득신고, 필요자료 요청 템플릿, 건강보험 추가정산 안내</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('exit',getSideLink('exit')); return false;">
+      <div class="hci">🚪</div><h3>퇴사 처리</h3>
+      <p data-edit="sp_8">퇴사 7단계 절차, 실업급여 확인, 원천징수영수증 전달</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('severance',getSideLink('severance')); return false;">
+      <div class="hci">🧮</div><h3>퇴직금 계산기</h3>
+      <p data-edit="sp_9">평균임금 기반 자동계산, 임원 퇴직금 주의사항</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('vat',getSideLink('vat')); return false;">
+      <div class="hci">🧾</div><h3>부가세</h3>
+      <p data-edit="sp_10">정기신고 절차, 간주임대료, 조기환급, 기한후 신고</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('corporate',getSideLink('corporate')); return false;">
+      <div class="hci">🏦</div><h3>법인세</h3>
+      <p data-edit="sp_11">결산, 세무조정, 비영리법인, 업무용승용차 비용명세서</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('income',getSideLink('income')); return false;">
+      <div class="hci">📈</div><h3>종합소득세</h3>
+      <p data-edit="sp_12">신고유형, 간편장부·복식부기·추계, 소득공제 신고서</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('stock',getSideLink('stock')); return false;">
+      <div class="hci">📉</div><h3>주식 양도양수</h3>
+      <p data-edit="sp_13">증권거래세, 양도소득세 신고, 대주주·소액주주 판단</p>
+    </a>
+    <a class="home-card" href="javascript:void(0)" onclick="show('new_client',getSideLink('new_client')); return false;">
+      <div class="hci">🤝</div><h3>신규 및 이관</h3>
+      <p data-edit="sp_14">수임등록, 자료요청 템플릿, 모두싸인, 전산자료 백업</p>
+    </a>
+  </div>
+</div>
+
+<!-- ===== 회사 운영 ===== -->
+<div id="company" class="section">
+  <div class="sec-head"><h2 data-edit="sh_1">🏢 회사 운영</h2><p data-edit="sp_15">대한세무법인 사무 관련 공통 업무 안내</p></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span><span data-edit="ctt_1">공인인증서 위치</span></div>
+      <div class="alert info"><span class="alert-icon">💾</span><div data-edit="al_1">내 PC → 로컬디스크 C → 사용자 → User → AppData → LocalLow → NPKI → yessign → USER</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_2">공기청정기 청소</span></div>
+      <p style="font-size:13px;color:var(--text2)" data-edit="sp_16">필터 교체: 2년에 1회 / 청소: 6개월마다</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_3">대형폐기물 처리</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_1">성남시 대형폐기물 검색 후 신청</strong><p data-edit="sp_17">신청자: 대한세무법인 / 비밀번호: 3377 / 배출장소: 1층 주차장</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_2">결제</strong><p data-edit="sp_18">소리 팀장님께 말씀드린 후 진행</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_3">접수 후 번호+배출예정일 프린트 → 폐기물에 부착</strong></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_4">기장료 문의 대응</span></div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:10px" data-edit="sp_19">문의 시 확인할 사항 3가지 먼저 여쭤보기</p>
+    <table class="tbl"><tr><th>확인항목</th><th>내용</th></tr>
+    <tr><td data-edit="td_1">① 업종</td><td data-edit="td_2">어떤 업종인지</td></tr>
+    <tr><td data-edit="td_3">② 직원 수</td><td data-edit="td_4">직원이 어느정도 있는지</td></tr>
+    <tr><td data-edit="td_5">③ 매출</td><td data-edit="td_6">매출이 어느정도인지</td></tr></table>
+    <div class="alert warn" style="margin-top:10px"><span class="alert-icon">💬</span><div data-edit="al_2">기장료는 업종·수입금액에 따라 다르므로 이사님께 여쭤봐야 한다고 안내 후 보고</div></div>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span><span data-edit="ctt_5">현금영수증 발행</span></div>
+      <ul class="steps">
+        <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_4">taxadmin.tosspayments.com 접속</strong></div></li>
+        <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_5">현금영수증 승인(발행) → 건별 입력</strong></div></li>
+        <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_6">거래자 구분: 소득공제용, 주민번호 입력</strong><p data-edit="sp_20">상품명: '이름 종합소득세 신고 수수료'</p></div></li>
+        <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_7">발행 후 더존에 현과로 전표입력</strong></div></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_6">4대보험 신고요율 업데이트</span></div>
+      <p style="font-size:13px;color:var(--text2)" data-edit="sp_21">구글드라이브 → 공유문서 → 기본서식모음 → 4대보험신고요율에서 올해 변동사항 정리 후 업로드</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple)"></span><span data-edit="ctt_7">월간 세금박사 발송 관리</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_8">매월 중순 위하고에 변동사항 작성 요청</strong></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_9">구글독스 수정 → 파일 저장 (구글드라이브 > 내부문서 > 교육 및 각종원고 > 월간세금박사)</strong></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_10">매월 말일 팩스로 변경 신청서 수신 → 메일로 변경 신청</strong><p data-edit="sp_22">예) 6월 변동사항 신청 → 8월호부터 반영</p></div></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== 서류발급 ===== -->
+<div id="docs" class="section">
+  <div class="sec-head"><h2 data-edit="sh_2">📄 서류발급 및 조회</h2><p data-edit="sp_23">거래처 요청 시 발급 방법 안내</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_8">재무제표 종류</span></div>
+    <table class="tbl"><tr><th>종류</th><th>내용</th><th>발급처</th></tr>
+    <tr><td data-edit="td_7">비교식 재무제표</td><td data-edit="td_8">전년도와 비교 / 거래처 제출용</td><td data-edit="td_9">위하고·더존 (재무제표 일괄출력, 비교 선택) + 재무제표확인원 필수</td></tr>
+    <tr><td data-edit="td_10">표준재무제표증명원</td><td data-edit="td_11">세무서 제출용 / 복식부기 대상만 가능</td><td data-edit="td_12">홈택스 → 증명·등록·신청 → 즉시발급증명 → 표준재무제표증명</td></tr></table>
+    <div class="alert info" style="margin-top:10px"><span class="alert-icon">📌</span><div data-edit="al_3">재무제표확인원 발급번호: 연월일-001 형식 (예: 240826-001) / 용도: 제출용 / 인쇄 후 도장 찍고 스캔해서 첫 페이지에 첨부</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_9">주요 증명서 발급처 모음</span></div>
+    <table class="tbl"><tr><th>서류명</th><th>발급 경로</th></tr>
+    <tr><td data-edit="td_13">부가세과표증명원</td><td data-edit="td_14">홈택스 → 즉시발급증명 → 부가가치세 과세표준증명</td></tr>
+    <tr><td data-edit="td_15">사업자등록증명원</td><td data-edit="td_16">홈택스 → 즉시발급증명 → 사업자등록증명</td></tr>
+    <tr><td data-edit="td_17">폐업사실증명원</td><td data-edit="td_18">홈택스 → 즉시발급증명 → 폐업사실증명</td></tr>
+    <tr><td data-edit="td_19">국세 납세증명서</td><td data-edit="td_20">홈택스 → 즉시발급증명 → 납세증명서(국세완납증명)</td></tr>
+    <tr><td data-edit="td_21">지방세 납세증명서</td><td data-edit="td_22">위택스 → 발급 → 문서발급 → 지방세 납세증명서 (사용목적: 기타)</td></tr>
+    <tr><td data-edit="td_23">소득금액증명원</td><td data-edit="td_24">홈택스 → 즉시발급증명 → 소득금액증명 (전년도 종소세 신고 후 발급 가능)</td></tr>
+    <tr><td data-edit="td_25">근로소득원천징수영수증</td><td data-edit="td_26">위하고 → 연말정산 근로소득원천징수영수증 (연말정산 완료 후)</td></tr>
+    <tr><td data-edit="td_27">주주명부</td><td data-edit="td_28">홈택스 → 세금신고 → 법인세 → 신고도움 서비스 → 신고 참고자료</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_10">메타게이트 재무제표 전송 (경기신용보증재단)</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_11">프로그램 설치 및 세무대리인 선택</strong></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_12">거래처 기업정보 + 세무대리인 정보(대한세무법인) 입력</strong></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_13">원하는 서류 선택 → 발급연도 입력</strong><p data-edit="sp_24">예) 2022년·2023년: 1개년도 재무제표=202212, 2개년도=202312</p></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_14">발급 → 전송 완료 확인 (약 15분 소요)</strong></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_11">소득금액증명원 발급 가능 시점</span></div>
+    <div class="alert warn"><span class="alert-icon">⚠️</span><div data-edit="al_4">2024년도 종소세 신고 → 2025년 5월 → 이후 발급 가능<br>2025년도 종소세 신고 → 2026년 5월 → 이전에는 발급 불가</div></div>
+    <div class="alert info"><span class="alert-icon">💡</span><div>근로소득원천징수영수증 발급 불가 시 → <strong data-edit="st_15">갑근세 원천징수확인서</strong> 대체 제안</div></div>
+  </div>
+</div>
+
+<!-- ===== 신규 및 이관 ===== -->
+<div id="new_client" class="section">
+  <div class="sec-head"><h2 data-edit="sh_3">🤝 신규 및 이관</h2><p data-edit="sp_25">신규 거래처 수임 및 이관 절차</p></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span><span data-edit="ctt_12">이관 절차</span></div>
+      <ul class="steps">
+        <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_16">이관받는 경우</strong><p data-edit="sp_26">이사님께 이전 세무사사무실 연락처 받아서 이관자료 요청 / 위하고 사용 중임 안내 후 전달 형식 협의</p></div></li>
+        <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_17">이관가는 경우</strong><p data-edit="sp_27">이관처 주소, 이메일, 연락처 수취 → 수임해지</p></div></li>
+        <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_18">전산자료 백업</strong><p data-edit="sp_28">세무사랑: 마이그레이션 → 아이디 deahan01 / 비번 1234</p></div></li>
+        <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_19">이사님께 보고</strong><p data-edit="sp_29">매출·기존 기장료 확인 후 새 기장료·출금 시작일 여쭤보기</p></div></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_13">신규 수임 절차</span></div>
+      <ul class="steps">
+        <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_20">이사님께 먼저 확인</strong><p data-edit="sp_30">기장료, 출금 시작일, 인건비 신고 여부, 사장님 연락처</p></div></li>
+        <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_21">자료 요청 메시지 발송</strong></div></li>
+        <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_22">회사등록 + 홈택스 수임등록</strong></div></li>
+        <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_23">모두싸인으로 기장계약서 서명 요청</strong><p data-edit="sp_31">app.modusign.co.kr / ID: tax@taxdh.net / PW: idol9967*</p></div></li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_14">신규 필요서류 요청 템플릿</span></div>
+    <div class="msgbox" data-edit="mb_1">안녕하세요 대한세무법인 이소연 주임입니다.
+필요서류 요청드립니다.
+
+① 사업자등록증 사본
+② 대표자 신분증 사본
+③ 임대차 계약서 사본
+④ 사업용계좌 통장사본 (사업용계좌 등록 및 자동이체 신청용)
+④-1 사업용 신용카드 사본
+⑤ 이메일 주소
+⑥ 홈택스 아이디/비밀번호
+
+카톡으로 사진찍어서 보내주셔도 됩니다.
+팩스번호: 031-783-8871 / 직통: 031-783-8877
+메일: tax@taxdh.net
+<button class="copy-btn" onclick="copyText(this)">복사</button></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_15">홈택스 수임등록 주의사항</span></div>
+    <table class="tbl"><tr><th>상황</th><th>처리</th></tr>
+    <tr><td data-edit="td_29">단독 사업장 1개</td><td data-edit="td_30">타소득포함으로 수임등록</td></tr>
+    <tr><td data-edit="td_31">복수 사업장 운영</td><td data-edit="td_32">1개만 타소득포함, 나머지는 해당사업장으로 등록</td></tr>
+    <tr><td data-edit="td_33">"타소득포함 수임 이력 있음" 문구</td><td data-edit="td_34">세무대리정보 이용 신청서(기장 기존해지와 신규수임)로 신청</td></tr></table>
+    <div class="alert info" style="margin-top:10px"><span class="alert-icon">💡</span><div data-edit="al_5">세무대리이용신청서 첨부: 신청서 + 내 신분증 사본 + 대표 신분증 사본<br>3번 기장대리 부분은 무조건 해지일까지로 체크</div></div>
+  </div>
+</div>
+
+<!-- ===== 원천세 ===== -->
+<div id="withhold" class="section">
+  <div class="sec-head"><h2 data-edit="sh_4">💳 원천세</h2><p data-edit="sp_32">급여대장 작성부터 전자신고까지</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_16">원천세 신고 순서 (6단계)</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_24">급여대장 확인 및 입력</strong><p data-edit="sp_33">건강·연금: EDI 고지대로 / 고용: 요율대로 / 정산보험료는 건강보험만 신경쓰기</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_25">원천징수이행상황신고서 작성</strong><p data-edit="sp_34">소득지급 금액 = 과세 전체 + 식대 포함 / 차량유지비 반영 안됨</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_26">지방소득세특별징수납부서 마감</strong></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_27">거주자 사업소득 간이지급명세서</strong></div></li>
+      <li class="step-item"><span class="step-num">5</span><div class="step-content"><strong data-edit="st_28">일용직 지급명세서</strong></div></li>
+      <li class="step-item"><span class="step-num">6</span><div class="step-content"><strong data-edit="st_29">전자파일 전환 후 전자신고</strong><p data-edit="sp_35">① 원천징수이행상황신고서 ② 지방소득세특별징수 ③ 거주자 사업소득 간이지급명세서 ④ 일용근로소득 지급명세서 ⑤ 근로소득 간이지급명세서(1월·7월)</p></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_17">두루누리 지원</span></div>
+    <div class="alert info"><span class="alert-icon">ℹ️</span><div><strong data-edit="st_30">대상기준:</strong> 근로자 10인 미만 + 기준소득월액 270만원 미만 신규가입자 (직전 1년간 가입이력 없는 자)<br>지원: 고용보험·연금보험만 해당 / 80% 지원</div></div>
+    <table class="tbl" style="margin-top:10px"><tr><th>구분</th><th>내용</th></tr>
+    <tr><td data-edit="td_35">고용보험 80% 지원</td><td>근로자 기준 15,840원 지원 → 실납부 3,960원<br>급여대장 입력 시 두루누리(고용) 금액: -15,840원</td></tr>
+    <tr><td data-edit="td_36">지원 시작 시점</td><td data-edit="td_37">납부 완료된 시점부터 적용 → 다음 달 고지서에 반영</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_18">원천세 가산세 납부서 출력 (기한후)</span></div>
+    <div class="formula" data-edit="fm_1">
+      <strong data-edit="st_31">가산세 계산:</strong> (미납부세액 × 3%) + (미납부세액 × 미납일수 × 0.00022)<br>
+      <strong data-edit="st_32">한도:</strong> 당초 납부세액의 10% (최대)
+    </div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">소득세</span><div class="step-content"><strong data-edit="st_33">홈택스 → 세무대리 납세관리 → 납부서출력</strong><p>납세구분: 4번 원천분자납 / 세목: 근로소득세(갑) or 사업소득세<br>납부지연가산세 클릭 → 미납세액·당초납부기한 입력 → 계산하기 → 출력</p></div></li>
+      <li class="step-item"><span class="step-num">지방세</span><div class="step-content"><strong data-edit="st_34">신고 → 특별징수 → 특별징수신고 → 한건신고</strong><p data-edit="sp_36">납세자조회에서 사업자번호 조회 → 세액 입력 → 가산세 자동계산</p></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_19">원천세 환급 절차</span></div>
+    <div class="alert warn"><span class="alert-icon">⚠️</span><div>국세는 전자신고 시 자동 환급 / <strong data-edit="st_35">지방세는 별도 환급신청 필요!</strong></div></div>
+    <p style="font-size:12.5px;color:var(--text2);margin-top:10px"><strong data-edit="st_36">지방세 환급 필요서류:</strong> ① 지방소득세 환급 청구서 ② 소득자별 환급신청 명세서 ③ 연말정산 원천징수 이행상황신고서(부표 포함) ④ 국세환급내역 증빙서류 ⑤ 지방소득세 특별징수 계산서 및 명세서 ⑥ 통장 앞면 사본</p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_20">급여 유형별 처리</span></div>
+    <table class="tbl"><tr><th>유형</th><th>처리방법</th></tr>
+    <tr><td data-edit="td_38">근로소득자</td><td data-edit="td_39">중소기업감면(90%) → 사원등록 > 관리사항 > 14번 중소기업취업감면여부 '부'로 변경 후 F8 재계산</td></tr>
+    <tr><td data-edit="td_40">사업소득자 (세후 지급)</td><td data-edit="td_41">세전급여 = 세후급여 ÷ 96.7 × 100</td></tr>
+    <tr><td data-edit="td_42">일용근로자</td><td data-edit="td_43">일용직 급여일괄입력에서 진행 / 마감: 지급명세서(제출집계표)에서 마감 후 인쇄</td></tr></table>
+  </div>
+</div>
+
+<!-- ===== 연말정산 ===== -->
+<div id="yearend" class="section">
+  <div class="sec-head"><h2 data-edit="sh_5">📋 연말정산</h2><p data-edit="sp_37">근로소득 및 종교인소득 연말정산 절차</p></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span><span data-edit="ctt_21">근로소득 요청자료</span></div>
+      <ul class="steps">
+        <li class="step-item"><span class="step-num">①</span><div class="step-content"><strong data-edit="st_37">연말정산 간소화 PDF</strong><p data-edit="sp_38">다운로드 파일 그대로</p></div></li>
+        <li class="step-item"><span class="step-num">②</span><div class="step-content"><strong data-edit="st_38">인적공제 관련 서류</strong><p data-edit="sp_39">주민등록등본, 가족관계증명서, 부양가족 확인</p></div></li>
+        <li class="step-item"><span class="step-num">③</span><div class="step-content"><strong data-edit="st_39">전 직장 근로소득원천징수영수증</strong></div></li>
+        <li class="step-item"><span class="step-num">④</span><div class="step-content"><strong data-edit="st_40">기타 영수증</strong><p data-edit="sp_40">기부금, 교복, 취학 전 아동 학원비, 월세 이체내역+계약서, 안경점 영수증 등</p></div></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--purple)"></span><span data-edit="ctt_22">종교인소득 요청자료</span></div>
+      <ul class="steps">
+        <li class="step-item"><span class="step-num">①</span><div class="step-content"><strong data-edit="st_41">연말정산 간소화 PDF</strong></div></li>
+        <li class="step-item"><span class="step-num">②</span><div class="step-content"><strong data-edit="st_42">인적공제 관련 서류</strong></div></li>
+        <li class="step-item"><span class="step-num">③</span><div class="step-content"><strong data-edit="st_43">기부금 영수증</strong></div></li>
+        <li class="step-item"><span class="step-num">④</span><div class="step-content"><strong data-edit="st_44">근로자 확인사항</strong><p data-edit="sp_41">종교인은 인적공제·연금보험료·기부금만 반영 가능</p></div></li>
+      </ul>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_23">연말정산 처리 순서 (근로소득)</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_45">사원등록 — 인적공제 확인 및 부양가족 입력</strong><p data-edit="sp_42">PDF 업로드 전에 반드시 사원등록에 부양가족 기재</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_46">종전근무지 원천징수영수증 입력</strong><p data-edit="sp_43">4대보험료 입력 / 73. 결정세액을 소득세·지방세에 입력 (기납부세액 아님!)</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_47">전사원 불러오기 (대표자 삭제)</strong></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_48">국민/건강/고용보험료 업로드설정</strong><p data-edit="sp_44">국세청 간소화 반영 여부 → 전년도 원천징수영수증 확인하여 동일하게 체크</p></div></li>
+      <li class="step-item"><span class="step-num">5</span><div class="step-content"><strong data-edit="st_49">국세청 연말정산 간소화 PDF 전송</strong></div></li>
+      <li class="step-item"><span class="step-num">6</span><div class="step-content"><strong data-edit="st_50">금액 확인</strong><p data-edit="sp_45">주택자금 & 월세액공제 꼭 확인 / 간소화자료 있다고 무조건 반영 금지 → 요건 확인 필수</p></div></li>
+      <li class="step-item"><span class="step-num">7</span><div class="step-content"><strong data-edit="st_51">마감 (꼭 총괄에서)</strong></div></li>
+      <li class="step-item"><span class="step-num">8</span><div class="step-content"><strong data-edit="st_52">지급명세서 제출</strong><p data-edit="sp_46">2/1~3/10: 근로소득·퇴직소득·사업소득 등 / 2/1~2/28: 이자배당·기타소득 등</p></div></li>
+      <li class="step-item"><span class="step-num">9</span><div class="step-content"><strong data-edit="st_53">전자신고</strong><p data-edit="sp_47">C근로소득 → 홈택스 근로소득지급명세서 제출 / CA의료비 → 의료비 지급명세서 제출</p></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_24">보수총액신고</span></div>
+    <table class="tbl"><tr><th>항목</th><th>신고기한</th></tr>
+    <tr><td data-edit="td_44">건강보험 보수총액신고</td><td data-edit="td_45">3월 10일까지</td></tr>
+    <tr><td data-edit="td_46">고용산재 보수총액신고</td><td data-edit="td_47">3월 15일까지</td></tr>
+    <tr><td data-edit="td_48">연금보험</td><td data-edit="td_49">신고 불필요 (국세청 지급명세서를 공단이 직접 활용)</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_25">중소기업 취업자 소득세 감면</span></div>
+    <div class="alert info"><span class="alert-icon">💡</span><div data-edit="al_6">대상자 해당 시 사업장에서 직접 홈택스로 신고 후 신청내역 우리 쪽에 전달 요청<br>사원등록에서 중소기업 취업자 소득세 감면 여로 등록 → 급여대장에 자동 반영</div></div>
+  </div>
+</div>
+
+<!-- ===== 입사 ===== -->
+<div id="entry" class="section">
+  <div class="sec-head"><h2 data-edit="sh_6">👤 입사 처리</h2><p data-edit="sp_48">취득신고 절차 및 유의사항</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_26">STEP 1 — 입사자 정보 확인</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">①</span><div class="step-content"><strong data-edit="st_54">입사일·식대여부 등 간단히 확인 후 필요자료 요청</strong></div></li>
+      <li class="step-item"><span class="step-num">②</span><div class="step-content"><strong data-edit="st_55">대표자(사장님) 취득신고 안내</strong><p data-edit="sp_49">직원 급여와 같거나 높은 금액으로 취득신고 필요</p></div></li>
+    </ul>
+    <div class="alert warn" style="margin-top:10px"><span class="alert-icon">⚠️</span><div><strong data-edit="st_56">법인 vs 개인:</strong> 법인은 무보수확인서 제출 시 OK / 개인사업자는 무보수확인서 불가</div></div>
+    <div class="alert info"><span class="alert-icon">ℹ️</span><div data-edit="al_7">복수 사업장: 취득신고는 사업장별로 진행 → 사장님도 사업장마다 각각 취득신고</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_27">STEP 2 — 필요자료 요청 템플릿</span></div>
+    <div class="msgbox" data-edit="mb_2">사장님 안녕하세요.
+
+취득신고 관련하여 필요 자료 요청드립니다.
+
+① 근무자의 등본 및 근로계약서
+② 근무자 자차 소유 여부
+③ 6세 미만 자녀가 있는지 여부
+④ 식대 지원 여부
+
+자료 보내주시는 대로 기장계약서 작성 및 취득신고 진행하도록 하겠습니다.
+<button class="copy-btn" onclick="copyText(this)">복사</button></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_28">건강보험료 추가 정산 안내</span></div>
+    <div class="alert info"><span class="alert-icon">💡</span><div>직장가입자가 되더라도 <strong data-edit="st_57">근로소득 외 소득이 2,000만원 이상</strong>이면 초과분에 대해 건강보험료 추가 정산 가능<br>연금보험은 별도 추가 정산 개념 없음 — 건강보험만 해당</div></div>
+    <div class="alert success"><span class="alert-icon">✅</span><div data-edit="al_8">5월 보수총액신고 후 보험료 정산 → 환급 or 추가 고지 가능. "걱정 말라"고 추가 안내드리기</div></div>
+  </div>
+</div>
+
+<!-- ===== 퇴사 ===== -->
+<div id="exit" class="section">
+  <div class="sec-head"><h2 data-edit="sh_7">🚪 퇴사 처리</h2><p data-edit="sp_50">퇴사자 발생 시 7단계 처리 절차</p></div>
+  <div class="alert warn"><span class="alert-icon">📌</span><div><strong data-edit="st_58">퇴사일 ≠ 상실일</strong> — 예) 퇴사일 12/31 → 상실일 1/1 (다음날)</div></div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_29">퇴사 전 확인 3가지</span></div>
+    <table class="tbl"><tr><th>항목</th><th>확인내용</th></tr>
+    <tr><td data-edit="td_50">① 퇴사일자</td><td data-edit="td_51">정확한 퇴사일 확인</td></tr>
+    <tr><td data-edit="td_52">② 퇴사달 급여액</td><td data-edit="td_53">말일 퇴사 → 지난달 동일 급여인지·상여 여부 / 중간 퇴사 → 근무한 날까지 급여 금액</td></tr>
+    <tr><td data-edit="td_54">③ 퇴사사유</td><td>자발 vs 권고사직 → <strong style="color:var(--red)">권고사직이면 실업급여 대상!</strong></td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_30">7단계 퇴사 처리</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_59">퇴사일 입력</strong><p data-edit="sp_51">사원등록에서 퇴사일 입력</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_60">연말정산 근로소득 원천징수영수증</strong><p data-edit="sp_52">중도퇴사자 탭 → 사원 불러오기 → 급여액·기납부세액 확인 → PDF 저장 후 퇴사자에게 전달</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_61">급여대장 퇴사 소득세 반영</strong></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_62">퇴직소득자료 입력</strong><p><span class="badge badge-orange">퇴직금 있는 경우만</span></p></div></li>
+      <li class="step-item"><span class="step-num">5</span><div class="step-content"><strong data-edit="st_63">퇴직소득원천징수영수증</strong><p><span class="badge badge-orange">퇴직금 있는 경우만</span></p></div></li>
+      <li class="step-item"><span class="step-num">6</span><div class="step-content"><strong data-edit="st_64">원천징수이행상황신고서</strong></div></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== 상여금 소득세 ===== -->
+<div id="bonus_tax" class="section">
+  <div class="sec-head"><h2 data-edit="sh_8">💰 상여금 소득세 계산</h2><p data-edit="sp_53">상여는 간이세액표 직접 적용 불가 — 별도 계산 필수</p></div>
+  <div class="alert danger"><span class="alert-icon">🚫</span><div data-edit="al_9">상여는 평소 급여와 다르게 소득세가 계산됩니다. 홈택스 근로소득 간이세액표를 그대로 적용하면 안 됩니다!</div></div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_31">3단계 계산 순서</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_65">월평균 급여 계산</strong><p data-edit="sp_54">직전 상여 지급 다음달 ~ 이번 상여 지급월까지 과세급여 총액 ÷ 해당 월수</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_66">간이세액 조회</strong><p>홈택스 간이세액표에서 <em>월평균급여</em>로 조회 (부양가족·8~20세 자녀 수 반영)</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_67">상여금 조정세액 계산</strong>
+        <div class="formula" style="margin-top:8px" data-edit="fm_2"><strong data-edit="st_68">조정세액</strong> = (월평균 간이세액 × 조정률) × 산정대상 월수 − (기납부세액 + 기감면세액)</div>
+      </div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_32">계산 예시</span></div>
+    <table class="tbl"><tr><th>항목</th><th>값</th></tr>
+    <tr><td data-edit="td_55">월 근로소득</td><td data-edit="td_56">3,100,000원</td></tr>
+    <tr><td data-edit="td_57">상여 지급월</td><td data-edit="td_58">11월 (직전 상여 3월)</td></tr>
+    <tr><td data-edit="td_59">산정 대상 월수</td><td data-edit="td_60">8개월 (4~11월)</td></tr>
+    <tr><td data-edit="td_61">8개월 과세급여 합계</td><td data-edit="td_62">25,800,000원</td></tr>
+    <tr><td data-edit="td_63">부양가족</td><td data-edit="td_64">20세 이하 자녀 1명</td></tr></table>
+    <div class="formula" style="margin-top:12px" data-edit="fm_3">
+      <strong data-edit="st_69">① 월평균 급여</strong> = 25,800,000 ÷ 8 = 3,225,000원<br>
+      <strong data-edit="st_70">② 간이세액</strong> = 63,170원 (급여 3,225,000 / 공제대상 2 / 자녀 1명)<br>
+      <strong data-edit="st_71">③ 조정세액</strong> = (63,170 × 100%) × 8 − (457,800 + 0) = <strong data-edit="st_72">47,560원</strong>
+    </div>
+    <div class="alert info" style="margin-top:10px"><span class="alert-icon">💡</span><div>급여대장 우측 상단 <strong data-edit="st_73">상여소득세 계산</strong> 버튼 클릭 시 자동 계산</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_33">보험료 반영 방법</span></div>
+    <table class="tbl"><tr><th>보험</th><th>방법</th></tr>
+    <tr><td>건강보험 <span class="badge badge-blue">직접계산</span></td><td data-edit="td_65">상여금 포함 금액으로 계산 후 수정 반영</td></tr>
+    <tr><td>고용보험 <span class="badge badge-blue">직접계산</span></td><td data-edit="td_66">상여금 포함 금액으로 계산 후 수정 반영</td></tr>
+    <tr><td>국민연금 <span class="badge badge-green">고지대로</span></td><td data-edit="td_67">정산 개념 없음 → EDI 고지대로 반영</td></tr></table>
+  </div>
+</div>
+
+<!-- ===== 중도퇴사 4대보험 ===== -->
+<div id="midleave" class="section">
+  <div class="sec-head"><h2 data-edit="sh_9">📊 중도퇴사 4대보험</h2><p data-edit="sp_55">근무기간 1개월 이상, 월중 퇴사자 보험료 반영</p></div>
+  <div class="three-col">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_34">국민연금 <span class="badge badge-green" style="margin-left:4px">공제 안함</span></span></div>
+      <p style="font-size:13px;color:var(--text2)" data-edit="sp_56">자격 상실일(퇴사 다음날)이 속한 달의 보험료는 징수하지 않음</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--red)"></span><span data-edit="ctt_35">고용보험 <span class="badge badge-red" style="margin-left:4px">반드시 공제</span></span></div>
+      <p style="font-size:13px;color:var(--text2)" data-edit="sp_57">요율 0.9%대로 계산하여 반영</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_36">건강·장기요양 <span class="badge badge-orange" style="margin-left:4px">퇴직 정산</span></span></div>
+      <p style="font-size:13px;color:var(--text2)" data-edit="sp_58">퇴직정산을 통해 입사~퇴사 전체 보수에 대해 재계산</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_37">건강보험 퇴직정산 계산법</span></div>
+    <div class="formula" data-edit="fm_4">
+      입사~퇴사까지 받은 모든 과세급여 총액 × 보험료율<br>
+      − 이미 전월에서 공제한 금액 = <strong data-edit="st_74">당월 추가 공제 or 환급</strong>
+    </div>
+    <hr>
+    <p style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:10px" data-edit="sp_59">📌 예시 (2025.12.12 입사 → 2026.2.6 퇴사)</p>
+    <table class="tbl"><tr><th>항목</th><th>값</th></tr>
+    <tr><td data-edit="td_68">정산년도</td><td data-edit="td_69">2026</td></tr>
+    <tr><td>상실일</td><td data-edit="td_71">2026.02.07 (퇴사 다음날)</td></tr>
+    <tr><td data-edit="td_72">26년 보수총액</td><td data-edit="td_73">2,479,313원</td></tr>
+    <tr><td data-edit="td_74">26년 근무월수</td><td>2개월</td></tr>
+    <tr><td data-edit="td_76">납부한 보험료(근로자분)</td><td data-edit="td_77">건강 98,090원 / 요양 12,880원</td></tr>
+    <tr><td data-edit="td_78">월평균 보수월액</td><td data-edit="td_79">(1,899,861 + 579,452) ÷ 2개월</td></tr></table>
+    <div class="formula" style="margin-top:12px" data-edit="fm_5">
+      월평균 기준 납부했어야 할 보험료: 건강 44,565원, 장기요양 5,855원 (각 월)<br>
+      <strong data-edit="st_75">정산보험료</strong> = 납부한 보험료 − 납부했어야 할 보험료 → 차액을 2월 급여대장에 입력
+    </div>
+  </div>
+</div>
+
+<!-- ===== 퇴직금 ===== -->
+<div id="severance" class="section">
+  <div class="sec-head"><h2 data-edit="sh_10">🧮 퇴직금 계산</h2><p data-edit="sp_60">평균임금 기반 퇴직금 자동 계산기</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_38">퇴직금 공식</span></div>
+    <div class="formula" data-edit="fm_6">
+      <strong data-edit="st_76">퇴직금</strong> = 평균임금 × 재직일수 × 30 / 365<br>
+      <strong data-edit="st_77">평균임금</strong> = (산정급여 + 산정상여) ÷ 3개월 일수<br>
+      <strong data-edit="st_78">산정급여</strong> = 퇴사 직전 3개월 급여 합계<br>
+      <strong data-edit="st_79">산정상여</strong> = 퇴사기준 1년 내 상여금 합계 ÷ 12 × 3
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_39">퇴직금 계산기</span></div>
+    <div class="calc-grid">
+      <div class="calc-field"><label>직전 3개월 급여 합계 (원)</label><input type="number" id="c1" placeholder="예: 26839950"></div>
+      <div class="calc-field"><label>1년 내 상여금 합계 (원, 없으면 0)</label><input type="number" id="c2" placeholder="예: 5500000"></div>
+      <div class="calc-field"><label>직전 3개월 일수 (일)</label><input type="number" id="c3" placeholder="예: 92"></div>
+      <div class="calc-field"><label>총 재직일수 (일)</label><input type="number" id="c4" placeholder="예: 1897"></div>
+    </div>
+    <button class="calc-btn" onclick="calcSev()">퇴직금 계산하기</button>
+    <div class="calc-result" id="sevResult">
+      <div class="res-row"><span class="res-label">산정상여 (상여÷12×3)</span><span class="res-val" id="r1">—</span></div>
+      <div class="res-row"><span class="res-label">평균임금 (일)</span><span class="res-val" id="r2">—</span></div>
+      <div class="res-row"><span class="res-label">재직일수</span><span class="res-val" id="r3">—</span></div>
+      <div class="res-row"><span class="res-label">퇴직금 (세전)</span><span class="res-val big" id="r4">—</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_40">처리 절차 (퇴직금 있는 경우)</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_80">급여대장 + 퇴사일자 입력</strong><p data-edit="sp_61">퇴사월까지 급여대장 입력 / 사원등록에서 퇴사일 작성</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_81">퇴직금 산정</strong><p data-edit="sp_62">퇴직금산정 탭 → 퇴직금계산유형: 일할(노동부) → 직전 3개월 급여 자동 불러옴</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_82">금액 안내</strong><p data-edit="sp_63">추정 금액임을 명시 — 상여가 있을 경우 금액 달라질 수 있음 안내</p></div></li>
+    </ul>
+    <div class="alert info" style="margin-top:10px"><span class="alert-icon">📌</span><div>연차수당은 <strong data-edit="st_83">노무사 담당</strong> — 우리가 계산해주지 않음</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_41">임원(대표자) 퇴직금 주의사항</span></div>
+    <table class="tbl"><tr><th>구분</th><th>내용</th></tr>
+    <tr><td data-edit="td_80">계산 방법</td><td data-edit="td_81">일반 직원과 다름 → 법인세법 책자 참고</td></tr>
+    <tr><td data-edit="td_82">정관 배수 규정</td><td data-edit="td_83">정관에 배수 규정 시 계산된 퇴직금에 배수 적용</td></tr>
+    <tr><td data-edit="td_84">세법 한도</td><td>최대 2배 / 2배 초과분 → 퇴직소득 아닌 <strong data-edit="st_84">근로소득</strong>으로 반영</td></tr>
+    <tr><td data-edit="td_85">정관 미기재</td><td data-edit="td_86">1배수만 지급</td></tr>
+    <tr><td data-edit="td_87">일반 직원</td><td data-edit="td_88">퇴직금 지급 한도 없음</td></tr></table>
+  </div>
+</div>
+
+<!-- ===== 지역가입자 ===== -->
+<div id="region_ins" class="section">
+  <div class="sec-head"><h2 data-edit="sh_11">🏥 지역가입자 건강보험</h2><p data-edit="sp_64">문의 시 안내 방법</p></div>
+  <div class="alert danger"><span class="alert-icon">🚫</span><div>지역가입자 건강보험료 산출방법은 <strong data-edit="st_85">세무대리인이 알 수 없습니다.</strong><br>개인정보 문제로 공단에서도 제3자에게 안내 불가</div></div>
+  <div class="card" style="margin-top:14px">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_42">산출 기준 (참고)</span></div>
+    <table class="tbl"><tr><th>번호</th><th>기준</th></tr>
+    <tr><td>1</td><td data-edit="td_90">소득금액 (이월결손금 반영 전 — 소득금액증명원상 금액)</td></tr>
+    <tr><td>2</td><td data-edit="td_92">타 자산 (부동산, 자동차 등)</td></tr>
+    <tr><td>3</td><td data-edit="td_94">환산점수</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_43">고객 안내 문구</span></div>
+    <div class="msgbox" data-edit="mb_3">안녕하세요, 사장님.
+
+지역가입자 건강보험료의 경우, 소득 외에 보유 자산 등 여러 요소를 종합적으로 고려하여 산정되기 때문에 저희 쪽에서는 정확한 금액을 안내드리기 어렵습니다.
+
+건강보험공단(☎ 1577-1000)에 직접 문의하시면 본인 확인 후 상세하게 안내받으실 수 있습니다.
+
+감사합니다.
+<button class="copy-btn" onclick="copyText(this)">복사</button></div>
+  </div>
+</div>
+
+<!-- ===== 부가세 ===== -->
+<div id="vat" class="section">
+  <div class="sec-head"><h2 data-edit="sh_12">🧾 부가세 정기신고</h2><p data-edit="sp_65">신고 순서 및 주요 사항</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_44">파일철 순서</span></div>
+    <p style="font-size:13px;color:var(--text2)" data-edit="sp_66">① 공제받지 못할 매입세액명세서 → ② 신용카드매출전표등 발행금액 집계표 → ③ 건물등감가상각취득명세서 → ④ 매출세금계산서합계표 → ⑤ 매입세금계산서합계표 → ⑥ 신용카드매출전표등수령명세서 → ⑦ 카드매출 홈택스자료 → ⑧ 종이세금계산서 → ⑨ 부가세 예정고지 세액조회</p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_45">신고 순서</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_86">전표 전송 및 분개</strong><p data-edit="sp_67">전자세금계산서·전자계산서·신용카드·현금영수증 전표 전송 / 통장 매출 내역 확인 / 간주임대료 입력 / 신용카드·현금영수증·현금매출 입력</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_87">신고서 작성</strong><p data-edit="sp_68">홈택스·위하고 각 신고서 작성 / 세금계산서·계산서 합계표 / 신용카드매출전표발행집계표 등</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_88">부가가치세신고서 작성</strong><p data-edit="sp_69">업태에 따른 매출 여러개인 경우 과표 꼭 나눠주기 / 신고서와 세액 차이 5,000원까지 허용</p></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_89">전자신고</strong></div></li>
+      <li class="step-item"><span class="step-num">5</span><div class="step-content"><strong data-edit="st_90">부가세 분개 (예수금 & 대급금 상계처리)</strong></div></li>
+    </ul>
+  </div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_46">예정고지 대상자</span></div>
+      <div class="alert info"><span class="alert-icon">ℹ️</span><div data-edit="al_10">직전 과세기간(6개월) 공급가액 1억 5천 미만 법인사업자<br>단, 예정고지 세액 50만원 미만 시 부과 안 됨</div></div>
+      <p style="font-size:12.5px;color:var(--text2);margin-top:8px" data-edit="sp_70">예정신고 가능 요건: ① 휴업·사업 부진 ② 공급가액·납부세액이 직전 과세기간의 1/3 미달 ③ 조기환급</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--red)"></span><span data-edit="ctt_47">납부 지연 가산세</span></div>
+      <div class="formula" data-edit="fm_7">납부세액 × 3% + 납부세액 × 0.00022 × 지연일수</div>
+      <p style="font-size:12.5px;color:var(--text2);margin-top:8px" data-edit="sp_71">납부기간 지난 후 납부 시 → 납부서 새로 작성 (당일 납부만 가능)</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_48">간주임대료 계산법</span></div>
+    <div class="formula" data-edit="fm_8">181일(상반기) / 365일 × 보증금 × 3.1%<br>분개: (차) 세금과공과금 / (대) 부가세예수금</div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple)"></span><span data-edit="ctt_49">공제 가능 차량 종류</span></div>
+    <table class="tbl"><tr><th>번호</th><th>차량</th></tr>
+    <tr><td>1</td><td>화물차</td></tr>
+    <tr><td>2</td><td data-edit="td_98">밴형 승용차</td></tr>
+    <tr><td>3</td><td data-edit="td_100">경차 (1,000cc 미만 — 모닝·스파크·레이 등)</td></tr>
+    <tr><td>4</td><td data-edit="td_102">125cc 이하 이륜 자동차</td></tr>
+    <tr><td>5</td><td data-edit="td_104">정원 9인승 이상 승용차 (카니발 9인승 등)</td></tr></table>
+    <div class="alert warn" style="margin-top:10px"><span class="alert-icon">⚠️</span><div data-edit="al_11">공제 차량이 없으면 차량 관련 비용(주유비·세차·수리 등) 공제 불가 → 여비교통비 처리</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_50">매입 항목별 처리 기준</span></div>
+    <table class="tbl"><tr><th>항목</th><th>처리</th></tr>
+    <tr><td data-edit="td_105">식대 (직원 없는 개인사업장)</td><td data-edit="td_106">접대비 처리</td></tr>
+    <tr><td data-edit="td_107">마트·편의점</td><td data-edit="td_108">공제 안받는 게 좋음 (담배·술 가능성)</td></tr>
+    <tr><td data-edit="td_109">이마트 등</td><td data-edit="td_110">소모품 처리 후 공제 가능 — 사업장마다 확인 필수</td></tr>
+    <tr><td>백화점</td><td data-edit="td_112">접대비 처리</td></tr>
+    <tr><td data-edit="td_113">노래방·골프</td><td data-edit="td_114">접대비 처리</td></tr>
+    <tr><td data-edit="td_115">SRT(케이알산업)</td><td data-edit="td_116">여비교통비</td></tr>
+    <tr><td data-edit="td_117">비품(100만원 이상)</td><td>비품</td></tr>
+    <tr><td data-edit="td_119">소모품(100만원 이하)</td><td data-edit="td_120">소모품비</td></tr>
+    <tr><td data-edit="td_121">시청·법원 수수료</td><td data-edit="td_122">공제 불가</td></tr>
+    <tr><td data-edit="td_123">면세·간이사업장 구매처</td><td data-edit="td_124">무조건 일반전표</td></tr></table>
+  </div>
+</div>
+
+<!-- ===== 부가세 신고서별 ===== -->
+<div id="vat_detail" class="section">
+  <div class="sec-head"><h2 data-edit="sh_13">📑 부가세 신고서별 안내</h2><p data-edit="sp_72">각 서식별 작성 기준</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_51">부가가치세 신고서 매출·매입</span></div>
+    <table class="tbl"><tr><th>구분</th><th>항목</th><th>반영 위치</th></tr>
+    <tr><td rowspan="3">매출</td><td data-edit="td_125">세금계산서 발급분</td><td data-edit="td_126">세금계산서합계표 공급가액·세액 → 11.과세</td></tr>
+    <tr><td data-edit="td_127">신용카드·현금영수증</td><td data-edit="td_128">신용카드매출전표발행집계표 과세매출분 → 17.카과, 22.현과</td></tr>
+    <tr><td>기타</td><td data-edit="td_130">건별 입력 → 14.건별</td></tr>
+    <tr><td rowspan="4">매입</td><td data-edit="td_131">세금계산서 발급분</td><td data-edit="td_132">세금계산서합계표 공급가액·세액 → 51.과세</td></tr>
+    <tr><td data-edit="td_133">고정자산매입</td><td data-edit="td_134">건물등감가상각자산취득명세서 → 비품·차량·시설장치 등</td></tr>
+    <tr><td data-edit="td_135">그 밖의 공제매입세액</td><td data-edit="td_136">사업용카드·현금영수증 공제분 → 57.카과, 61.현과</td></tr>
+    <tr><td data-edit="td_137">공제받지 못할 매입세액</td><td data-edit="td_138">세금계산서 불공제 내역</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_52">전자세금계산서 발급세액공제</span></div>
+    <div class="alert info"><span class="alert-icon">ℹ️</span><div data-edit="al_12">대상: 직전연도 공급가액 3억원 미만 개인사업자 (법인 해당 없음)<br>공제: 건당 200원 / 연간 한도 100만원</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_53">중간지급조건부 세금계산서</span></div>
+    <div class="alert warn"><span class="alert-icon">⚠️</span><div>계약금·중도금·잔금 3부분 이상, 계약일~잔금일 6개월 이상인 경우 해당<br>공급시기 = <strong data-edit="st_91">실제 입금일 아닌 계약서에 명시된 지급 예정일</strong></div></div>
+    <p style="font-size:12.5px;color:var(--text2);margin-top:8px" data-edit="sp_73">합계로 교부받은 경우: 계약금·중도금 매입세액 공제 불가 / 잔금 부분만 공제 가능</p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_54">공통매입세액 안분계산</span></div>
+    <table class="tbl"><tr><th>구분</th><th>기준</th></tr>
+    <tr><td data-edit="td_139">안분계산 필요</td><td data-edit="td_140">공통매입세액 500만원 이상</td></tr>
+    <tr><td data-edit="td_141">안분계산 불필요</td><td data-edit="td_142">면세 공급가액이 총매출의 5% 미만 (단, 과세사업 존재 시) / 공통매입세액 5만원 미만</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple)"></span><span data-edit="ctt_55">부가세 기한후 신고</span></div>
+    <div class="alert info"><span class="alert-icon">💡</span><div>세무서 안내문의 결정세액은 전자세금계산서만 기준 → 카드공제 등 못 받음 → <strong data-edit="st_92">기한후 신고 진행이 유리</strong></div></div>
+    <table class="tbl" style="margin-top:10px"><tr><th>가산세</th><th>계산방법</th></tr>
+    <tr><td data-edit="td_143">납부지연 가산세</td><td data-edit="td_144">납부세액(27번) × 0.00022 × 지연일수 (자동계산)</td></tr>
+    <tr><td data-edit="td_145">무신고 가산세</td><td data-edit="td_146">납부세액 × 20% × 감면율 (1~3개월: 30%감면 → 70% 적용)</td></tr></table>
+  </div>
+</div>
+
+<!-- ===== PC방 부가세 ===== -->
+<div id="vat_pc" class="section">
+  <div class="sec-head"><h2 data-edit="sh_14">🎮 PC방 부가세</h2><p data-edit="sp_74">PC방 매출 관리 및 신고 요령</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_56">PC방 관리 핵심 사항</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_93">1기 확정 때 대략적인 매출 확인</strong></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_94">매출 2~2.5억인 경우 매입 4배 기준으로 신고 (성실가능성↑)</strong></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_95">업종코드 PC영업으로 확인</strong><p data-edit="sp_75">신규 PC방이 빠른 사업자 등록 위해 수리업으로 냈다가 추후 변경하는 경우 많음 → 주업종코드 확인 필수</p></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_96">사업용계좌에 현금 입금 하지 말 것 안내</strong></div></li>
+    </ul>
+    <div class="alert info" style="margin-top:10px"><span class="alert-icon">💡</span><div data-edit="al_13">상반기 매출 2~2.5억: 비율 6:4 or 5:5로 맞춰 신고 (성실신고 대상 방지, 다은 과장님)</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_57">게임사별 카드결제 대행사</span></div>
+    <table class="tbl"><tr><th>게임사</th><th>결제 대행사</th></tr>
+    <tr><td>넥슨</td><td data-edit="td_148">엔에이치엔사이버결제</td></tr>
+    <tr><td>라이엇</td><td data-edit="td_150">페이레터 (25년부터 네이버 결제도 추가)</td></tr>
+    <tr><td data-edit="td_151">블리자드</td><td data-edit="td_152">토스페이먼츠</td></tr>
+    <tr><td data-edit="td_153">스마일게이트</td><td>다날</td></tr>
+    <tr><td data-edit="td_155">카카오게임즈</td><td data-edit="td_156">케이지이니시스</td></tr>
+    <tr><td data-edit="td_157">오성에프엔씨</td><td data-edit="td_158">갤럭시아머니트리(주)</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_58">매출 환산 방법</span></div>
+    <div class="formula" data-edit="fm_9">
+      <strong data-edit="st_97">서비스 매출 (게임비):</strong><br>
+      게임사별 게임매입시간 합계 × 게임료 = 서비스매출<br>
+      (게임매입시간 = 게임사별 매입 공급가액 ÷ 시간당 원가)<br><br>
+      <strong data-edit="st_98">현금매출:</strong> 카드매출 × 배율 (실제 현금매출 비율 사장님께 확인)<br><br>
+      <strong data-edit="st_99">기준:</strong> 게임매입 4배와 시간당 환산금액 중 작은 금액으로 서비스매출 신고
+    </div>
+  </div>
+</div>
+
+<!-- ===== 법인세 ===== -->
+<div id="corporate" class="section">
+  <div class="sec-head"><h2 data-edit="sh_15">🏦 법인세</h2><p data-edit="sp_76">결산 → 조정 → 신고 전체 절차</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_59">결산 필요자료</span></div>
+    <p style="font-size:13px;color:var(--text2)" data-edit="sp_77">① 법인통장거래내역(엑셀) ② 법인카드이용대금명세서 ③ 법인등기부등본 ④ 주주명부 ⑤ 임대차계약서 ⑥ 이자배당소득원천징수영수증 ⑦ 지방세세목별과세증명서 ⑧ 보험증권 ⑨ 대출원리금상환내역서 ⑩ 대출이자납부내역서 ⑪ 차량운행일지 ⑫ 각종 증빙영수증</p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--accent2)"></span><span data-edit="ctt_60">조정 시작 전 준비 순서</span></div>
+    <div class="alert info"><span class="alert-icon">⭐</span><div data-edit="al_14">재무제표 출력 + 법인세신고도움 서비스 출력 (6페이지까지만)</div></div>
+    <p style="font-size:12.5px;color:var(--text2);margin-top:10px" data-edit="sp_78">접대비(적요코드) → 세금과공과(거래처코드) → 업무용승용차(차량관리코드) → 감가상각비(합잔 금액 확인) → 보험료(선급비용 관리여부) → 가지급금(인정이자계산 필요)</p>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_61">표준재무제표 마감 순서</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_100">표준원가명세서</strong><p data-edit="sp_79">원가유형 선택 → 새로불러오기 → 금액 확인 후 저장</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_101">표준손익계산서</strong><p data-edit="sp_80">서식 유형 ①일반법인용 → 새로불러오기 → 확인 후 저장</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_102">이익잉여금처분계산서</strong><p data-edit="sp_81">처분확정일: 차기년도 3월 31일</p></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_103">표준재무상태표</strong><p data-edit="sp_82">서식 유형 ①일반법인용 → 자산·부채·자본 확인</p></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_62">접대비 한도</span></div>
+    <table class="tbl"><tr><th>구분</th><th>한도</th></tr>
+    <tr><td data-edit="td_159">일반기업</td><td data-edit="td_160">12,000,000원 + 수입금액 × 0.3%</td></tr>
+    <tr><td data-edit="td_161">중소기업</td><td data-edit="td_162">36,000,000원 + 수입금액 × 0.3%</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--red)"></span><span data-edit="ctt_63">세금과공과금 손금불산입 항목</span></div>
+    <div class="alert danger"><span class="alert-icon">🚫</span><div>과태료, 가산세, 법인세, 법인지방세, <strong data-edit="st_104">건강보험 연체금</strong> → 손금불산입<br>국민연금·고용보험 연체금 → 손금산입 (반대!)</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple)"></span><span data-edit="ctt_64">업무용 승용차 처리</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_105">업무용승용차등록</strong><p data-edit="sp_83">보험기간 꼭 작성 (24년 귀속부터) / 업무전용자동차보험 가입해야 경비 인정</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_106">운행기록 작성 '여', '0' → 총 주행거리 = 업무용 사용거리 → 업무사용비율 100%</strong><p data-edit="sp_84">역계산: 지출 유류비 ÷ 근처 주유소 금액 × 연비 = 총 주행거리</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_107">한도: (감가상각비 + 기타) 합산 1,500만원 / 감가상각비 800만원</strong></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_65">비영리법인 법인세 신고 주의</span></div>
+    <table class="tbl"><tr><th>항목</th><th>내용</th></tr>
+    <tr><td data-edit="td_163">회사등록</td><td data-edit="td_164">추가사항에서 비영리법인으로 변경 / 중소기업: 비중소기업 / 종류별: 비영리</td></tr>
+    <tr><td data-edit="td_165">자본금과 적립금</td><td data-edit="td_166">비영리법인은 자본금 없음 → 갑 공란, 갑(결손금계산서)만 작성</td></tr>
+    <tr><td data-edit="td_167">출연재산보고</td><td data-edit="td_168">4월 30일까지 제출</td></tr></table>
+  </div>
+</div>
+
+<!-- ===== 법인세 중간예납 ===== -->
+<div id="corp_interim" class="section">
+  <div class="sec-head"><h2 data-edit="sh_16">⏳ 법인세 중간예납</h2><p data-edit="sp_85">8월 31일까지 (12월말 법인 기준)</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_66">중간예납 신고 순서</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_108">홈택스 중간예납 세액 조회</strong><p data-edit="sp_86">세무대리 → 납세관리 → 기장대리 → 법인세 중간예납 세액 조회</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_109">신고 기준 판단</strong><p data-edit="sp_87">① 직전 사업연도 산출세액 기준 vs ② 해당 중간예납기간 법인세액 기준</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_110">'대한세무법인 법인세 신고현황' 파일 만들기</strong></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_111">선택한 기준으로 신고 진행</strong></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_67">신고 기준 선택 판단</span></div>
+    <div class="alert info"><span class="alert-icon">💡</span><div><strong data-edit="st_112">대부분</strong>은 직전 사업연도 산출세액 기준으로 신고</div></div>
+    <div class="alert warn" style="margin-top:6px"><span class="alert-icon">⚠️</span><div>올해 매출이 크게 줄었거나, 작년에 부동산 매각 등으로 법인세를 많이 냈다면 → <strong data-edit="st_113">해당 중간예납기간 기준이 유리</strong> → 사업주에게 설명 후 선택하게 하기</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_68">해당 중간예납기간 기준 신고 절차 (가결산)</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_114">상반기(1~6월) 가결산 진행</strong><p data-edit="sp_88">통장·카드 업로드 / 잔액 맞추기 / 외상대 맞추기 / 부가세·인건비 분개</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_115">회계기간 변경: 2025.01.01~2025.06.30</strong></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_116">결산자료입력 → 감가상각비 반기결산 반영</strong></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_117">표준재무제표 불러오기</strong><p data-edit="sp_89">이익잉여금처분계산서 생략 가능 (법인세법시행령 제100조)</p></div></li>
+      <li class="step-item"><span class="step-num">5</span><div class="step-content"><strong data-edit="st_118">수입금액조정명세서 작성</strong></div></li>
+      <li class="step-item"><span class="step-num">6</span><div class="step-content"><strong data-edit="st_119">법인세과세표준 및 세액조정계산서 작성 → 전자신고</strong></div></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== 소득세 ===== -->
+<div id="income" class="section">
+  <div class="sec-head"><h2 data-edit="sh_17">📈 종합소득세</h2><p data-edit="sp_90">신고유형별 처리 방법</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_69">신고유형 비교</span></div>
+    <table class="tbl"><tr><th>유형</th><th>장부</th><th>결손금 이월</th><th>특징</th></tr>
+    <tr><td data-edit="td_169">기장신고</td><td data-edit="td_170">간편장부</td><td>가능</td><td data-edit="td_172">사업상 거래를 쉽게 기록</td></tr>
+    <tr><td data-edit="td_173">기장신고</td><td data-edit="td_174">복식부기</td><td>가능</td><td data-edit="td_176">재무제표 작성 필수 / 차·대변 분리</td></tr>
+    <tr><td data-edit="td_177">추계신고</td><td data-edit="td_178">단순경비율</td><td>불가</td><td data-edit="td_180">수입금액 × 업종별 경비율</td></tr>
+    <tr><td data-edit="td_181">추계신고</td><td data-edit="td_182">기준경비율</td><td>불가</td><td data-edit="td_184">주요경비 실지출 인정 + 기타비용 경비율 적용</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_70">소득 종류별 종합/분리 과세</span></div>
+    <table class="tbl"><tr><th>소득</th><th>구분</th></tr>
+    <tr><td data-edit="td_185">근로소득</td><td data-edit="td_186">종합과세만 가능 (일용직 제외)</td></tr>
+    <tr><td data-edit="td_187">주택임대소득</td><td data-edit="td_188">총수입 2,000만원 초과 → 종합과세 / 이하 → 선택</td></tr>
+    <tr><td data-edit="td_189">기타소득</td><td data-edit="td_190">기타소득금액 300만원 이하 → 분리과세 가능</td></tr>
+    <tr><td data-edit="td_191">금융소득(이자·배당)</td><td data-edit="td_192">합계 2,000만원 초과 → 종합과세 / 이하 → 무조건 분리과세</td></tr>
+    <tr><td data-edit="td_193">사적연금</td><td data-edit="td_194">연간 수령액 1,500만원 초과 → 종합과세 / 이하 → 선택</td></tr>
+    <tr><td data-edit="td_195">퇴직·양도소득</td><td data-edit="td_196">무조건 분류과세</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_71">간편장부 처리 순서</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_120">표준 손익계산서 작성</strong><p data-edit="sp_91">매출액 입력 / 경비 사용금액 입력 / 잡이익 12번 기타에 꼭 반영</p></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_121">결산대체 → 대체대조표 → 합잔</strong></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_122">간편장부 소득금액명세서</strong><p data-edit="sp_92">22. 해당연도 소득금액 = 손익계산서 당기순이익 일치 확인</p></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_123">소득공제 신고서</strong><p data-edit="sp_93">국민연금·연금저축·소상공인·퇴직연금 입력 → 6번 탭 새로불러오기</p></div></li>
+      <li class="step-item"><span class="step-num">5</span><div class="step-content"><strong data-edit="st_124">종합소득세 신고서</strong><p data-edit="sp_94">소득금액·소득공제 불러오기 / 기부금 세액공제 / 중간예납 입력</p></div></li>
+    </ul>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--purple)"></span><span data-edit="ctt_72">성실신고 대상자</span></div>
+    <div class="alert warn"><span class="alert-icon">⚠️</span><div data-edit="al_15">업종별 수입금액에 따라 성실신고 대상 기준 달라짐<br>공동사업장은 해당 공동사업장 총수입금액 기준 / 단독·공동사업장 각각 별도 판단 (합산 안 함)</div></div>
+  </div>
+</div>
+
+<!-- ===== 면세사업장 ===== -->
+<div id="exempt" class="section">
+  <div class="sec-head"><h2 data-edit="sh_18">🎓 면세사업장 현황신고</h2><p data-edit="sp_95">개인·법인 면세사업자 신고 절차</p></div>
+  <div class="two-col">
+    <div class="card">
+      <div class="card-title"><span class="dot"></span><span data-edit="ctt_73">개인 면세사업장 요청자료</span></div>
+      <p style="font-size:13px;color:var(--text2)">① 종이세금계산서·종이계산서<br>② 사업용카드 미등록 카드 내역 엑셀파일<br>③ 임대료 및 보증금 확인</p>
+    </div>
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--purple)"></span><span data-edit="ctt_74">법인 면세사업장</span></div>
+      <div class="alert info"><span class="alert-icon">ℹ️</span><div data-edit="al_16">면세법인은 현황신고 없이 합계표 제출 + 법인세 신고<br>세금계산서 합계표: 부가세 기한(1/25, 7/25)<br>계산서 합계표: 2월 10일까지</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_75">개인 면세사업장 신고 순서</span></div>
+    <ul class="steps">
+      <li class="step-item"><span class="step-num">1</span><div class="step-content"><strong data-edit="st_125">전표 전송 및 분개</strong></div></li>
+      <li class="step-item"><span class="step-num">2</span><div class="step-content"><strong data-edit="st_126">신고서 작성 (학원 예시)</strong><p data-edit="sp_96">학원사업자 수입금액검토표 → 사업장현황신고서 순으로 작성</p></div></li>
+      <li class="step-item"><span class="step-num">3</span><div class="step-content"><strong data-edit="st_127">수입금액검토표 주요 기본경비</strong><p data-edit="sp_97">보증금·임대료 확인 / 기타증빙수취경비는 손익계산서 당기순이익의 11% 기준</p></div></li>
+      <li class="step-item"><span class="step-num">4</span><div class="step-content"><strong data-edit="st_128">사업장현황신고서 불러오기</strong><p data-edit="sp_98">신용카드·현금영수증 매입금액은 자동 불러오기 안 됨 → 수기 작성</p></div></li>
+      <li class="step-item"><span class="step-num">5</span><div class="step-content"><strong data-edit="st_129">전자신고 → 사장님께 안내</strong><p data-edit="sp_99">가공경비 포함 내용 언급 금지 / 이익 문의 시 결산 진행 후 다시 안내드린다고 하기</p></div></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ===== 비영업용 차량 ===== -->
+<div id="vehicle" class="section">
+  <div class="sec-head"><h2 data-edit="sh_19">🚗 비영업용 차량</h2><p data-edit="sp_100">리스·렌트 차량 유형 비교</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_76">운용리스 vs 금융리스 vs 렌트 비교</span></div>
+    <table class="tbl"><tr><th>구분</th><th>운용리스</th><th>금융리스</th><th>렌트</th></tr>
+    <tr><td data-edit="td_197">자산성격</td><td data-edit="td_198">단순임대</td><td data-edit="td_199">사실상 소유와 유사</td><td>-</td></tr>
+    <tr><td data-edit="td_201">리스기간</td><td data-edit="td_202">짧은 기간 사용 후 반납</td><td data-edit="td_203">자산 수명의 75%</td><td>-</td></tr>
+    <tr><td>소유권</td><td data-edit="td_206">종료 시 단순 반납</td><td data-edit="td_207">종료 시 이전 or 낮은 금액 매입 가능</td><td>-</td></tr>
+    <tr><td data-edit="td_209">회계처리</td><td data-edit="td_210">임대료 비용 처리</td><td data-edit="td_211">자산·부채 인식 후 감가상각/이자비용</td><td data-edit="td_212">임대료 비용 처리</td></tr>
+    <tr><td>세금</td><td>리스자</td><td>이용자</td><td>-</td></tr>
+    <tr><td data-edit="td_217">적격증빙</td><td data-edit="td_218">세금계산서 발급</td><td data-edit="td_219">계산서(영수증) 발급</td><td data-edit="td_220">세금계산서 발급</td></tr>
+    <tr><td>보험</td><td>이용자</td><td>이용자</td><td>렌트사</td></tr></table>
+  </div>
+</div>
+
+<!-- ===== 주식 양도양수 ===== -->
+<div id="stock" class="section">
+  <div class="sec-head"><h2 data-edit="sh_20">📉 주식 양도양수</h2><p data-edit="sp_101">증권거래세 + 양도소득세 신고</p></div>
+  <div class="card">
+    <div class="card-title"><span class="dot"></span><span data-edit="ctt_77">필요자료 요청 템플릿</span></div>
+    <div class="msgbox" data-edit="mb_4">대표님 안녕하세요, 증권거래세 신고를 위해 아래 서류 요청드립니다.
+
+1. 주식 양도·양수 계약서
+2. 주주명부 (변동 전/변동 후)
+3. 양도인·양수인 인적사항 (신분증 사본 또는 인감증명서)
+4. 법인 등기부등본
+<button class="copy-btn" onclick="copyText(this)">복사</button></div>
+    <div class="alert info" style="margin-top:10px"><span class="alert-icon">💡</span><div data-edit="al_17">양도인이 최초로 주식을 취득한 취득일 및 취득 당시 금액도 필요 → 최초 취득당시 양도양수계약서 요청</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--green)"></span><span data-edit="ctt_78">증권거래세 신고</span></div>
+    <table class="tbl"><tr><th>항목</th><th>내용</th></tr>
+    <tr><td data-edit="td_225">신고기한</td><td data-edit="td_226">상반기(1~6월) 양도: 8월 31일 / 하반기(7~12월) 양도: 다음해 2월 말</td></tr>
+    <tr><td>세율</td><td data-edit="td_228">과세표준금액 × 0.35%</td></tr>
+    <tr><td data-edit="td_229">신고대상자</td><td data-edit="td_230">양도자 (개인이 주식 양도하는 경우 개인으로 신고)</td></tr>
+    <tr><td>납부</td><td data-edit="td_232">양도인의 개인 통장에서 납부 (법인통장 안됨!)</td></tr></table>
+    <div class="alert warn" style="margin-top:10px"><span class="alert-icon">⚠️</span><div data-edit="al_18">양도차익이 없어도 신고 필수!</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title"><span class="dot" style="background:var(--orange)"></span><span data-edit="ctt_79">양도소득세 계산</span></div>
+    <div class="formula" data-edit="fm_10">
+      <strong data-edit="st_130">양도소득금액</strong> = 양도금액 − 취득가액 − 필요경비(증권거래세)<br>
+      <strong data-edit="st_131">세액</strong> = (양도소득금액 − 기본공제 250만원) × 세율<br>
+      소액주주 10~20% / 대주주 20%
+    </div>
+    <div class="alert info" style="margin-top:10px"><span class="alert-icon">📌</span><div data-edit="al_19">대주주 기준 (비상장주식): 본인 지분 4% 이상 OR 시가총액 10억 이상</div></div>
+    <p style="font-size:12px;color:var(--text2);margin-top:8px">예시: 1,000주 양도가액 18,500,000원 / 취득가액 6,500,000원 / 증권거래세 64,750원<br>양도소득금액 = 18,500,000 − 6,500,000 − 64,750 = <strong data-edit="st_132">11,935,250원</strong></p>
+  </div>
+</div>
+
+</main>
+
+<script>
+// 섹션 전환
+function show(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+  const sec = document.getElementById(id);
+  if (sec) sec.classList.add('active');
+  // el이 클래스리스트를 가진 요소면 active 추가, 아니면 id로 nav 링크 찾기
+  if (el && el.classList) {
+    el.classList.add('active');
+  } else {
+    const navLink = document.querySelector(`nav a[onclick*="'${id}'"]`);
+    if (navLink) navLink.classList.add('active');
+  }
+  // 맨 위로 스크롤
+  window.scrollTo(0, 0);
+  return false;
+}
+function getSideLink(id) {
+  return document.querySelector(`nav a[onclick*="'${id}'"]`);
+}
+
+// 복사
+function copyText(btn) {
+  const text = btn.parentElement.innerText.replace('복사','').trim();
+  navigator.clipboard.writeText(text).then(() => {
+    btn.textContent = '✓ 복사됨';
+    setTimeout(() => btn.textContent = '복사', 1800);
+  });
+}
+
+// 퇴직금 계산
+function calcSev() {
+  const s = parseFloat(document.getElementById('c1').value)||0;
+  const b = parseFloat(document.getElementById('c2').value)||0;
+  const d = parseFloat(document.getElementById('c3').value)||92;
+  const w = parseFloat(document.getElementById('c4').value)||0;
+  const bAdj = b/12*3;
+  const avg = (s+bAdj)/d;
+  const sev = avg*w*30/365;
+  document.getElementById('r1').textContent = fmt(Math.round(bAdj))+'원';
+  document.getElementById('r2').textContent = fmt(Math.round(avg))+'원';
+  document.getElementById('r3').textContent = w+'일';
+  document.getElementById('r4').textContent = fmt(Math.round(sev))+'원';
+  document.getElementById('sevResult').classList.add('show');
+}
+function fmt(n){ return n.toLocaleString('ko-KR'); }
+
+// 검색
+function searchContent(q) {
+  const sections = document.querySelectorAll('.section');
+  sections.forEach(s => {
+    const texts = s.querySelectorAll('p,td,li,strong,.alert div,h2,h3');
+    texts.forEach(el => {
+      el.innerHTML = el.innerHTML.replace(/<mark class="hl">([^<]*)<\/mark>/g,'$1');
+    });
+  });
+  if (!q.trim()) return;
+  const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'), 'gi');
+  sections.forEach(s => {
+    const texts = s.querySelectorAll('p,td,li,strong,.alert div');
+    texts.forEach(el => {
+      if (el.children.length === 0) {
+        el.innerHTML = el.innerHTML.replace(re, m => `<mark class="hl">${m}</mark>`);
+      }
+    });
+  });
+}
+
+// 키보드 단축키 (/ 키로 검색창 포커스)
+document.addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== document.getElementById('searchInput')) {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
+});
+
+// ── 편집 모드 ──
+const STORAGE_KEY = 'semu_edits_v2';
+let editMode = false;
+
+function loadSavedEdits() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return;
+    const data = JSON.parse(saved);
+    document.querySelectorAll('[data-edit]').forEach(el => {
+      const key = el.getAttribute('data-edit');
+      if (data[key] !== undefined) el.innerHTML = data[key];
+    });
+  } catch(e) {}
+}
+
+function saveAllEdits() {
+  const data = {};
+  document.querySelectorAll('[data-edit]').forEach(el => {
+    data[el.getAttribute('data-edit')] = el.innerHTML;
+  });
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  showToast('✓ 저장되었습니다');
+}
+
+function resetAllEdits() {
+  if (!confirm('모든 수정 내용을 초기화하시겠습니까?')) return;
+  localStorage.removeItem(STORAGE_KEY);
+  location.reload();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('saveToast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+function toggleEditMode() {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  const btn = document.getElementById('editToggleBtn');
+  const banner = document.getElementById('editBanner');
+  const hint = document.getElementById('editHint');
+  
+  if (editMode) {
+    btn.innerHTML = '💾 저장하기';
+    btn.classList.add('active');
+    banner.classList.add('show');
+    hint.classList.add('show');
+    document.querySelectorAll('[data-edit]').forEach(el => {
+      el.contentEditable = 'true';
+      el.spellcheck = false;
+    });
+  } else {
+    saveAllEdits();
+    btn.innerHTML = '✏️ 내용 편집';
+    btn.classList.remove('active');
+    banner.classList.remove('show');
+    hint.classList.remove('show');
+    document.querySelectorAll('[data-edit]').forEach(el => {
+      el.contentEditable = 'false';
+    });
+  }
+}
+
+// 자동저장 (편집 중 3초 후)
+let autoSaveTimer;
+document.addEventListener('input', (e) => {
+  if (e.target.hasAttribute('data-edit')) {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+      const data = {};
+      document.querySelectorAll('[data-edit]').forEach(el => {
+        data[el.getAttribute('data-edit')] = el.innerHTML;
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }, 1500);
+  }
+});
+
+// Ctrl+S 단축키
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 's' && editMode) {
+    e.preventDefault();
+    saveAllEdits();
+  }
+});
+
+// 페이지 로드 시 저장된 내용 복원
+document.addEventListener('DOMContentLoaded', loadSavedEdits);
+setTimeout(loadSavedEdits, 100);
+
+</script>
+
+<!-- 편집 UI -->
+<div class="save-toast" id="saveToast"></div>
+<div class="edit-banner" id="editBanner">✏️ 편집 모드 활성화 — 원하는 텍스트를 클릭하여 수정하세요. Ctrl+S 또는 저장 버튼으로 저장됩니다.</div>
+<div class="edit-bar">
+  <div class="edit-hint" id="editHint">클릭하면 바로 수정 가능 · Ctrl+S 저장</div>
+  <button class="edit-toggle-btn" id="editToggleBtn" onclick="toggleEditMode()">✏️ 내용 편집</button>
+  <button class="edit-toggle-btn" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-size:11px;padding:8px 16px;" onclick="resetAllEdits()">🔄 초기화</button>
+</div>
+
+<!-- ───── AI 채팅 버튼 & 창 ───── -->
+<style>
+/* 채팅 토글 버튼 */
+.ai-fab {
+  position: fixed; bottom: 24px; left: 24px; z-index: 400;
+  width: 56px; height: 56px; border-radius: 50%;
+  background: linear-gradient(135deg, #f5c400, #e8a000);
+  border: none; cursor: pointer; font-size: 26px;
+  box-shadow: 0 4px 18px rgba(200,150,0,.45);
+  transition: all .2s; display: flex; align-items: center; justify-content: center;
+}
+.ai-fab:hover { transform: scale(1.1); box-shadow: 0 6px 22px rgba(200,150,0,.55); }
+.ai-fab .fab-badge {
+  position: absolute; top: -3px; right: -3px;
+  background: #ef4444; color: #fff; font-size: 10px; font-weight: 700;
+  font-family: 'Jua', sans-serif;
+  width: 18px; height: 18px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid #fff; display: none;
+}
+.ai-fab .fab-badge.show { display: flex; }
+
+/* 채팅 창 */
+.ai-chat-window {
+  position: fixed; bottom: 90px; left: 24px; z-index: 400;
+  width: 360px; height: 520px;
+  background: #fffdf5; border: 2px solid #e8d84a;
+  border-radius: 20px; box-shadow: 0 8px 36px rgba(180,140,0,.22);
+  display: flex; flex-direction: column;
+  transform: scale(0.85) translateY(20px); opacity: 0;
+  pointer-events: none; transition: all .22s cubic-bezier(.34,1.56,.64,1);
+  overflow: hidden;
+}
+.ai-chat-window.open {
+  transform: none; opacity: 1; pointer-events: all;
+}
+
+/* 채팅 헤더 */
+.ai-chat-header {
+  background: linear-gradient(135deg, #f5c400, #e8a000);
+  padding: 14px 16px; display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.ai-chat-header .ai-avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 18px; flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.12);
+}
+.ai-chat-header .ai-info h3 {
+  font-family: 'Jua', sans-serif; font-size: 15px; color: #2a1a00; margin: 0;
+}
+.ai-chat-header .ai-info p {
+  font-size: 11px; color: #5c3a00; margin: 0;
+}
+.ai-chat-close {
+  margin-left: auto; background: none; border: none;
+  font-size: 18px; cursor: pointer; color: #2a1a00; opacity: .6;
+  transition: opacity .13s; padding: 4px;
+}
+.ai-chat-close:hover { opacity: 1; }
+
+/* 메시지 영역 */
+.ai-chat-messages {
+  flex: 1; overflow-y: auto; padding: 14px 14px 8px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.ai-chat-messages::-webkit-scrollbar { width: 4px; }
+.ai-chat-messages::-webkit-scrollbar-thumb { background: #fde047; border-radius: 2px; }
+
+/* 메시지 버블 */
+.msg-wrap { display: flex; gap: 8px; align-items: flex-end; }
+.msg-wrap.user { flex-direction: row-reverse; }
+.msg-avatar {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #fef9c3; border: 1.5px solid #fde047;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; flex-shrink: 0;
+}
+.msg-bubble {
+  max-width: 78%; padding: 9px 13px; border-radius: 14px;
+  font-size: 13px; line-height: 1.65; font-family: 'Nanum Gothic', sans-serif;
+  word-break: break-word;
+}
+.msg-bubble.ai {
+  background: #fff; border: 1px solid #e8d84a; color: #3a2a00;
+  border-bottom-left-radius: 4px;
+}
+.msg-bubble.user {
+  background: linear-gradient(135deg, #f5c400, #e8a000);
+  color: #2a1a00; border-bottom-right-radius: 4px;
+}
+.msg-bubble.typing {
+  background: #fff; border: 1px solid #e8d84a; color: #a07030;
+}
+.typing-dots { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+.typing-dots span {
+  width: 6px; height: 6px; border-radius: 50%; background: #ca8a04;
+  animation: typingBounce 1.2s infinite;
+}
+.typing-dots span:nth-child(2) { animation-delay: .2s; }
+.typing-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes typingBounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: .4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* 빠른 질문 칩 */
+.ai-quick-chips {
+  padding: 0 14px 8px; display: flex; gap: 6px; flex-wrap: wrap; flex-shrink: 0;
+}
+.chip {
+  background: #fef9c3; border: 1px solid #fde047; color: #713f00;
+  font-size: 11px; font-family: 'Jua', sans-serif;
+  padding: 5px 11px; border-radius: 20px; cursor: pointer;
+  transition: all .13s; white-space: nowrap;
+}
+.chip:hover { background: #fde047; transform: translateY(-1px); }
+
+/* 입력 영역 */
+.ai-chat-input-wrap {
+  padding: 10px 12px; border-top: 1px solid #e8d84a;
+  display: flex; gap: 8px; align-items: flex-end; flex-shrink: 0;
+  background: #fffdf5;
+}
+.ai-chat-input {
+  flex: 1; border: 1.5px solid #e8d84a; border-radius: 12px;
+  padding: 9px 13px; font-size: 13px; font-family: 'Nanum Gothic', sans-serif;
+  background: #fff; color: #3a2a00; outline: none; resize: none;
+  max-height: 100px; min-height: 38px; line-height: 1.5;
+  transition: border .13s;
+}
+.ai-chat-input:focus { border-color: #ca8a04; }
+.ai-chat-input::placeholder { color: #c0a060; }
+.ai-send-btn {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: linear-gradient(135deg, #f5c400, #e8a000);
+  border: none; cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .13s; flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(200,150,0,.3);
+}
+.ai-send-btn:hover { transform: scale(1.08); }
+.ai-send-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+</style>
+
+<!-- AI 채팅 버튼 -->
+<button class="ai-fab" onclick="toggleChat()" title="AI에게 질문하기">
+  🐥
+  <span class="fab-badge" id="fabBadge">!</span>
+</button>
+
+<!-- AI 채팅 창 -->
+<div class="ai-chat-window" id="aiChatWindow">
+  <div class="ai-chat-header">
+    <div class="ai-avatar">🐥</div>
+    <div class="ai-info">
+      <h3>세무비서 AI</h3>
+      <p id="aiStatusText">Gemini로 연결 중...</p>
+    </div>
+    <button class="ai-chat-close" onclick="toggleChat()">✕</button>
+  </div>
+
+  <!-- API 키 입력 화면 -->
+  <div id="apiKeyScreen" style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:14px;">
+    <div style="font-size:40px;">🔑</div>
+    <p style="font-family:'Jua',sans-serif;font-size:15px;color:#5c3d00;text-align:center;">Gemini API 키를 입력해 주세요!</p>
+    <p style="font-size:12px;color:#a07030;text-align:center;line-height:1.6;">
+      <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#ca8a04;font-weight:700;">aistudio.google.com</a>에서<br>무료로 발급받을 수 있어요 🐥
+    </p>
+    <div style="width:100%;position:relative;">
+      <input type="password" id="apiKeyInput" placeholder="API 키를 붙여넣으세요..."
+        style="width:100%;padding:11px 44px 11px 14px;border:2px solid #fde047;border-radius:12px;
+               font-size:13px;font-family:'Nanum Gothic',sans-serif;outline:none;background:#fff;color:#3a2a00;"
+        onkeydown="if(event.key==='Enter') saveApiKey()">
+      <button onclick="toggleKeyVisible()" id="eyeBtn"
+        style="position:absolute;right:10px;top:50%;transform:translateY(-50%);
+               background:none;border:none;cursor:pointer;font-size:16px;">👁️</button>
+    </div>
+    <button onclick="saveApiKey()"
+      style="width:100%;padding:12px;background:linear-gradient(135deg,#f5c400,#e8a000);
+             border:none;border-radius:12px;font-family:'Jua',sans-serif;font-size:14px;
+             color:#2a1a00;cursor:pointer;font-weight:400;">
+      연결하기 🐥
+    </button>
+    <p style="font-size:11px;color:#c0a060;text-align:center;">키는 브라우저에만 저장되며 외부로 전송되지 않아요</p>
+  </div>
+
+  <!-- 채팅 화면 -->
+  <div id="chatScreen" style="flex:1;display:none;flex-direction:column;overflow:hidden;">
+    <div class="ai-chat-messages" id="chatMessages">
+      <div class="msg-wrap">
+        <div class="msg-avatar">🐥</div>
+        <div class="msg-bubble ai">안녕하세요! 세무비서 AI예요 🐥<br>원천세, 부가세, 4대보험, 연말정산 등 세무 관련 질문을 편하게 해주세요!</div>
+      </div>
+    </div>
+
+    <div class="ai-quick-chips" id="quickChips">
+      <span class="chip" onclick="sendQuick('퇴직금 계산 방법 알려줘')">🧮 퇴직금 계산</span>
+      <span class="chip" onclick="sendQuick('상여금 소득세 계산 방법은?')">💰 상여금 소득세</span>
+      <span class="chip" onclick="sendQuick('중도퇴사자 4대보험 처리 방법은?')">📊 중도퇴사 보험</span>
+      <span class="chip" onclick="sendQuick('부가세 신고 순서 알려줘')">🧾 부가세 신고</span>
+    </div>
+
+    <div style="padding:6px 12px;display:flex;justify-content:flex-end;">
+      <button onclick="resetApiKey()"
+        style="background:none;border:none;font-size:11px;color:#c0a060;cursor:pointer;
+               font-family:'Nanum Gothic',sans-serif;text-decoration:underline;">
+        🔑 API 키 변경
+      </button>
+    </div>
+
+    <div class="ai-chat-input-wrap">
+      <textarea class="ai-chat-input" id="chatInput" placeholder="질문을 입력하세요..." rows="1"
+        onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+      <button class="ai-send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── AI 채팅 (Gemini) ──
+const GEMINI_KEY_STORAGE = 'semu_gemini_key';
+let chatOpen = false;
+let chatHistory = [];
+let isLoading = false;
+let geminiApiKey = '';
+
+const SYSTEM_PROMPT = `당신은 대한세무법인의 세무비서 AI입니다. 이름은 "세린이"이고, 친근하고 귀여운 말투를 사용하세요. 이모지를 적절히 활용하세요.
+
+다음은 업무 노트의 핵심 내용입니다:
+
+【원천세】
+- 건강·연금: EDI 고지대로 / 고용: 요율대로
+- 두루누리: 10인 미만, 기준소득월액 270만원 미만 신규가입자 대상. 고용·연금 80% 지원
+- 원천세 가산세: (미납부세액×3%) + (미납부세액×미납일수×0.00022), 한도 10%
+
+【4대보험/노무】
+- 퇴직금 = 평균임금 × 재직일수 × 30/365
+- 평균임금 = (산정급여 + 산정상여) ÷ 3개월 일수
+- 산정상여 = 1년 내 상여금 ÷ 12 × 3
+- 상여금 소득세: 간이세액표 직접 적용 불가. 월평균급여로 간이세액 조회 후 조정세액 계산
+- 조정세액 = (월평균 간이세액 × 조정률) × 산정월수 - (기납부세액 + 기감면세액)
+- 중도퇴사: 국민연금 공제안함 / 건강장기요양 퇴직정산 / 고용보험 0.9% 반드시 공제
+
+【부가세】
+- 간주임대료: 보증금 × 3.1% × 해당기간일수/365
+- 납부지연 가산세: 세액×3% + 세액×0.00022×지연일수
+- 공제 가능 차량: 화물차, 밴형, 경차(1000cc미만), 125cc이하 이륜차, 9인승 이상 승용차
+
+【연말정산】
+- 근로소득: 간소화PDF, 인적공제서류, 전직장 원천징수영수증 필요
+- 보수총액신고: 건강보험 3/10, 고용산재 3/15 기한
+
+【법인세】
+- 접대비 한도: 일반기업 1,200만원 / 중소기업 3,600만원 + 수입금액×0.3%
+- 세금과공과 손금불산입: 과태료, 가산세, 법인세, 건강보험 연체금
+- 업무용승용차: 한도 연 1,500만원 (감가상각비 800만원)
+
+모르는 내용이나 확실하지 않은 경우에는 솔직하게 말하고, 정확한 확인을 권유하세요.
+답변은 간결하고 실용적으로, 필요시 번호나 항목으로 정리해주세요.`;
+
+// 초기화: 저장된 키 확인
+function initChat() {
+  const saved = localStorage.getItem(GEMINI_KEY_STORAGE);
+  if (saved) {
+    geminiApiKey = saved;
+    showChatScreen();
+  } else {
+    showKeyScreen();
+  }
+}
+
+function showKeyScreen() {
+  document.getElementById('apiKeyScreen').style.display = 'flex';
+  document.getElementById('chatScreen').style.display = 'none';
+  document.getElementById('aiStatusText').textContent = 'API 키를 입력해 주세요';
+}
+
+function showChatScreen() {
+  document.getElementById('apiKeyScreen').style.display = 'none';
+  document.getElementById('chatScreen').style.display = 'flex';
+  document.getElementById('aiStatusText').textContent = 'Gemini 연결됨 ✓';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) { alert('API 키를 입력해 주세요!'); return; }
+  geminiApiKey = key;
+  localStorage.setItem(GEMINI_KEY_STORAGE, key);
+  document.getElementById('apiKeyInput').value = '';
+  showChatScreen();
+  setTimeout(() => document.getElementById('chatInput').focus(), 200);
+}
+
+function resetApiKey() {
+  if (!confirm('API 키를 변경하시겠어요?')) return;
+  geminiApiKey = '';
+  localStorage.removeItem(GEMINI_KEY_STORAGE);
+  showKeyScreen();
+}
+
+function toggleKeyVisible() {
+  const inp = document.getElementById('apiKeyInput');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function toggleChat() {
+  chatOpen = !chatOpen;
+  document.getElementById('aiChatWindow').classList.toggle('open', chatOpen);
+  document.getElementById('fabBadge').classList.remove('show');
+  if (chatOpen) {
+    initChat();
+    setTimeout(() => {
+      const target = geminiApiKey
+        ? document.getElementById('chatInput')
+        : document.getElementById('apiKeyInput');
+      if (target) target.focus();
+    }, 300);
+  }
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+}
+
+function sendQuick(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+function addMessage(role, content) {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap' + (role === 'user' ? ' user' : '');
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = role === 'user' ? '👤' : '🐥';
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble ' + role;
+  bubble.innerHTML = content
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  wrap.appendChild(avatar);
+  wrap.appendChild(bubble);
+  document.getElementById('chatMessages').appendChild(wrap);
+  scrollToBottom();
+  return bubble;
+}
+
+function addTyping() {
+  const wrap = document.createElement('div');
+  wrap.className = 'msg-wrap';
+  wrap.id = 'typingIndicator';
+  wrap.innerHTML = '<div class="msg-avatar">🐥</div><div class="msg-bubble typing"><div class="typing-dots"><span></span><span></span><span></span></div></div>';
+  document.getElementById('chatMessages').appendChild(wrap);
+  scrollToBottom();
+}
+
+function removeTyping() {
+  const t = document.getElementById('typingIndicator');
+  if (t) t.remove();
+}
+
+function scrollToBottom() {
+  const m = document.getElementById('chatMessages');
+  m.scrollTop = m.scrollHeight;
+}
+
+async function sendMessage() {
+  if (isLoading) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  input.style.height = 'auto';
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('quickChips').style.display = 'none';
+
+  addMessage('user', text);
+  chatHistory.push({ role: 'user', parts: [{ text }] });
+
+  addTyping();
+
+  try {
+    // Gemini 2.0 Flash API 호출
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiApiKey}`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: chatHistory,
+        generationConfig: { maxOutputTokens: 1000, temperature: 0.7 }
+      })
+    });
+
+    const data = await response.json();
+    removeTyping();
+
+    if (data.error) {
+      const errMsg = data.error.code === 400
+        ? 'API 키가 올바르지 않아요 🔑\n키를 다시 확인해 주세요!'
+        : `오류: ${data.error.message}`;
+      addMessage('ai', errMsg);
+      if (data.error.code === 400 || data.error.code === 403) {
+        setTimeout(() => { geminiApiKey=''; localStorage.removeItem(GEMINI_KEY_STORAGE); showKeyScreen(); }, 1500);
+      }
+    } else {
+      const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '죄송해요, 답변을 불러오지 못했어요 😢';
+      chatHistory.push({ role: 'model', parts: [{ text: aiText }] });
+      addMessage('ai', aiText);
+    }
+
+  } catch (err) {
+    removeTyping();
+    addMessage('ai', '네트워크 오류가 발생했어요 😢\n잠시 후 다시 시도해 주세요!');
+  }
+
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+// FAB 뱃지 (2초 후 표시)
+setTimeout(() => {
+  if (!chatOpen) document.getElementById('fabBadge').classList.add('show');
+}, 2000);
+</script>
+</body>
+</html>
