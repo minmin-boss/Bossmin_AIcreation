@@ -332,6 +332,12 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
         <div class="k-cd" style="color:#92400e;">세무·노무 궁금한 것<br>뭐든 물어보세요!</div>
         <div class="k-card-tag" style="background:linear-gradient(135deg,#fef9c3,#fde047);color:#a16207;border-color:#fde047;">🐥 클릭해서 입장</div>
       </div>
+      <div class="k-card" onclick="location.href='travel-tracker.html'" style="cursor:pointer;border-color:#a5d8ff;background:linear-gradient(135deg,#f0f9ff,#dbeafe);" >
+        <span class="k-ico">🗺️</span>
+        <div class="k-ct" style="color:#1d4ed8;">내 여행 지도</div>
+        <div class="k-cd" style="color:#1e40af;">방문한 나라·도시를<br>지도에 기록해요 ✈️</div>
+        <div class="k-card-tag" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);color:#1d4ed8;border-color:#93c5fd;">🌍 클릭해서 입장</div>
+      </div>
     </div>
     <div class="k-foot">🎀 ⓒ Bossmin_office_AI creation 🎀</div>
   </div>
@@ -398,6 +404,7 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
       <div class="ig-hl"><div class="ig-hl-ring" style="background:#dbdbdb;"><div class="ig-hl-inner">📊</div></div><span class="ig-hl-label">업무현황</span></div>
       <div class="ig-hl"><div class="ig-hl-ring" style="background:#dbdbdb;"><div class="ig-hl-inner">💬</div></div><span class="ig-hl-label">공지</span></div>
       <div class="ig-hl" onclick="location.href='taxmanager_ai.html'" style="cursor:pointer;"><div class="ig-hl-ring" style="background:linear-gradient(45deg,#ffd600,#ff8f00);"><div class="ig-hl-inner">🐥</div></div><span class="ig-hl-label">세무비서</span></div>
+      <div class="ig-hl" onclick="location.href='travel-tracker.html'" style="cursor:pointer;"><div class="ig-hl-ring" style="background:linear-gradient(45deg,#60a5fa,#2563eb);"><div class="ig-hl-inner">🗺️</div></div><span class="ig-hl-label">여행지도</span></div>
     <div class="ig-tab-row">
       <div class="ig-tab on"><svg width="22" height="22" viewBox="0 0 24 24" fill="#000"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></div>
       <div class="ig-tab"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#aaa" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M16 3v4a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V3"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></div>
@@ -433,7 +440,13 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
         </div>
         <div class="ig-ov"><span>세무비서 AI 이동</span></div>
       </div>
-      <div class="ig-cell" style="background:#f9f9f9;"></div>
+      <div class="ig-cell" onclick="location.href='travel-tracker.html'" style="background:linear-gradient(135deg,#dbeafe,#3b82f6);cursor:pointer;">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;width:100%;height:100%;">
+          <span style="font-size:32px;">🗺️</span>
+          <span style="font-size:10px;font-weight:700;color:#fff;text-align:center;padding:0 6px;">내 여행 지도</span>
+        </div>
+        <div class="ig-ov"><span>내 여행 지도 이동</span></div>
+      </div>
     </div>
     <div class="ig-bottomnav">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2"><path d="M3 9.5L12 3l9 6.5V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9.5z"/></svg>
@@ -485,6 +498,7 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
       <div class="cy-tab-item">음악</div>
       <div class="cy-tab-item">방명록</div>
       <div class="cy-tab-item" onclick="location.href='taxmanager_ai.html'" style="color:#aa6600;font-weight:bold;">🐥 세무비서AI</div>
+      <div class="cy-tab-item" onclick="location.href='travel-tracker.html'" style="color:#1d4ed8;font-weight:bold;">🗺️ 여행지도</div>
     </div>
 
     <!-- 본문 -->
@@ -601,6 +615,13 @@ body{font-family:"Nanum Gothic",-apple-system,sans-serif;}
           <div class="cy-board-row" style="border-bottom:1px dashed #fde047;"><span class="cy-board-ico">💛</span><span class="cy-board-txt" style="color:#5c3d00;font-weight:bold;">세무·노무 궁금한 것 뭐든 물어보세요!</span><span class="cy-board-badge" style="background:#fef9c3;color:#a16207;border-color:#fde047;">AI 연결</span></div>
           <div class="cy-board-row" style="border-bottom:1px dashed #fde047;"><span class="cy-board-ico">📊</span><span class="cy-board-txt">4대보험 · 연말정산 · 부가세 안내</span></div>
           <div class="cy-board-row"><span class="cy-board-ico">🧮</span><span class="cy-board-txt">퇴직금 계산 · 원천세 · 법인세</span></div>
+        </div>
+        <!-- 내 여행 지도 -->
+        <div class="cy-board" onclick="location.href='travel-tracker.html'" style="cursor:pointer;border-color:#93c5fd;background:linear-gradient(180deg,#f0f9ff,#dbeafe);">
+          <div class="cy-board-hd" style="background:linear-gradient(180deg,#60a5fa,#2563eb);">🗺️ 내 여행 지도 <span style="font-size:10px;">+ 입장하기 ▶</span></div>
+          <div class="cy-board-row" style="border-bottom:1px dashed #bfdbfe;"><span class="cy-board-ico">✈️</span><span class="cy-board-txt" style="color:#1e3a5f;font-weight:bold;">방문한 나라·도시를 지도에 기록해요!</span><span class="cy-board-badge" style="background:#dbeafe;color:#1d4ed8;border-color:#93c5fd;">여행기록</span></div>
+          <div class="cy-board-row" style="border-bottom:1px dashed #bfdbfe;"><span class="cy-board-ico">📍</span><span class="cy-board-txt">나라·도시별 국기 핀으로 표시</span></div>
+          <div class="cy-board-row"><span class="cy-board-ico">📊</span><span class="cy-board-txt">연도별 통계 · 비행 거리 · 히트맵</span></div>
         </div>
       </div>
     </div>
