@@ -100,6 +100,14 @@ tr:hover td{background:#fafaf8}
 #loading p{font-size:.84rem;color:var(--muted)}
 .spinner{width:34px;height:34px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+#login-screen{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:998}
+.login-card{background:var(--card);border-radius:20px;padding:2.5rem 2rem;width:340px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.1);text-align:center;border:1px solid var(--border)}
+.login-logo{font-size:1.5rem;font-weight:700;color:var(--accent);letter-spacing:-.5px;margin-bottom:.2rem}
+.login-sub{font-size:.76rem;color:var(--muted);margin-bottom:1.75rem}
+.btn-google{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:11px 0;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:.88rem;font-weight:600;cursor:pointer;font-family:var(--font);transition:all .18s}
+.btn-google:hover{background:#f5f5f5;border-color:#ccc}
+.user-info-bar{display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--muted);background:#f0f0ed;padding:4px 10px;border-radius:99px}
+.user-avatar-img{width:20px;height:20px;border-radius:50%;object-fit:cover}
 
 .stat-green{color:var(--accent)}
 .stat-orange{color:var(--warn)}
@@ -131,6 +139,24 @@ tr:hover td{background:#fafaf8}
   <p>Firebase 연결 중...</p>
 </div>
 
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Our dayoff</div>
+    <div class="login-sub">· work-life balance ·</div>
+    <p style="font-size:.78rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.7">Google 계정으로 로그인하면<br>어디서든 내 휴가 정보를 확인할 수 있어요</p>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Google 계정으로 로그인
+    </button>
+    <p style="font-size:.66rem;color:var(--muted);margin-top:1rem">회사 Google 계정을 사용해주세요</p>
+  </div>
+</div>
+
 <div class="app" id="main-app" style="display:none">
   <div class="header">
     <div class="header-left">
@@ -141,6 +167,13 @@ tr:hover td{background:#fafaf8}
       <div class="sync-wrap">
         <span class="sync-dot loading" id="sync-dot"></span>
         <span id="sync-label">연결 중</span>
+      </div>
+      <div id="user-info-bar-wrap" style="display:none">
+        <div class="user-info-bar">
+          <img id="user-avatar-img" class="user-avatar-img" src="" alt="">
+          <span id="user-display-name" style="max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+          <button onclick="signOutUser()" style="border:none;background:none;cursor:pointer;color:var(--muted);font-size:.68rem;padding:0 2px;font-family:var(--font)">로그아웃</button>
+        </div>
       </div>
     </div>
   </div>
@@ -286,6 +319,9 @@ import {
   getFirestore, collection, doc, setDoc, getDoc, getDocs,
   onSnapshot, addDoc, deleteDoc, updateDoc, query, orderBy
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 
 // ── Firebase ──────────────────────────────────────────────
 const app = initializeApp({
@@ -297,33 +333,27 @@ const app = initializeApp({
   appId: "1:56974474790:web:5007a844ea581ff58e70e7",
   measurementId: "G-FDF14885J5"
 });
-const db = getFirestore(app);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+const googleProvider = new GoogleAuthProvider();
 
-// ── Device ID ─────────────────────────────────────────────
-const DEVICE_KEY   = 'leave-tracker-uid';
-const LEGACY_KEY   = 'leave-tracker-uid-legacy'; // 마이그레이션용 이전 ID 보관
+// ── Auth ──────────────────────────────────────────────────
 const AVATAR_COLORS = ['#2d6a4f','#1d6091','#7c3aed','#c45f3a','#0f766e','#b45309','#9d174d','#1e40af','#065f46','#92400e'];
+let MY_ID = null; // Google Auth UID
 
-// 이름+입사일로 고정 ID 생성 (어느 기기에서 열어도 동일)
-async function makeStableId(name, join) {
-  const raw = (name + '|' + (join||'')).trim().toLowerCase();
-  const buf = new TextEncoder().encode(raw);
-  const hash = await crypto.subtle.digest('SHA-256', buf);
-  const arr = Array.from(new Uint8Array(hash));
-  return 'uid_' + arr.slice(0,10).map(b=>b.toString(16).padStart(2,'0')).join('');
-}
-
-// 현재 저장된 ID 반환 (없으면 임시 ID)
-function getMyId() {
-  let id = localStorage.getItem(DEVICE_KEY);
-  if (!id) {
-    // 임시 ID - 설정 저장 시 안정된 ID로 교체됨
-    id = 'tmp_' + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-    localStorage.setItem(DEVICE_KEY, id);
+window.signInWithGoogle = async function() {
+  try {
+    await signInWithPopup(auth, googleProvider);
+  } catch(e) {
+    toast('로그인 실패: ' + e.message);
+    console.error(e);
   }
-  return id;
-}
-let MY_ID = getMyId();
+};
+window.signOutUser = async function() {
+  if (!confirm('로그아웃하시겠습니까?')) return;
+  await signOut(auth);
+  location.reload();
+};
 
 // ── State ─────────────────────────────────────────────────
 let allMembers  = {};   // { [uid]: { settings, leaves[] } }
@@ -1356,50 +1386,11 @@ window.saveSettings = async function() {
   if (!s.name) { toast('이름을 입력해주세요.'); return; }
 
   try {
-    // 이름+입사일로 안정된 ID 생성 (어느 기기에서나 동일)
-    const stableId = await makeStableId(s.name, s.join);
-    const oldId    = MY_ID;
-    const isNewId  = stableId !== oldId;
-
-    if (isNewId) {
-      // 기존 데이터를 새 ID로 마이그레이션
-      const [oldLeaves, oldWlb, oldTenure] = await Promise.all([
-        getDocs(collection(db,'members',oldId,'leaves')),
-        getDocs(collection(db,'members',oldId,'wlb')),
-        getDocs(collection(db,'members',oldId,'tenure'))
-      ]);
-      const writes = [];
-      oldLeaves.docs.forEach(d=>writes.push(setDoc(doc(db,'members',stableId,'leaves',d.id),d.data())));
-      oldWlb.docs.forEach(d=>writes.push(setDoc(doc(db,'members',stableId,'wlb',d.id),d.data())));
-      oldTenure.docs.forEach(d=>writes.push(setDoc(doc(db,'members',stableId,'tenure',d.id),d.data())));
-      await Promise.all(writes);
-
-      // 임시 ID(tmp_ 또는 uid_ 랜덤)면 기존 데이터 정리
-      if (!oldId.startsWith('stable_')) {
-        const deletes = [];
-        oldLeaves.docs.forEach(d=>deletes.push(deleteDoc(d.ref)));
-        oldWlb.docs.forEach(d=>deletes.push(deleteDoc(d.ref)));
-        oldTenure.docs.forEach(d=>deletes.push(deleteDoc(d.ref)));
-        await deleteDoc(doc(db,'members',oldId,'meta','settings')).catch(()=>{});
-        await deleteDoc(doc(db,'memberIndex',oldId)).catch(()=>{});
-        await Promise.all(deletes);
-      }
-
-      // MY_ID를 새 ID로 업데이트
-      MY_ID = stableId;
-      localStorage.setItem('leave-tracker-uid', stableId);
-    }
-
-    // 설정 저장 + memberIndex 등록
     await setDoc(doc(db,'members',MY_ID,'meta','settings'), s);
     await setDoc(doc(db,'memberIndex',MY_ID),{lastSeen:new Date().toISOString()},{merge:true});
-
     mySettings = {...s};
     if (!allMembers[MY_ID]) allMembers[MY_ID]={settings:{},leaves:[],wlb:[],tenure:[]};
     allMembers[MY_ID].settings = {...s};
-
-    if (isNewId) listenMember(MY_ID);
-
     toast('저장되었습니다.'); renderAll();
   } catch(e) { toast('저장 실패: '+e.message); console.error(e); }
 };
@@ -1804,21 +1795,28 @@ function listenTeam() {
 document.getElementById('today-str').textContent =
   new Date().toLocaleDateString('ko-KR',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
 
-(async()=>{
+async function initApp(user) {
   try {
-    // 내 설정이 Firebase에 있는지 먼저 확인
+    MY_ID = user.uid;
+
+    // 헤더에 유저 정보 표시
+    const wrap   = document.getElementById('user-info-bar-wrap');
+    const avatar = document.getElementById('user-avatar-img');
+    const name   = document.getElementById('user-display-name');
+    if (wrap)   wrap.style.display = 'block';
+    if (avatar && user.photoURL) avatar.src = user.photoURL;
+    if (name)   name.textContent = user.displayName || user.email;
+
+    // 내 설정 로드 + memberIndex 갱신
     const mySetSnap = await getDoc(doc(db,'members',MY_ID,'meta','settings'));
     if (mySetSnap.exists()) {
-      // 기존 사용자: memberIndex 갱신
-      await setDoc(doc(db,'memberIndex',MY_ID),{lastSeen:new Date().toISOString()},{merge:true});
       mySettings = {...mySetSnap.data()};
+      await setDoc(doc(db,'memberIndex',MY_ID),{lastSeen:new Date().toISOString()},{merge:true});
     }
 
-    // Load initial data for all members
+    // 전체 멤버 로딩
     const idxSnap = await getDocs(collection(db,'memberIndex'));
     const uids = idxSnap.docs.map(d=>d.id);
-
-    // MY_ID가 memberIndex에 없어도 반드시 포함
     if (!uids.includes(MY_ID)) uids.push(MY_ID);
 
     await Promise.all(uids.map(async uid=>{
@@ -1837,10 +1835,10 @@ document.getElementById('today-str').textContent =
         tenure:   tenureSnap.docs.map(d=>({id:d.id,...d.data()}))
       };
       if (uid===MY_ID) {
-        mySettings      = setSnap.exists() ? {...setSnap.data()} : mySettings;
-        myLeaves        = [...allMembers[uid].leaves];
-        myWlb           = [...allMembers[uid].wlb];
-        myTenureLeaves  = [...allMembers[uid].tenure];
+        mySettings     = setSnap.exists() ? {...setSnap.data()} : mySettings;
+        myLeaves       = [...allMembers[uid].leaves];
+        myWlb          = [...allMembers[uid].wlb];
+        myTenureLeaves = [...allMembers[uid].tenure];
       }
     }));
 
@@ -1848,11 +1846,10 @@ document.getElementById('today-str').textContent =
     teamMembers = teamSnap.docs.map(d=>({id:d.id,...d.data()}));
 
     setSyncState('ok');
-    document.getElementById('loading').style.display='none';
-    document.getElementById('main-app').style.display='block';
+    document.getElementById('loading').style.display  = 'none';
+    document.getElementById('main-app').style.display = 'block';
     renderAll();
 
-    // 실시간 리스너 - MY_ID는 항상 포함
     uids.forEach(uid=>listenMember(uid));
     listenMemberIndex();
     listenTeam();
@@ -1860,10 +1857,22 @@ document.getElementById('today-str').textContent =
   } catch(e) {
     setSyncState('err');
     document.getElementById('loading').innerHTML =
-      `<p style="color:var(--danger);text-align:center;padding:2rem">Firebase 연결 실패<br><small>${e.message}</small></p>`;
+      `<p style="color:var(--danger);text-align:center;padding:2rem">오류 발생<br><small>${e.message}</small></p>`;
     console.error(e);
   }
-})();
+}
+
+// Auth 상태 감지 → 로그인 여부에 따라 화면 전환
+onAuthStateChanged(auth, user => {
+  if (user) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('loading').style.display      = 'flex';
+    initApp(user);
+  } else {
+    document.getElementById('loading').style.display      = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+});
 </script>
 </body>
 </html>
