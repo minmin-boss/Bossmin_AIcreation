@@ -647,5 +647,42 @@ function sw(id){
   });
 }
 </script>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+const app = initializeApp({
+  apiKey: "AIzaSyC7Qv2Piu4E0YgpEsS606CzYZlYK6oHxwA",
+  authDomain: "coworker-daydo.firebaseapp.com",
+  projectId: "coworker-daydo",
+  storageBucket: "coworker-daydo.firebasestorage.app",
+  messagingSenderId: "56974474790",
+  appId: "1:56974474790:web:5007a844ea581ff58e70e7"
+});
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+
+onAuthStateChanged(auth, user => {
+  const loginBtns  = document.querySelectorAll('.idx-login-btn');
+  const userBadges = document.querySelectorAll('.idx-user-badge');
+  if (user) {
+    loginBtns.forEach(b  => b.style.display = 'none');
+    userBadges.forEach(b => {
+      b.style.display = 'flex';
+      const img  = b.querySelector('.idx-avatar');
+      const name = b.querySelector('.idx-uname');
+      if (img  && user.photoURL)   img.src          = user.photoURL;
+      if (name && user.displayName) name.textContent = user.displayName;
+    });
+  } else {
+    loginBtns.forEach(b  => b.style.display = 'flex');
+    userBadges.forEach(b => b.style.display = 'none');
+  }
+});
+
+window.idxGoogleLogin  = async () => { try { await signInWithPopup(auth, provider); } catch(e) { alert('로그인 실패: '+e.message); } };
+window.idxGoogleLogout = async () => { if (confirm('로그아웃하시겠습니까?')) await signOut(auth); };
+</script>
 </body>
 </html>
