@@ -180,7 +180,7 @@ tr.cli-grp td{background:#f8f9fc!important;font-size:11px;font-weight:700;color:
       <div class="page active" id="page-dashboard">
         <div class="stats-row" id="dashStats"></div>
         <div class="dash-grid">
-          <div class="card"><div class="card-hd"><h2>&#128197; 이번달 신고 일정</h2></div><div style="padding:10px 14px" id="dashSched"></div></div>
+          <div class="card"><div class="card-hd"><h2>&#128197; 이번달 세무 신고 일정 <small style="font-weight:400;color:#98a2b3;font-size:11px">(홈택스 기준)</small></h2></div><div style="padding:10px 14px;max-height:340px;overflow-y:auto;" id="dashSched"></div></div>
           <div class="card"><div class="card-hd"><h2>&#128276; 폐업 거래처</h2></div><div style="padding:10px 14px" id="dashClosed"></div></div>
         </div>
       </div>
@@ -566,30 +566,167 @@ window.changeYear = function() {
   showPage(curPage);
 };
 
+// ── 홈택스 세무일정 데이터 (국세청 공식 기준) ──
+// tag: wh=원천세, vat=부가세, corp=법인세, income=소득세, etc=기타
+// ── 세무·4대보험 월별 신고일정 (국세청 + 4대보험공단 공식 기준) ──
+// tag: wh=원천세, vat=부가세, corp=법인세, income=소득세, ins=4대보험, etc=기타
+var TAX_SCHEDULE = {
+  1: [
+    {d:'01/10', tag:'wh',  l:'원천세 반기납부 신고·납부 (전년 7~12월분)'},
+    {d:'01/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (전년 12월분)'},
+    {d:'01/15', tag:'ins', l:'건강보험 직장가입자 보수총액신고 시작 (전년도)'},
+    {d:'01/25', tag:'vat', l:'부가가치세 2기 확정신고·납부'},
+    {d:'01/31', tag:'etc', l:'일용근로소득 지급명세서 제출 (전년 하반기분)'},
+    {d:'01/31', tag:'etc', l:'간이지급명세서(근로소득) 제출 (전년 하반기분)'},
+    {d:'01/31', tag:'ins', l:'근로내용확인신고서 제출 (전년 12월 일용·단기근로자분)'}
+  ],
+  2: [
+    {d:'02/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (1월분)'},
+    {d:'02/15', tag:'ins', l:'건강보험 직장가입자 보수총액신고 마감 (전년도)'},
+    {d:'02/15', tag:'ins', l:'고용·산재보험 보수총액신고 마감 (전년도)'},
+    {d:'02/15', tag:'ins', l:'국민연금 직장 기준소득월액 변경신청 가능'},
+    {d:'02/28', tag:'etc', l:'지급명세서 제출 (전년 근로·퇴직·사업소득 등)'},
+    {d:'02/28', tag:'etc', l:'간이지급명세서(사업소득) 제출 (전년 하반기분)'},
+    {d:'02/28', tag:'ins', l:'근로내용확인신고서 제출 (1월 일용·단기근로자분)'}
+  ],
+  3: [
+    {d:'03/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (2월분)'},
+    {d:'03월',  tag:'ins', l:'건강보험 직장가입자 보수총액 연말정산 — 3월 보험료에 반영'},
+    {d:'03월',  tag:'ins', l:'국민연금 직장 기준소득월액 정산 (3월분 반영)'},
+    {d:'03/31', tag:'corp',l:'법인세 확정신고·납부 (12월 결산법인)'},
+    {d:'03/31', tag:'etc', l:'성실신고확인 대상 법인 세무사 확인서 제출'},
+    {d:'03/31', tag:'ins', l:'근로내용확인신고서 제출 (2월 일용·단기근로자분)'}
+  ],
+  4: [
+    {d:'04/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (3월분)'},
+    {d:'04/25', tag:'vat', l:'부가가치세 1기 예정신고·납부'},
+    {d:'04/30', tag:'etc', l:'일용근로소득 지급명세서 제출 (1분기분)'},
+    {d:'04/30', tag:'etc', l:'간이지급명세서(사업소득) 제출 (1분기분)'},
+    {d:'04/30', tag:'ins', l:'근로내용확인신고서 제출 (3월 일용·단기근로자분)'}
+  ],
+  5: [
+    {d:'05/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (4월분)'},
+    {d:'05/31', tag:'income',l:'종합소득세 확정신고·납부'},
+    {d:'05/31', tag:'etc', l:'개인지방소득세 신고·납부'},
+    {d:'05/31', tag:'etc', l:'간이지급명세서(근로소득) 제출 (상반기분)'},
+    {d:'05/31', tag:'ins', l:'근로내용확인신고서 제출 (4월 일용·단기근로자분)'}
+  ],
+  6: [
+    {d:'06/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (5월분)'},
+    {d:'06/30', tag:'income',l:'성실신고확인 대상자 종합소득세 확정신고·납부'},
+    {d:'06/30', tag:'etc', l:'간이지급명세서(사업소득) 제출 (2분기분)'},
+    {d:'06/30', tag:'etc', l:'일용근로소득 지급명세서 제출 (2분기분)'},
+    {d:'06/30', tag:'ins', l:'근로내용확인신고서 제출 (5월 일용·단기근로자분)'},
+    {d:'06월',  tag:'ins', l:'건강보험 지역가입자 연간 보험료 정산 (전년 소득 반영, 11월분부터 적용)'}
+  ],
+  7: [
+    {d:'07/10', tag:'wh',  l:'원천세 반기납부 신고·납부 (1~6월분)'},
+    {d:'07/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (6월분)'},
+    {d:'07/25', tag:'vat', l:'부가가치세 1기 확정신고·납부'},
+    {d:'07/31', tag:'ins', l:'근로내용확인신고서 제출 (6월 일용·단기근로자분)'},
+    {d:'07월',  tag:'ins', l:'국민연금 직장 기준소득월액 정기결정 — 7월 보험료부터 변경'},
+    {d:'07월',  tag:'ins', l:'건강보험 직장 보수월액 정기변경 — 7월분 보험료부터 반영'},
+    {d:'07월',  tag:'ins', l:'고용·산재보험 개산보험료 신고·납부 (당해연도 추정)'}
+  ],
+  8: [
+    {d:'08/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (7월분)'},
+    {d:'08/31', tag:'corp',l:'법인세 중간예납 (12월 결산법인)'},
+    {d:'08/31', tag:'etc', l:'간이지급명세서(사업소득) 제출 (3분기분)'},
+    {d:'08/31', tag:'etc', l:'일용근로소득 지급명세서 제출 (3분기분)'},
+    {d:'08/31', tag:'ins', l:'근로내용확인신고서 제출 (7월 일용·단기근로자분)'}
+  ],
+  9: [
+    {d:'09/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (8월분)'},
+    {d:'09/30', tag:'ins', l:'근로내용확인신고서 제출 (8월 일용·단기근로자분)'}
+  ],
+  10: [
+    {d:'10/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (9월분)'},
+    {d:'10/25', tag:'vat', l:'부가가치세 2기 예정신고·납부'},
+    {d:'10/31', tag:'etc', l:'일용근로소득 지급명세서 제출 (3분기분)'},
+    {d:'10/31', tag:'etc', l:'간이지급명세서(사업소득) 제출 (3분기분)'},
+    {d:'10/31', tag:'ins', l:'근로내용확인신고서 제출 (9월 일용·단기근로자분)'}
+  ],
+  11: [
+    {d:'11/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (10월분)'},
+    {d:'11월',  tag:'ins', l:'건강보험 지역가입자 정산분 보험료 부과 시작 (6월 정산 반영)'},
+    {d:'11/30', tag:'etc', l:'간이지급명세서(사업소득) 제출 (4분기분)'},
+    {d:'11/30', tag:'etc', l:'일용근로소득 지급명세서 제출 (4분기분)'},
+    {d:'11/30', tag:'ins', l:'근로내용확인신고서 제출 (10월 일용·단기근로자분)'}
+  ],
+  12: [
+    {d:'12/10', tag:'wh',  l:'원천세 매월납부 신고·납부 (11월분)'},
+    {d:'12/15', tag:'ins', l:'고용·산재보험 보수총액신고 사전안내 시작'},
+    {d:'12/31', tag:'etc', l:'연말정산 간소화 자료 일괄제공 동의기간'},
+    {d:'12/31', tag:'etc', l:'폐업 시 부가가치세 신고기한'},
+    {d:'12/31', tag:'ins', l:'근로내용확인신고서 제출 (11월 일용·단기근로자분)'}
+  ]
+};
+
+var TAG_COLOR = {
+  wh:     {bg:'#eff6ff', border:'#bfdbfe', text:'#1d4ed8', dot:'#3b82f6'},
+  vat:    {bg:'#fef3c7', border:'#fde68a', text:'#92400e', dot:'#f59e0b'},
+  corp:   {bg:'#f0fdf4', border:'#bbf7d0', text:'#065f46', dot:'#22c55e'},
+  income: {bg:'#fdf4ff', border:'#e9d5ff', text:'#6b21a8', dot:'#a855f7'},
+  ins:    {bg:'#fff1f2', border:'#fecdd3', text:'#9f1239', dot:'#f43f5e'},
+  etc:    {bg:'#f8fafc', border:'#e2e8f0', text:'#475569', dot:'#94a3b8'}
+};
+var TAG_LBL = {wh:'원천세', vat:'부가세', corp:'법인세', income:'소득세', ins:'4대보험', etc:'기타'};
+
 // ── 대시보드 ──
 function renderDash() {
-  var act = clients.filter(function(c){ return !c.close || new Date(c.close).getFullYear() >= today.getFullYear(); });
+  var act = clients.filter(function(c){ return !c.closeType && inYear(c, gYear); });
   var corp = clients.filter(function(c){ return c.type === '법인' && inYear(c, gYear); });
-  var cls = clients.filter(function(c){ return c.close && new Date(c.close).getFullYear() === gYear; });
+  var cls = clients.filter(function(c){ return c.closeType && new Date(c.close||'').getFullYear() === gYear; });
+
   document.getElementById('dashStats').innerHTML =
     '<div class="sc bl"><div class="lb">전체 거래처</div><div class="vl">' + clients.length + '</div><div class="sb2">총 등록</div></div>' +
     '<div class="sc gr"><div class="lb">운영중</div><div class="vl">' + act.length + '</div><div class="sb2">' + gYear + '년 기준</div></div>' +
     '<div class="sc am"><div class="lb">법인 거래처</div><div class="vl">' + corp.length + '</div><div class="sb2">법인세 대상</div></div>' +
-    '<div class="sc rd"><div class="lb">' + gYear + '년 폐업</div><div class="vl">' + cls.length + '</div><div class="sb2">폐업 처리</div></div>';
+    '<div class="sc rd"><div class="lb">' + gYear + '년 종결</div><div class="vl">' + cls.length + '</div><div class="sb2">폐업·이관·해지</div></div>';
+
   var m = today.getMonth() + 1;
-  var sch = [
-    {m:m, l:'원천세 신고', d: m + '월 지급 → ' + (m >= 12 ? 1 : m+1) + '/10'},
-    {m:4, l:'부가세 1기예정', d:'4/25'}, {m:7, l:'부가세 1기확정', d:'7/25'},
-    {m:10, l:'부가세 2기예정', d:'10/25'}, {m:1, l:'부가세 2기확정', d:'1/25'},
-    {m:3, l:'법인세 확정신고', d:'3/31'}, {m:8, l:'법인세 중간예납', d:'8/31'},
-    {m:5, l:'종합소득세', d:'5/31'}, {m:6, l:'종합소득세(성실)', d:'6/30'}
-  ].filter(function(s){ return s.m === m || s.m === m+1 || (m === 12 && s.m === 1); });
-  document.getElementById('dashSched').innerHTML = sch.length
-    ? sch.map(function(s){ return '<div class="dli"><strong>' + s.l + '</strong><span style="color:#667085;font-size:11px">' + s.d + '</span></div>'; }).join('')
-    : '<div style="color:#98a2b3;text-align:center;padding:16px;font-size:12px">이번달 주요 일정 없음</div>';
+  var nextM = m >= 12 ? 1 : m + 1;
+
+  // 이번달 + 다음달 일정
+  function buildSchedHTML(mon, isNext) {
+    var items = TAX_SCHEDULE[mon] || [];
+    if (!items.length) return '';
+    var mnLabel = (isNext ? '다음달 ' : '') + mon + '월';
+    var html = '<div style="font-size:10px;font-weight:700;color:#98a2b3;letter-spacing:.5px;padding:4px 0 6px;">'
+      + (isNext ? '── ' + nextM + '월 예정 ──' : '── ' + m + '월 신고 일정 ──') + '</div>';
+    items.forEach(function(s) {
+      var c = TAG_COLOR[s.tag] || TAG_COLOR.etc;
+      html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:5px 0;border-bottom:1px solid #f5f5f5;">'
+        + '<div style="flex-shrink:0;margin-top:2px;">'
+        + '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:' + c.dot + ';"></span>'
+        + '</div>'
+        + '<div style="flex:1;min-width:0;">'
+        + '<div style="font-size:11px;color:#1a1a2e;line-height:1.5;">' + s.l + '</div>'
+        + '</div>'
+        + '<div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:2px;">'
+        + '<span style="font-size:10px;font-weight:700;color:' + c.text + ';background:' + c.bg + ';border:1px solid ' + c.border + ';padding:1px 6px;border-radius:3px;">' + TAG_LBL[s.tag] + '</span>'
+        + '<span style="font-size:10px;color:#667085;">' + s.d + '</span>'
+        + '</div>'
+        + '</div>';
+    });
+    return html;
+  }
+
+  var schedHTML = buildSchedHTML(m, false);
+  if (nextM !== m) schedHTML += buildSchedHTML(nextM, true);
+
+  document.getElementById('dashSched').innerHTML = schedHTML ||
+    '<div style="color:#98a2b3;text-align:center;padding:16px;font-size:12px">이번달 일정 없음</div>';
+
+  // 폐업/이관/기장해지 거래처
   document.getElementById('dashClosed').innerHTML = cls.length
-    ? cls.map(function(c){ return '<div class="dli"><span><span class="b-cls">폐업</span> <strong style="margin-left:4px">' + c.name + '</strong></span><span style="color:#98a2b3;font-size:11px">' + c.close + '</span></div>'; }).join('')
-    : '<div style="color:#98a2b3;text-align:center;padding:16px;font-size:12px">' + gYear + '년 폐업 거래처 없음</div>';
+    ? cls.map(function(c) {
+        var ctCls = {'폐업':'b-cls','이관':'b-ikan','기장해지':'b-haiji'}[c.closeType] || 'b-cls';
+        return '<div class="dli"><span><span class="' + ctCls + '">' + c.closeType + '</span>'
+          + ' <strong style="margin-left:4px">' + c.name + '</strong></span>'
+          + '<span style="color:#98a2b3;font-size:11px">' + (c.close||'') + '</span></div>';
+      }).join('')
+    : '<div style="color:#98a2b3;text-align:center;padding:16px;font-size:12px">' + gYear + '년 종결 거래처 없음</div>';
 }
 
 // ── 거래처 ──
