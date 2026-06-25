@@ -121,7 +121,25 @@ tr.cli-grp td{background:#f8f9fc!important;font-size:11px;font-weight:700;color:
 </style>
 </head>
 <body>
-<div class="app">
+
+<!-- ==================== 로그인 화면 ==================== -->
+<div id="loginScreen" style="display:none;position:fixed;inset:0;background:#f0f2f5;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:0;">
+  <div style="background:#fff;border-radius:16px;padding:48px 40px;box-shadow:0 8px 40px rgba(0,0,0,.12);text-align:center;width:360px;">
+    <div style="font-size:36px;margin-bottom:12px;">&#128203;</div>
+    <div style="font-size:20px;font-weight:700;color:#1a1a2e;margin-bottom:4px;">세무업무 관리 시스템</div>
+    <div style="font-size:12px;color:#98a2b3;margin-bottom:32px;">Tax Office Manager</div>
+    <button id="googleLoginBtn" onclick="signInWithGoogle()" style="display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px 20px;border:1px solid #e0e4ea;border-radius:8px;background:#fff;cursor:pointer;font-family:inherit;font-size:14px;font-weight:500;color:#344054;transition:all .2s;">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+      Google 계정으로 로그인
+    </button>
+    <div id="loginError" style="margin-top:14px;font-size:12px;color:#d92d20;display:none;"></div>
+    <div style="margin-top:28px;padding-top:20px;border-top:1px solid #f0f2f5;font-size:11px;color:#98a2b3;">
+      로그인 계정별로 독립된 데이터가 저장됩니다.<br>여러 사용자가 각자 계정으로 이용 가능합니다.
+    </div>
+  </div>
+</div>
+
+<div class="app" id="mainApp" style="display:none">
   <div class="sidebar">
     <div class="sb-logo">
       <div class="t">&#128203; 세무업무 관리</div>
@@ -149,7 +167,14 @@ tr.cli-grp td{background:#f8f9fc!important;font-size:11px;font-weight:700;color:
   <div class="main">
     <div class="topbar">
       <h1 id="pageTitle">대시보드</h1>
-      <div class="top-acts" id="topActs"></div>
+      <div class="top-acts" id="topActs" style="gap:10px">
+        <div id="pageActs"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <img id="userPhotoDisplay" src="" style="display:none;width:26px;height:26px;border-radius:50%;object-fit:cover;">
+          <span id="userNameDisplay" style="font-size:12px;color:#667085;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+        </div>
+        <button onclick="signOutUser()" style="padding:5px 11px;border-radius:5px;border:1px solid #e0e4ea;background:#fff;font-size:11px;cursor:pointer;color:#667085;">로그아웃</button>
+      </div>
     </div>
     <div class="content">
       <div class="page active" id="page-dashboard">
@@ -239,6 +264,148 @@ tr.cli-grp td{background:#f8f9fc!important;font-size:11px;font-weight:700;color:
 
 <div class="toast" id="toast">저장됨 &#10003;</div>
 
+
+<script type="module">
+import { initializeApp }                                          from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPopup, signOut,
+         onAuthStateChanged, GoogleAuthProvider }                 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, doc, collection,
+         setDoc, deleteDoc, onSnapshot }                          from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── Firebase 프로젝트 설정 ──
+const firebaseConfig = {
+  apiKey:            "AIzaSyCki0eMfnvN2h1pSyq5kU_sxqD7tLxgq6k",
+  authDomain:        "tax-office-manager.firebaseapp.com",
+  projectId:         "tax-office-manager",
+  storageBucket:     "tax-office-manager.firebasestorage.app",
+  messagingSenderId: "941748338613",
+  appId:             "1:941748338613:web:8c0e0de08969122f4623fc",
+  measurementId:     "G-KP8XDDGRNW"
+};
+
+const app      = initializeApp(firebaseConfig);
+const auth     = getAuth(app);
+const db       = getFirestore(app);
+const provider = new GoogleAuthProvider();
+
+let currentUid   = null;
+let unsubClients = null;
+let unsubRecords = null;
+let unsubMeta    = null;
+
+// ── Google 로그인 버튼 SVG (재사용) ──
+const GOOGLE_BTN_HTML =
+  '<svg width="18" height="18" viewBox="0 0 18 18" style="flex-shrink:0">' +
+  '<path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/>' +
+  '<path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/>' +
+  '<path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/>' +
+  '<path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/>' +
+  '</svg> Google 계정으로 로그인';
+
+// ── 로그인 ──
+window.signInWithGoogle = async function() {
+  const btn   = document.getElementById('googleLoginBtn');
+  const errEl = document.getElementById('loginError');
+  btn.disabled = true;
+  btn.textContent = '로그인 중...';
+  errEl.style.display = 'none';
+  try {
+    await signInWithPopup(auth, provider);
+  } catch(e) {
+    errEl.textContent = '로그인 실패: ' + (e.code === 'auth/popup-closed-by-user' ? '팝업이 닫혔습니다. 다시 시도해주세요.' : e.message);
+    errEl.style.display = 'block';
+    btn.disabled = false;
+    btn.innerHTML = GOOGLE_BTN_HTML;
+  }
+};
+
+// ── 로그아웃 ──
+window.signOutUser = async function() {
+  if (!confirm('로그아웃 하시겠습니까?')) return;
+  [unsubClients, unsubRecords, unsubMeta].forEach(function(u){ if(u) u(); });
+  unsubClients = unsubRecords = unsubMeta = null;
+  await signOut(auth);
+};
+
+// ── 인증 상태 감지 ──
+onAuthStateChanged(auth, function(user) {
+  const loginScreen = document.getElementById('loginScreen');
+  const mainApp     = document.getElementById('mainApp');
+  if (user) {
+    currentUid = user.uid;
+    loginScreen.style.display = 'none';
+    mainApp.style.display     = 'flex';
+    const nameEl  = document.getElementById('userNameDisplay');
+    const photoEl = document.getElementById('userPhotoDisplay');
+    if (nameEl)  nameEl.textContent = user.displayName || user.email;
+    if (photoEl && user.photoURL) { photoEl.src = user.photoURL; photoEl.style.display = 'inline-block'; }
+    subscribeAll(user.uid);
+  } else {
+    currentUid = null;
+    mainApp.style.display     = 'none';
+    loginScreen.style.display = 'flex';
+    const btn = document.getElementById('googleLoginBtn');
+    if (btn) { btn.disabled = false; btn.innerHTML = GOOGLE_BTN_HTML; }
+  }
+});
+
+// ── Firestore 실시간 구독 (clients + records + meta) ──
+function subscribeAll(uid) {
+  // 기존 구독 해제
+  [unsubClients, unsubRecords, unsubMeta].forEach(function(u){ if(u) u(); });
+
+  // 1) 거래처 목록
+  unsubClients = onSnapshot(collection(db, 'users', uid, 'clients'), function(snap) {
+    var arr = [];
+    snap.forEach(function(d) { arr.push(Object.assign({}, d.data(), {id: parseInt(d.id, 10)})); });
+    arr.sort(function(a, b){ return a.id - b.id; });
+    if (window._fbSetClients) window._fbSetClients(arr);
+  }, function(e){ console.error('clients 구독 오류:', e.message); });
+
+  // 2) 신고 records
+  unsubRecords = onSnapshot(doc(db, 'users', uid, 'data', 'records'), function(snap) {
+    if (snap.exists() && window._fbSetRecords) window._fbSetRecords(snap.data());
+  }, function(e){ console.error('records 구독 오류:', e.message); });
+
+  // 3) nextId meta
+  unsubMeta = onSnapshot(doc(db, 'users', uid, 'data', 'meta'), function(snap) {
+    if (snap.exists() && window._fbSetNextId) {
+      var d = snap.data();
+      if (d.nextId) window._fbSetNextId(d.nextId);
+    }
+  }, function(e){ console.error('meta 구독 오류:', e.message); });
+}
+
+// ── 저장/삭제 함수 (메인 스크립트에서 window.fb* 로 호출) ──
+window.fbSaveClient = async function(c) {
+  if (!currentUid) return;
+  try { await setDoc(doc(db, 'users', currentUid, 'clients', String(c.id)), c); }
+  catch(e) { console.error('fbSaveClient 오류:', e.message); }
+};
+
+window.fbDeleteClient = async function(id) {
+  if (!currentUid) return;
+  try { await deleteDoc(doc(db, 'users', currentUid, 'clients', String(id))); }
+  catch(e) { console.error('fbDeleteClient 오류:', e.message); }
+};
+
+window.fbSaveRecord = async function(key, data) {
+  if (!currentUid) return;
+  try {
+    const patch = {};
+    patch[key] = data;
+    await setDoc(doc(db, 'users', currentUid, 'data', 'records'), patch, {merge: true});
+  } catch(e) { console.error('fbSaveRecord 오류:', e.message); }
+};
+
+window.fbSaveNextId = async function(nid) {
+  if (!currentUid) return;
+  try { await setDoc(doc(db, 'users', currentUid, 'data', 'meta'), {nextId: nid}, {merge: true}); }
+  catch(e) { console.error('fbSaveNextId 오류:', e.message); }
+};
+
+</script>
+
 <script>
 (function() {
 "use strict";
@@ -274,7 +441,12 @@ var R = {}; // records store
 
 // ── 유틸 ──
 function rec(k) { return R[k] || {}; }
-function setRec(k, d) { R[k] = Object.assign({}, rec(k), d); showToast(); }
+function setRec(k, d) {
+  R[k] = Object.assign({}, rec(k), d);
+  showToast();
+  // Firebase 저장
+  if (window.fbSaveRecord) window.fbSaveRecord(k, R[k]);
+}
 
 function showToast() {
   var t = document.getElementById('toast');
@@ -381,7 +553,8 @@ function showPage(p) {
   document.getElementById('nav-' + p).classList.add('active');
   var titles = {dashboard:'대시보드', clients:'거래처 현황', wh:'원천세 신고현황', vat:'부가세 신고현황', corp:'법인세 신고현황', income:'소득세 신고현황'};
   document.getElementById('pageTitle').textContent = titles[p] || p;
-  document.getElementById('topActs').innerHTML = p === 'clients' ? '<button class="btn btn-p" onclick="openAddClient()">+ 거래처 추가</button>' : '';
+  var pageActsEl = document.getElementById('pageActs');
+  if (pageActsEl) pageActsEl.innerHTML = p === 'clients' ? '<button class="btn btn-p" onclick="openAddClient()">+ 거래처 추가</button>' : '';
   curPage = p;
   var fn = {dashboard:renderDash, clients:renderClients, wh:renderWH, vat:renderVAT, corp:renderCorp, income:renderIncome};
   if (fn[p]) fn[p]();
@@ -582,11 +755,20 @@ window.saveClient = function() {
     clients.push(d);
   }
   closeMo('cliModal'); renderClients(); showToast();
+  // Firebase 저장
+  if (window.fbSaveClient) {
+    var saved = editCliId
+      ? clients.find(function(c){ return c.id===editCliId; })
+      : clients[clients.length-1];
+    if (saved) window.fbSaveClient(saved);
+    if (window.fbSaveNextId) window.fbSaveNextId(nextId);
+  }
 };
 window.delClient = function(id) {
   if (!confirm('삭제하시겠습니까?')) return;
   clients = clients.filter(function(c){ return c.id!==id; });
   renderClients();
+  if (window.fbDeleteClient) window.fbDeleteClient(id);
 };
 
 // ── 원천세 ──
@@ -980,10 +1162,41 @@ document.querySelectorAll('.mo').forEach(function(m){
   m.addEventListener('click', function(e){ if (e.target === m) closeMo(m.id); });
 });
 
-// ── 초기화 ──
+// ── Firebase로부터 데이터 수신 후 UI 갱신 ──
+window._fbSetClients = function(arr) {
+  if (arr.length > 0) {
+    clients = arr;
+  }
+  // 현재 페이지 다시 렌더
+  var fn = {dashboard:renderDash, clients:renderClients, wh:renderWH, vat:renderVAT, corp:renderCorp, income:renderIncome};
+  if (fn[curPage]) fn[curPage]();
+};
+window._fbSetRecords = function(data) {
+  R = data || {};
+  var fn = {dashboard:renderDash, clients:renderClients, wh:renderWH, vat:renderVAT, corp:renderCorp, income:renderIncome};
+  if (fn[curPage]) fn[curPage]();
+};
+window._fbSetNextId = function(nid) {
+  if (nid > nextId) nextId = nid;
+};
+
+// ── 초기화 (로그인 전에도 대시보드 UI 표시) ──
 renderDash();
 
 })();
 </script>
+
+<!-- 우클릭 방지 -->
+<script>
+document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
+document.addEventListener('dragstart',   function(e){ e.preventDefault(); });
+document.addEventListener('selectstart', function(e){ e.preventDefault(); });
+</script>
+
+<!-- 워터마크 -->
+<style>
+.wm{position:fixed;bottom:10px;right:14px;z-index:99999;pointer-events:none;user-select:none;font-size:11px;color:rgba(0,0,0,0.1);font-family:'Malgun Gothic',sans-serif;font-weight:700;letter-spacing:3px;}
+</style>
+<div class="wm">boss_min_</div>
 </body>
 </html>
