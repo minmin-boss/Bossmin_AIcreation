@@ -39,11 +39,12 @@ function _startListen(uid){
   _unsub=onSnapshot(q,snap=>{
     window._fbData=[];
     snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
-    // 저장 중 플래그가 있으면 onSnapshot 렌더 건너뜀 (addTrip이 직접 처리)
     if(window._appReady&&window._render&&!window._saving){
       trips=window._fbData;window.trips=trips;window._render();
     }
   });
+  // 플랜 구독도 시작
+  window._startPlanListen&&window._startPlanListen(uid);
 }
 window._googleLogin=async function(){
   const btn=document.getElementById('googleBtn');
@@ -57,6 +58,8 @@ window._googleLogin=async function(){
 };
 window._logout=async function(){if(!confirm('로그아웃 하시겠어요?'))return;await signOut(_auth);};
 const _COL='travel_trips';
+const _PLAN_COL='travel_plans';
+
 window._fbSave=async function(t){
   if(!window._user)return;
   if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
@@ -65,6 +68,26 @@ window._fbSave=async function(t){
 };
 window._fbDel=async function(id){await deleteDoc(doc(_db,_COL,id));};
 window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_db,_COL,t._fbId))));};
+
+// ── 플랜 CRUD ──
+window._fbSavePlan=async function(plan){
+  if(!window._user)return;
+  if(!plan.id)plan.id='plan_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+  plan.uid=window._user.uid;
+  await setDoc(doc(_db,_PLAN_COL,plan.id),plan);
+};
+window._fbDelPlan=async function(id){await deleteDoc(doc(_db,_PLAN_COL,id));};
+
+// 플랜 실시간 구독 시작
+window._startPlanListen=function(uid){
+  if(window._planUnsub){window._planUnsub();window._planUnsub=null;}
+  const q=query(collection(_db,_PLAN_COL),where('uid','==',uid),orderBy('createdAt','asc'));
+  window._planUnsub=onSnapshot(q,snap=>{
+    window._plansData=[];
+    snap.forEach(d=>window._plansData.push({id:d.id,...d.data()}));
+    if(window._appReady&&typeof renderPlanTab==='function') renderPlanTab();
+  });
+};
 </script>
 
 <style>
@@ -357,9 +380,10 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 
 <!-- Tabs -->
 <div class="page-tabs">
-  <button class="page-tab on" id="tabMap" onclick="switchTab('map')">🗺️ 평면 지도</button>
+  <button class="page-tab on" id="tabMap" onclick="switchTab('map')">🗺️ 지도</button>
   <button class="page-tab" id="tabGlobe" onclick="switchTab('globe')">🌍 지구본</button>
-  <button class="page-tab" id="tabDash" onclick="switchTab('dash')">📊 여행 통계</button>
+  <button class="page-tab" id="tabPlan" onclick="switchTab('plan')">📅 일정 계획</button>
+  <button class="page-tab" id="tabDash" onclick="switchTab('dash')">📊 통계</button>
 </div>
 
 <!-- MAP PAGE -->
@@ -645,6 +669,49 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
   </div>
 </div><!-- /pageGlobe -->
 
+<!-- PLAN PAGE -->
+<div id="pagePlan" style="display:none">
+
+  <!-- 여행 선택/추가 헤더 -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1rem;flex-wrap:wrap">
+    <select id="planSelect" onchange="selectPlan(this.value)" style="flex:1;min-width:180px;height:38px;font-size:13px;font-weight:700;border-radius:9px;border:1.5px solid var(--brd);background:var(--surf);color:var(--text);padding:0 12px;cursor:pointer">
+      <option value="">— 여행을 선택하세요 —</option>
+    </select>
+    <button onclick="openNewPlan()" style="height:38px;padding:0 16px;background:var(--accent);color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--f);white-space:nowrap;box-shadow:0 3px 10px rgba(58,123,213,.3)">+ 새 여행 계획</button>
+    <button id="planDelBtn" onclick="deletePlan()" style="height:38px;padding:0 14px;background:var(--surf);color:var(--pin);border:1.5px solid var(--pin);border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);display:none">🗑 삭제</button>
+  </div>
+
+  <!-- 여행 정보 헤더 (선택된 여행) -->
+  <div id="planHeader" style="display:none;background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;padding:1.2rem 1.4rem;margin-bottom:1rem;box-shadow:0 2px 12px var(--shadow)">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div id="planTitle" style="font-size:18px;font-weight:800;color:var(--text)"></div>
+        <div id="planMeta" style="font-size:11px;color:var(--text2);margin-top:3px"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <div style="background:var(--acl);border-radius:10px;padding:8px 14px;text-align:center">
+          <div id="planTotalDays" style="font-size:18px;font-weight:800;color:var(--accent)">0</div>
+          <div style="font-size:9px;color:var(--text2);font-weight:700;letter-spacing:.05em">DAYS</div>
+        </div>
+        <div style="background:var(--acl);border-radius:10px;padding:8px 14px;text-align:center">
+          <div id="planTotalBudget" style="font-size:18px;font-weight:800;color:var(--accent)">0</div>
+          <div style="font-size:9px;color:var(--text2);font-weight:700;letter-spacing:.05em">총 예산</div>
+        </div>
+        <div style="background:var(--acl);border-radius:10px;padding:8px 14px;text-align:center">
+          <div id="planTotalItems" style="font-size:18px;font-weight:800;color:var(--accent)">0</div>
+          <div style="font-size:9px;color:var(--text2);font-weight:700;letter-spacing:.05em">일정 수</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Day 탭 + 내용 -->
+  <div id="planDayTabs" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem"></div>
+  <div id="planDayContent"></div>
+
+</div><!-- /pagePlan -->
+
+
 <!-- DASHBOARD PAGE -->
 <div id="pageDash" style="display:none">
   <div class="dash-section">
@@ -826,15 +893,17 @@ function flagImg(emoji,size){
 // ── Tab ──
 function switchTab(tab){
   curTab=tab;
-  ['pageMap','pageGlobe','pageDash'].forEach(id=>{
+  ['pageMap','pageGlobe','pagePlan','pageDash'].forEach(id=>{
     const el=document.getElementById(id);
     if(el)el.style.display=id==='page'+tab.charAt(0).toUpperCase()+tab.slice(1)?'':'none';
   });
-  ['tabMap','tabGlobe','tabDash'].forEach(id=>{
-    document.getElementById(id).classList.toggle('on',id==='tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
+  ['tabMap','tabGlobe','tabPlan','tabDash'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.classList.toggle('on',id==='tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
   });
   if(tab==='dash')renderDashboard();
   if(tab==='globe')initGlobe();
+  if(tab==='plan')renderPlanTab();
 }
 
 // ── Render ──
@@ -1494,6 +1563,270 @@ document.getElementById('df').value=td;document.getElementById('dt').value=td;
 setTimeout(()=>{if(!window._appReady)_doBootApp();},900);
 
 document.getElementById('cntryIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('cityIn').focus();});
+
+// ══════════════════════════════════════════════════════
+// 📅 여행 일정 계획 탭
+// ══════════════════════════════════════════════════════
+let plans = [];           // 여행 목록 [{id, title, startDate, endDate, days:[...], ...}]
+let curPlanId = null;     // 현재 선택된 여행 id
+let curDayIdx = 0;        // 현재 선택된 Day (0-indexed)
+
+// 시간대
+const TIME_SLOTS = ['오전','오후','저녁','종일'];
+const TIME_COLORS = {'오전':'#3a7bd5','오후':'#e67e22','저녁':'#9b59b6','종일':'#27ae60'};
+const ITEM_TYPES = ['🗺️ 관광지','🍽️ 식사','🏨 숙소','✈️ 교통','🛍️ 쇼핑','🎭 액티비티','💆 휴식','📝 기타'];
+
+// Firebase 없을 때 로컬 저장
+function _savePlansLocal(){try{localStorage.setItem('tb_plans',JSON.stringify(plans));}catch(e){}}
+function _loadPlansLocal(){try{const d=localStorage.getItem('tb_plans');if(d)plans=JSON.parse(d);}catch(e){}}
+
+// 렌더
+function renderPlanTab(){
+  // plans 소스: Firebase 있으면 window._plansData, 없으면 로컬
+  if(window._plansData) plans=window._plansData;
+  else _loadPlansLocal();
+
+  // 셀렉트 박스 업데이트
+  const sel=document.getElementById('planSelect');
+  if(!sel)return;
+  const prev=sel.value;
+  sel.innerHTML='<option value="">— 여행을 선택하세요 —</option>';
+  plans.forEach(p=>{
+    const opt=document.createElement('option');
+    opt.value=p.id; opt.textContent=`${p.title||'이름 없음'} ${p.startDate?'('+p.startDate+')':''}`;
+    sel.appendChild(opt);
+  });
+  if(curPlanId&&plans.find(p=>p.id===curPlanId)) sel.value=curPlanId;
+  else if(prev&&plans.find(p=>p.id===prev)){sel.value=prev;curPlanId=prev;}
+
+  if(curPlanId) _renderPlanDetail(curPlanId);
+  else {
+    document.getElementById('planHeader').style.display='none';
+    document.getElementById('planDayTabs').innerHTML='';
+    document.getElementById('planDayContent').innerHTML=
+      '<div style="text-align:center;padding:3rem;color:var(--text3);font-size:13px">✈️ 위에서 여행을 선택하거나 새 여행을 만들어보세요!</div>';
+    document.getElementById('planDelBtn').style.display='none';
+  }
+}
+
+function selectPlan(id){
+  curPlanId=id||null;
+  curDayIdx=0;
+  renderPlanTab();
+}
+
+function _renderPlanDetail(id){
+  const plan=plans.find(p=>p.id===id);
+  if(!plan)return;
+
+  // 헤더
+  document.getElementById('planHeader').style.display='';
+  document.getElementById('planDelBtn').style.display='';
+  document.getElementById('planTitle').textContent=plan.title||'이름 없음';
+
+  const sd=plan.startDate||'', ed=plan.endDate||'';
+  document.getElementById('planMeta').textContent=
+    (sd&&ed)?`${sd} ~ ${ed}`:(sd||'날짜 미정');
+
+  const days=plan.days||[];
+  const totalItems=days.reduce((s,d)=>s+(d.items||[]).length,0);
+  const totalBudget=days.reduce((s,d)=>(d.items||[]).reduce((ss,it)=>ss+(it.cost||0),s),0);
+  document.getElementById('planTotalDays').textContent=days.length;
+  document.getElementById('planTotalItems').textContent=totalItems;
+  document.getElementById('planTotalBudget').textContent=
+    totalBudget>0?(totalBudget>=10000?Math.round(totalBudget/10000)+'만':totalBudget.toLocaleString()):'-';
+
+  // Day 탭
+  const dayTabs=document.getElementById('planDayTabs');
+  dayTabs.innerHTML='';
+  days.forEach((d,i)=>{
+    const btn=document.createElement('button');
+    btn.className='yt'+(i===curDayIdx?' on':'');
+    btn.textContent=`Day ${i+1}${d.label?' · '+d.label:''}`;
+    btn.onclick=()=>{curDayIdx=i;_renderPlanDetail(id);};
+    dayTabs.appendChild(btn);
+  });
+  // + Day 추가 버튼
+  const addDayBtn=document.createElement('button');
+  addDayBtn.className='yt';
+  addDayBtn.style.cssText='background:var(--accent);color:#fff;border-color:var(--accent)';
+  addDayBtn.textContent='+ Day 추가';
+  addDayBtn.onclick=()=>addDay(id);
+  dayTabs.appendChild(addDayBtn);
+
+  // Day 내용
+  const content=document.getElementById('planDayContent');
+  if(!days.length){
+    content.innerHTML=`<div style="text-align:center;padding:2rem;color:var(--text3);font-size:12px">Day를 추가하고 일정을 채워보세요!</div>`;
+    return;
+  }
+  const day=days[curDayIdx]||days[0];
+  if(!day){return;}
+
+  // Day 헤더 편집
+  content.innerHTML=`
+  <div style="background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;padding:1.2rem;margin-bottom:.8rem;box-shadow:0 2px 8px var(--shadow)">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:.8rem">
+      <div style="font-size:15px;font-weight:800;color:var(--accent)">Day ${curDayIdx+1}</div>
+      <input id="dayDateIn" type="date" value="${day.date||''}" style="width:150px;height:32px;font-size:12px" oninput="updateDayField('date',this.value)"/>
+      <input id="dayLabelIn" type="text" placeholder="예: 도쿄 → 오사카" value="${day.label||''}" style="flex:1;min-width:150px;height:32px;font-size:12px" oninput="updateDayField('label',this.value)"/>
+      <button onclick="deleteDay(${curDayIdx})" style="height:32px;padding:0 10px;background:none;border:1px solid var(--pin);color:var(--pin);border-radius:7px;font-size:11px;cursor:pointer;font-family:var(--f)">Day 삭제</button>
+    </div>
+    <!-- 일정 아이템 목록 -->
+    <div id="dayItems">${_renderItems(day.items||[],curDayIdx)}</div>
+    <!-- 새 일정 추가 폼 -->
+    <div style="margin-top:.8rem;padding-top:.8rem;border-top:1px dashed var(--brd)">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:.5rem;letter-spacing:.05em">+ 일정 추가</div>
+      <div style="display:grid;grid-template-columns:90px 1fr 100px 80px;gap:8px;margin-bottom:6px">
+        <select id="newItemTime" style="height:34px;font-size:11px">
+          ${TIME_SLOTS.map(t=>`<option>${t}</option>`).join('')}
+        </select>
+        <input id="newItemTitle" type="text" placeholder="장소명 / 일정 내용" style="height:34px;font-size:12px"/>
+        <select id="newItemType" style="height:34px;font-size:11px">
+          ${ITEM_TYPES.map(t=>`<option value="${t}">${t}</option>`).join('')}
+        </select>
+        <input id="newItemCost" type="number" placeholder="비용" min="0" style="height:34px;font-size:12px"/>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 90px;gap:8px;margin-bottom:6px">
+        <input id="newItemMemo" type="text" placeholder="메모 / 링크 (예: https://...)" style="height:34px;font-size:12px"/>
+        <select id="newItemTransport" style="height:34px;font-size:11px">
+          <option value="">교통편</option>
+          <option>✈️ 항공</option><option>🚅 기차</option><option>🚌 버스</option>
+          <option>🚗 렌터카</option><option>🚇 지하철</option><option>🚶 도보</option><option>🚢 선박</option>
+        </select>
+      </div>
+      <button onclick="addItem(${curDayIdx})" style="width:100%;height:34px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:800;cursor:pointer;font-family:var(--f)">+ 일정 추가하기</button>
+    </div>
+  </div>`;
+}
+
+function _renderItems(items, dayIdx){
+  if(!items.length) return '<div style="text-align:center;padding:1rem;color:var(--text3);font-size:12px">아직 일정이 없어요. 아래에서 추가하세요!</div>';
+  const timeOrder={'오전':0,'오후':1,'저녁':2,'종일':3};
+  const sorted=[...items].sort((a,b)=>(timeOrder[a.time]??9)-(timeOrder[b.time]??9));
+  return sorted.map((it,i)=>{
+    const col=TIME_COLORS[it.time]||'#7f8c8d';
+    const origIdx=items.indexOf(it);
+    return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--bg2)">
+      <div style="flex-shrink:0;margin-top:2px">
+        <span style="display:inline-block;background:${col};color:#fff;border-radius:12px;padding:2px 8px;font-size:10px;font-weight:700;white-space:nowrap">${it.time||'종일'}</span>
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:800;color:var(--text)">${it.type?it.type+' ':''}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--text)">${it.title||'제목 없음'}</span>
+          ${it.transport?`<span style="font-size:11px;background:var(--bg2);border-radius:6px;padding:1px 7px;color:var(--text2)">${it.transport}</span>`:''}
+          ${it.cost?`<span style="font-size:11px;background:#fff8e1;border-radius:6px;padding:1px 7px;color:#e67e22;font-weight:700">💰 ${it.cost.toLocaleString()}원</span>`:''}
+        </div>
+        ${it.memo?`<div style="font-size:11px;color:var(--text2);margin-top:3px">${it.memo.startsWith('http')?`<a href="${it.memo}" target="_blank" style="color:var(--accent)">🔗 ${it.memo}</a>`:it.memo}</div>`:''}
+      </div>
+      <button onclick="deleteItem(${dayIdx},${origIdx})" style="flex-shrink:0;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:2px 4px" title="삭제">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function updateDayField(field, value){
+  const plan=plans.find(p=>p.id===curPlanId);
+  if(!plan||!plan.days[curDayIdx])return;
+  plan.days[curDayIdx][field]=value;
+  _savePlan(plan);
+}
+
+function addDay(planId){
+  const plan=plans.find(p=>p.id===planId);
+  if(!plan)return;
+  if(!plan.days)plan.days=[];
+  plan.days.push({label:'',date:'',items:[]});
+  curDayIdx=plan.days.length-1;
+  _savePlan(plan);
+  _renderPlanDetail(planId);
+}
+
+function deleteDay(dayIdx){
+  const plan=plans.find(p=>p.id===curPlanId);
+  if(!plan||!confirm(`Day ${dayIdx+1}을 삭제할까요?`))return;
+  plan.days.splice(dayIdx,1);
+  curDayIdx=Math.max(0,curDayIdx-1);
+  _savePlan(plan);
+  _renderPlanDetail(curPlanId);
+}
+
+function addItem(dayIdx){
+  const plan=plans.find(p=>p.id===curPlanId);
+  if(!plan)return;
+  const title=document.getElementById('newItemTitle')?.value.trim();
+  if(!title){toast('일정 내용을 입력해주세요');document.getElementById('newItemTitle')?.focus();return;}
+  const item={
+    time:document.getElementById('newItemTime')?.value||'오전',
+    type:document.getElementById('newItemType')?.value||'',
+    title,
+    transport:document.getElementById('newItemTransport')?.value||'',
+    cost:Number(document.getElementById('newItemCost')?.value||0)||0,
+    memo:document.getElementById('newItemMemo')?.value.trim()||''
+  };
+  if(!plan.days[dayIdx])plan.days[dayIdx]={label:'',date:'',items:[]};
+  if(!plan.days[dayIdx].items)plan.days[dayIdx].items=[];
+  plan.days[dayIdx].items.push(item);
+  // 입력 초기화
+  ['newItemTitle','newItemMemo','newItemCost'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  _savePlan(plan);
+  _renderPlanDetail(curPlanId);
+  toast('✅ 일정 추가 완료!');
+}
+
+function deleteItem(dayIdx, itemIdx){
+  const plan=plans.find(p=>p.id===curPlanId);
+  if(!plan)return;
+  plan.days[dayIdx].items.splice(itemIdx,1);
+  _savePlan(plan);
+  _renderPlanDetail(curPlanId);
+}
+
+// 새 여행 계획 생성 모달
+function openNewPlan(){
+  // 간단한 인라인 프롬프트 대신 토스트 UI로 처리
+  const title=prompt('여행 이름을 입력하세요\n예: 2024 일본 여행');
+  if(!title||!title.trim())return;
+  const startDate=prompt('출발일 (예: 2024.03.01)\n비워두면 나중에 입력 가능');
+  const endDate=startDate?prompt('귀국일 (예: 2024.03.07)\n비워두면 나중에 입력 가능'):'';
+
+  const plan={
+    id:'plan_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    title:title.trim(),
+    startDate:startDate?.trim()||'',
+    endDate:endDate?.trim()||'',
+    days:[{label:'첫째 날',date:startDate?.trim()||'',items:[]}],
+    createdAt:Date.now()
+  };
+  plans.push(plan);
+  curPlanId=plan.id;
+  curDayIdx=0;
+  _savePlan(plan);
+  renderPlanTab();
+  toast(`✈️ "${title}" 여행 계획 생성!`);
+}
+
+function deletePlan(){
+  const plan=plans.find(p=>p.id===curPlanId);
+  if(!plan||!confirm(`"${plan.title}" 여행 계획을 삭제할까요?`))return;
+  if(window._fbDelPlan&&window._user)window._fbDelPlan(curPlanId).catch(e=>console.warn(e));
+  plans=plans.filter(p=>p.id!==curPlanId);
+  _savePlansLocal();
+  curPlanId=null;curDayIdx=0;
+  renderPlanTab();
+  toast('🗑 여행 계획 삭제');
+}
+
+function _savePlan(plan){
+  const idx=plans.findIndex(p=>p.id===plan.id);
+  if(idx>=0)plans[idx]=plan; else plans.push(plan);
+  _savePlansLocal();
+  if(window._fbSavePlan&&window._user){
+    window._fbSavePlan(plan).catch(e=>console.warn('Firebase plan save failed:',e));
+  }
+  // 통계 업데이트 (헤더 KPI)
+  if(curPlanId===plan.id)_renderPlanDetail(plan.id);
+}
 
 // 워터마크
 const wm=document.createElement('div');
