@@ -1382,5 +1382,19 @@ gms();render();anim();
 if(trips.length)setTimeout(startAuto,400);
 else{const s=s2xy(490,220);px=s.x;py=s.y;tx=s.x;ty=s.y;}
 </script>
+
+<!-- boss_min_ 워터마크 -->
+<div style="position:fixed;right:18px;bottom:18px;font-family:Gaegu,cursive;font-size:15px;font-weight:700;color:#ff6584;opacity:.22;letter-spacing:1px;z-index:9999;pointer-events:none;-webkit-user-select:none;user-select:none;">boss_min_</div>
+
+<script>
+/* 우클릭 차단 */
+document.addEventListener("contextmenu",function(e){e.preventDefault();});
+/* F12 / 개발자도구 단축키 차단 */
+document.addEventListener("keydown",function(e){
+  if(e.keyCode===123||(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===67))||(e.ctrlKey&&e.keyCode===85)){e.preventDefault();}
+});
+/* 드래그·선택 차단 */
+document.addEventListener("dragstart",function(e){e.preventDefault();});
+</script>
 </body>
 </html>
