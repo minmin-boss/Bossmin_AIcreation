@@ -401,7 +401,8 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
 </header>
 
 <div class="page-tabs">
-  <button class="page-tab on" id="tabMap" onclick="switchTab('map')">🗺️ 지도</button>
+  <button class="page-tab on" id="tabMap" onclick="switchTab('map')">🗺️ 평면 지도</button>
+  <button class="page-tab" id="tabGlobe" onclick="switchTab('globe')">🌍 지구본</button>
   <button class="page-tab" id="tabDash" onclick="switchTab('dash')">📊 여행 통계</button>
 </div>
 
@@ -678,10 +679,7 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
 </div>
 
 
-<div class="tool-row">
-  <button class="tool-btn" onclick="exportJSON()">💾 백업 내보내기</button>
-  <label class="tool-btn" style="cursor:pointer">📂 백업 불러오기<input type="file" accept=".json" style="display:none" onchange="importJSON(this)"></label>
-</div>
+
 <div class="list-hdr">
   <div class="list-ttl">🗺️ 방문한 곳 <span id="tripCnt" style="font-size:11px;color:var(--text2);font-weight:400"></span></div>
   <div class="lc">
@@ -693,6 +691,23 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
 <div class="year-tabs" id="yearTabs"></div>
 <div id="tl"></div>
 </div><!-- /pageMap -->
+
+<!-- GLOBE PAGE -->
+<div id="pageGlobe" style="display:none;margin-bottom:1.1rem">
+  <div style="background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px var(--shadow)">
+    <div id="globeDiv" style="width:100%;height:520px"></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-top:.8rem;padding:0 4px;flex-wrap:wrap">
+    <div style="font-size:11px;color:var(--text2)">
+      <span id="globeStatus">지구본을 드래그해서 회전하세요 ✈️</span>
+    </div>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button class="tool-btn" id="globePlayBtn" onclick="globeTogglePlay()">▶ 자동 비행</button>
+      <button class="tool-btn" onclick="globeReset()">🔄 초기화</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- DASHBOARD PAGE -->
 <div id="pageDash" style="display:none">
@@ -1214,10 +1229,13 @@ let curTab='map';
 function switchTab(tab){
   curTab=tab;
   document.getElementById('pageMap').style.display=tab==='map'?'':'none';
+  document.getElementById('pageGlobe').style.display=tab==='globe'?'':'none';
   document.getElementById('pageDash').style.display=tab==='dash'?'':'none';
   document.getElementById('tabMap').classList.toggle('on',tab==='map');
+  document.getElementById('tabGlobe').classList.toggle('on',tab==='globe');
   document.getElementById('tabDash').classList.toggle('on',tab==='dash');
   if(tab==='dash') renderDashboard();
+  if(tab==='globe') initGlobe();
 }
 
 /* ── Haversine distance (km) ── */
@@ -1816,6 +1834,281 @@ document.addEventListener("selectstart",e=>{if(!e.target.matches('input,textarea
 if(window.top!==window.self&&window.location===window.parent.location){
   try{window.top.location=window.location;}catch(e){}
 }
+
+/* ═══════════════════════════════════════════════════════
+   🌍 GLOBE VIEW — amCharts 5
+   ═══════════════════════════════════════════════════════ */
+let _globeRoot=null, _globeChart=null, _globeLineSeries=null;
+let _globePlaneIdx=0, _globePlaying=false, _globeTimer=null;
+let _globeInited=false;
+
+function initGlobe(){
+  if(_globeInited) { renderGlobePins(); return; }
+  _globeInited=true;
+
+  // Load amCharts 5
+  const scripts=[
+    'https://cdn.amcharts.com/lib/5/index.js',
+    'https://cdn.amcharts.com/lib/5/map.js',
+    'https://cdn.amcharts.com/lib/5/geodata/worldLow.js',
+    'https://cdn.amcharts.com/lib/5/themes/Animated.js'
+  ];
+  let loaded=0;
+  scripts.forEach(src=>{
+    const s=document.createElement('script');
+    s.src=src;
+    s.onload=()=>{ loaded++; if(loaded===scripts.length) _buildGlobe(); };
+    document.head.appendChild(s);
+  });
+}
+
+function _buildGlobe(){
+  const am5=window.am5, am5map=window.am5map, am5themes_Animated=window.am5themes_Animated;
+  if(!am5||!am5map) return;
+
+  const isDark=document.body.classList.contains('dark')||
+    window.matchMedia('(prefers-color-scheme:dark)').matches;
+
+  _globeRoot=am5.Root.new('globeDiv');
+  _globeRoot.setThemes([am5themes_Animated.new(_globeRoot)]);
+
+  _globeChart=_globeRoot.container.children.push(
+    am5map.MapChart.new(_globeRoot,{
+      panX:'rotateX', panY:'rotateY',
+      projection: am5map.geoOrthographic(),
+      paddingBottom:20, paddingTop:20,
+      homeGeoPoint:{latitude:35,longitude:127}
+    })
+  );
+
+  // 배경 (바다)
+  const bgSeries=_globeChart.series.push(am5map.MapPolygonSeries.new(_globeRoot,{}));
+  bgSeries.mapPolygons.template.setAll({
+    fill: am5.color(isDark?0x0a1628:0xc8e0f4),
+    strokeWidth:0
+  });
+  bgSeries.data.push({geometry:am5map.getGeoRectangle(90,180,-90,-180)});
+
+  // 대륙
+  const polySeries=_globeChart.series.push(
+    am5map.MapPolygonSeries.new(_globeRoot,{
+      geoJSON: window.am5geodata_worldLow,
+      exclude:['AQ']
+    })
+  );
+  polySeries.mapPolygons.template.setAll({
+    fill: am5.color(isDark?0x1f4a33:0xd4e8c2),
+    stroke: am5.color(isDark?0x2a6040:0xa8c890),
+    strokeWidth:0.4,
+    tooltipText:'{name}'
+  });
+  polySeries.mapPolygons.template.states.create('hover',{
+    fill: am5.color(isDark?0x2a5a3d:0xc0d8a8)
+  });
+
+  // 방문한 나라 하이라이트
+  polySeries.events.on('datavalidated',()=>{
+    const visitedEN=new Set(trips.map(t=>{
+      const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];
+      return c?c.en:'';
+    }).filter(Boolean));
+    polySeries.mapPolygons.each(p=>{
+      const id=p.dataItem?.get('id');
+      if(id&&visitedEN.has(_ISO2to3(id))){
+        p.set('fill',am5.color(0xf5c842));
+        p.set('stroke',am5.color(0xe6b430));
+      }
+    });
+  });
+
+  // 핀 시리즈
+  const pinSeries=_globeChart.series.push(
+    am5map.MapPointSeries.new(_globeRoot,{})
+  );
+  pinSeries.bullets.push(()=>{
+    const circle=am5.Circle.new(_globeRoot,{
+      radius:6, fill:am5.color(0xe8435a),
+      stroke:am5.color(0xff8096), strokeWidth:2,
+      tooltipText:'{title}', cursorOverStyle:'pointer'
+    });
+    circle.states.create('hover',{scale:1.4});
+    return am5.Bullet.new(_globeRoot,{sprite:circle});
+  });
+  window._globePinSeries=pinSeries;
+
+  // 비행 경로 라인 시리즈
+  _globeLineSeries=_globeChart.series.push(
+    am5map.MapLineSeries.new(_globeRoot,{})
+  );
+  _globeLineSeries.mapLines.template.setAll({
+    stroke: am5.color(0x3a7bd5),
+    strokeWidth:1.5, strokeOpacity:0.6,
+    strokeDasharray:[4,6]
+  });
+
+  // 비행기 불릿
+  const planeSeries=_globeChart.series.push(
+    am5map.MapPointSeries.new(_globeRoot,{})
+  );
+  planeSeries.bullets.push(()=>{
+    const label=am5.Label.new(_globeRoot,{
+      text:'✈', fontSize:20, centerX:am5.p50, centerY:am5.p50,
+      rotation:-45
+    });
+    return am5.Bullet.new(_globeRoot,{sprite:label});
+  });
+  window._globePlaneSeries=planeSeries;
+
+  // 초기 자동 회전
+  _globeChart.animate({key:'rotateX',from:0,to:360,duration:60000,loops:Infinity});
+
+  renderGlobePins();
+}
+
+// ISO 2자리 → EN name 역매핑 (간소)
+function _ISO2to3(iso2){
+  const m=Object.entries(_ISO).find(([k,v])=>v===iso2.toLowerCase());
+  return m?m[0]:'';
+}
+
+function renderGlobePins(){
+  const pinSeries=window._globePinSeries;
+  const lineSeries=_globeLineSeries;
+  if(!pinSeries||!lineSeries) return;
+
+  pinSeries.data.clear();
+  lineSeries.data.clear();
+
+  // 시간순 정렬
+  const ordered=chronoTrips().filter(t=>t.df||t.dt);
+  if(!ordered.length) return;
+
+  // 각 도시 좌표 (공항 lat/lon 우선, geocoded 차선)
+  const AP_LL={
+    "도쿄":[35.7647,140.3864],"오사카":[34.4347,135.2440],"서울":[37.4602,126.4407],
+    "베이징":[40.0799,116.6031],"상하이":[31.1443,121.8083],"홍콩":[22.308,113.918],
+    "타이베이":[25.0797,121.2342],"방콕":[13.681,100.747],"하노이":[21.221,105.807],
+    "다낭":[16.044,108.199],"호치민":[10.819,106.652],"발리":[-8.748,115.167],
+    "싱가포르":[1.365,103.994],"쿠알라룸푸르":[2.746,101.707],"마닐라":[14.509,121.019],
+    "자카르타":[-6.128,106.654],"뉴델리":[28.556,77.100],"뭄바이":[19.090,72.866],
+    "카트만두":[27.697,85.359],"파리":[49.010,2.548],"런던":[51.47,-0.454],
+    "로마":[41.800,12.239],"바르셀로나":[41.297,2.083],"베를린":[52.367,13.503],
+    "암스테르담":[52.311,4.768],"프라하":[50.101,14.260],"비엔나":[48.110,16.570],
+    "취리히":[47.465,8.549],"부다페스트":[47.430,19.261],"아테네":[37.936,23.945],
+    "이스탄불":[41.275,28.752],"두바이":[25.253,55.366],"텔아비브":[32.006,34.885],
+    "카이로":[30.122,31.406],"나이로비":[-1.319,36.928],"케이프타운":[-33.972,18.602],
+    "뉴욕":[40.641,-73.778],"로스앤젤레스":[33.943,-118.408],"시카고":[41.974,-87.907],
+    "마이애미":[25.796,-80.287],"시드니":[-33.940,151.175],"멜버른":[-37.669,144.841],
+    "오클랜드":[-37.008,174.785]
+  };
+
+  function getLL(t){
+    if(t.geoLat&&t.geoLon) return [parseFloat(t.geoLat),parseFloat(t.geoLon)];
+    if(AP_LL[t.city]) return AP_LL[t.city];
+    return null;
+  }
+
+  // 핀 추가
+  ordered.forEach((t,i)=>{
+    const ll=getLL(t);
+    if(!ll) return;
+    pinSeries.data.push({
+      geometry:{type:'Point',coordinates:[ll[1],ll[0]]},
+      title:`${t.flag||'🌍'} ${t.city||t.cntry}${t.df?' ('+t.df+')':''}`,
+      idx:t._i
+    });
+  });
+
+  // 경로 라인 추가
+  for(let i=1;i<ordered.length;i++){
+    const a=getLL(ordered[i-1]), b=getLL(ordered[i]);
+    if(!a||!b) continue;
+    lineSeries.data.push({
+      geometry:{
+        type:'LineString',
+        coordinates:[[a[1],a[0]],[b[1],b[0]]]
+      }
+    });
+  }
+
+  document.getElementById('globeStatus').textContent=
+    `${ordered.length}개 도시 · ${ordered.length-1}개 경로`;
+}
+
+let _globeAutoIdx=0;
+function globeTogglePlay(){
+  _globePlaying=!_globePlaying;
+  const btn=document.getElementById('globePlayBtn');
+  if(_globePlaying){
+    btn.textContent='⏸ 정지';
+    // 자동 회전 멈추고 순차 이동 시작
+    if(_globeChart) _globeChart.animate({key:'rotateX',to:_globeChart.get('rotateX'),duration:1});
+    _globeAutoIdx=0;
+    _globeFlyNext();
+  } else {
+    btn.textContent='▶ 자동 비행';
+    if(_globeTimer) clearTimeout(_globeTimer);
+    // 자동 회전 재시작
+    if(_globeChart) _globeChart.animate({key:'rotateX',from:_globeChart.get('rotateX'),to:_globeChart.get('rotateX')+360,duration:60000,loops:Infinity});
+  }
+}
+
+function _globeFlyNext(){
+  if(!_globePlaying) return;
+  const ordered=chronoTrips().filter(t=>t.df||t.dt);
+  if(!ordered.length) return;
+  const t=ordered[_globeAutoIdx%ordered.length];
+  const ll=_getGlobeLL(t);
+  if(ll&&_globeChart){
+    // 지구본 회전으로 해당 도시로 이동
+    _globeChart.animate({key:'rotateX',to:-ll[1],duration:1200,easing:window.am5?.ease?.out(window.am5?.ease?.cubic)});
+    _globeChart.animate({key:'rotateY',to:-ll[0],duration:1200});
+    // 비행기 이동
+    const ps=window._globePlaneSeries;
+    if(ps){
+      ps.data.setAll([{geometry:{type:'Point',coordinates:[ll[1],ll[0]]}}]);
+    }
+    document.getElementById('globeStatus').textContent=
+      `✈️ ${t.flag||''} ${t.city||t.cntry}${t.df?' — '+t.df:''}`;
+  }
+  _globeAutoIdx++;
+  _globeTimer=setTimeout(_globeFlyNext,2500);
+}
+
+function _getGlobeLL(t){
+  const AP_LL2={
+    "도쿄":[35.7647,140.3864],"오사카":[34.4347,135.2440],"서울":[37.4602,126.4407],
+    "베이징":[40.0799,116.6031],"상하이":[31.1443,121.8083],"홍콩":[22.308,113.918],
+    "타이베이":[25.0797,121.2342],"방콕":[13.681,100.747],"하노이":[21.221,105.807],
+    "다낭":[16.044,108.199],"호치민":[10.819,106.652],"발리":[-8.748,115.167],
+    "싱가포르":[1.365,103.994],"쿠알라룸푸르":[2.746,101.707],"마닐라":[14.509,121.019],
+    "자카르타":[-6.128,106.654],"뉴델리":[28.556,77.100],"뭄바이":[19.090,72.866],
+    "카트만두":[27.697,85.359],"파리":[49.010,2.548],"런던":[51.47,-0.454],
+    "로마":[41.800,12.239],"바르셀로나":[41.297,2.083],"베를린":[52.367,13.503],
+    "암스테르담":[52.311,4.768],"프라하":[50.101,14.260],"비엔나":[48.110,16.570],
+    "취리히":[47.465,8.549],"부다페스트":[47.430,19.261],"아테네":[37.936,23.945],
+    "이스탄불":[41.275,28.752],"두바이":[25.253,55.366],"텔아비브":[32.006,34.885],
+    "카이로":[30.122,31.406],"나이로비":[-1.319,36.928],"케이프타운":[-33.972,18.602],
+    "뉴욕":[40.641,-73.778],"로스앤젤레스":[33.943,-118.408],"시카고":[41.974,-87.907],
+    "마이애미":[25.796,-80.287],"시드니":[-33.940,151.175],"멜버른":[-37.669,144.841],
+    "오클랜드":[-37.008,174.785]
+  };
+  if(t.geoLat&&t.geoLon) return [parseFloat(t.geoLat),parseFloat(t.geoLon)];
+  return AP_LL2[t.city]||null;
+}
+
+function globeReset(){
+  _globePlaying=false;
+  document.getElementById('globePlayBtn').textContent='▶ 자동 비행';
+  if(_globeTimer) clearTimeout(_globeTimer);
+  if(window._globePlaneSeries) window._globePlaneSeries.data.clear();
+  if(_globeChart){
+    _globeChart.goHome();
+    _globeChart.animate({key:'rotateX',from:0,to:360,duration:60000,loops:Infinity});
+  }
+  document.getElementById('globeStatus').textContent='지구본을 드래그해서 회전하세요 ✈️';
+}
+
 </script>
 </body>
 </html>
