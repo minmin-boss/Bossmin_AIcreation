@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BOSS-AI Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+    /* 기본 리셋 */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+    
+    body {
+        font-family: "Nanum Gothic", -apple-system, sans-serif;
+        background-color: #fff0f5; /* 연한 라벤더 핑크 배경 */
+        color: #4a3b40;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 20px;
+    }
+
+    /* 메인 컨테이너 */
+    .portal-container {
+        background: #ffffff;
+        width: 100%;
+        max-width: 520px;
+        border-radius: 32px;
+        box-shadow: 0 12px 36px rgba(255, 182, 193, 0.3);
+        overflow: hidden;
+        border: 4px solid #ffe4e1; /* 미스티 로즈 테두리 */
+    }
+
+    /* 헤더 영역 */
+    .portal-header {
+        background: linear-gradient(135deg, #ffe5ec 0%, #ffc2d1 100%);
+        padding: 40px 24px 32px;
+        text-align: center;
+        position: relative;
+    }
+
+    .portal-header .emoji {
+        font-size: 48px;
+        margin-bottom: 12px;
+        display: inline-block;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-8px); }
+    }
+
+    .portal-title {
+        font-family: "Gaegu", sans-serif;
+        font-size: 32px;
+        color: #ff6584;
+        margin-bottom: 8px;
+        letter-spacing: 1px;
+    }
+
+    .portal-subtitle {
+        font-size: 13px;
+        color: #8b6d75;
+        background: rgba(255, 255, 255, 0.6);
+        display: inline-block;
+        padding: 4px 16px;
+        border-radius: 20px;
+        font-weight: 700;
+    }
+
+    /* 메뉴 그리드 */
+    .menu-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+        padding: 24px;
+    }
+
+    /* 메뉴 카드 스타일 */
+    .menu-card {
+        background: #ffffff;
+        border: 2px solid #ffe5ec;
+        border-radius: 20px;
+        padding: 20px 14px;
+        text-align: center;
+        text-decoration: none;
+        color: inherit;
+        transition: all 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 8px rgba(255, 229, 236, 0.2);
+    }
+
+    .menu-card:hover {
+        transform: translateY(-5px);
+        background: #fff8f9;
+        border-color: #ffb3c6;
+        box-shadow: 0 8px 20px rgba(255, 179, 198, 0.4);
+    }
+
+    /* 준비중 카드 스타일 */
+    .menu-card.disabled {
+        opacity: 0.6;
+        background: #fafafa;
+        border-color: #e0e0e0;
+        cursor: not-allowed;
+    }
+    
+    .menu-card.disabled:hover {
+        transform: none;
+        box-shadow: none;
+    }
+
+    .card-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+    }
+
+    .card-title {
+        font-size: 15px;
+        font-weight: 800;
+        color: #ff6584;
+        margin-bottom: 6px;
+    }
+    
+    .menu-card.disabled .card-title {
+        color: #888888;
+    }
+
+    .card-desc {
+        font-size: 11px;
+        color: #7c6a70;
+        line-height: 1.5;
+        word-break: keep-all;
+    }
+
+    .badge-ready {
+        display: inline-block;
+        margin-top: 8px;
+        font-size: 10px;
+        padding: 2px 10px;
+        border-radius: 12px;
+        background: #f0f0f0;
+        color: #999999;
+        font-weight: 700;
+    }
+
+    /* 푸터 영역 */
+    .portal-footer {
+        text-align: center;
+        padding: 16px;
+        font-size: 11px;
+        color: #bfa3ab;
+        background: #fff8f9;
+        border-top: 1px solid #ffe5ec;
+        font-weight: 700;
+    }
+</style>
+</head>
+<body>
+
+<div class="portal-container">
+    <div class="portal-header">
+        <div class="emoji">🌸</div>
+        <h1 class="portal-title">Bossmin Office</h1>
+        <p class="portal-subtitle">오늘도 기분 좋은 하루 보내세요 마이 보스! 💕</p>
+    </div>
+
+    <div class="menu-grid">
+        <a href="office_supplies.html" class="menu-card">
+            <span class="card-icon">✏️</span>
+            <div class="card-title">비품 소원함</div>
+            <div class="card-desc">필요한 사무 비품 신청 및<br>실시간 처리 현황 확인</div>
+        </a>
+
+        <a href="dayoff_work-life_balance.html" class="menu-card">
+            <span class="card-icon">🌴</span>
+            <div class="card-title">휴가 / 워라밸</div>
+            <div class="card-desc">나의 연차 정보 조회 및<br>워크라이프 밸런스 관리</div>
+        </a>
+
+        <a href="휴가신청서_연동.html" class="menu-card">
+            <span class="card-icon">💌</span>
+            <div class="card-title">휴가신청서</div>
+            <div class="card-desc">스마트하게 신청하고<br>캘린더 자동 연동까지</div>
+        </a>
+
+        <a href="taxmanager_ai.html" class="menu-card" style="border-color: #ffe066;">
+            <span class="card-icon">🐥</span>
+            <div class="card-title" style="color: #f59f00;">세무비서 AI</div>
+            <div class="card-desc">어려운 세무·노무 규정<br>무엇이든 물어보세요!</div>
+        </a>
+
+        <a href="travel-tracker.html" class="menu-card" style="border-color: #a5d8ff;">
+            <span class="card-icon">✈️</span>
+            <div class="card-title" style="color: #228be6;">내 여행 지도</div>
+            <div class="card-desc">떠나고 싶은 설렘 가득<br>방문 도시 지도 기록</div>
+        </a>
+
+        <div class="menu-card disabled">
+            <span class="card-icon">📊</span>
+            <div class="card-title">업무 현황</div>
+            <div class="card-desc">팀 전체 업무 프로세스<br>모니터링 대시보드</div>
+            <span class="badge-ready">준비중</span>
+        </div>
+    </div>
+
+    <div class="portal-footer">
+        © Bossmin_office_AI creation. all rights reserved.
+    </div>
+</div>
+
+</body>
+</html>
