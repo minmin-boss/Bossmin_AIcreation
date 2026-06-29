@@ -658,10 +658,17 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
     </div>
   </div>
   <div class="row2">
-    <div class="fg"><label class="fl">지역 / 명소</label>
-      <input type="text" id="spotIn" placeholder="예: 신주쿠, 에펠탑, 교외"/></div>
-    <div class="fg"><label class="fl">메모</label>
-      <input type="text" id="memoIn" placeholder="짧은 여행 메모"/></div>
+    <div class="fg"><label class="fl">✍️ 메모 (누구와 함께)</label>
+      <input type="text" id="memoIn" placeholder="예: 가족여행, 친구와, 혼자, 커플여행"/></div>
+    <div class="fg"><label class="fl">💰 여행 경비</label>
+      <div style="position:relative">
+        <input type="number" id="costIn" placeholder="0" min="0" style="padding-right:48px"/>
+        <select id="currIn" style="position:absolute;right:0;top:0;width:54px;height:36px;border-left:none;border-radius:0 7px 7px 0;font-size:11px;padding:0 2px">
+          <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option>
+          <option>CNY</option><option>THB</option><option>SGD</option><option>AUD</option>
+        </select>
+      </div>
+    </div>
   </div>
   <div class="row-btn">
     <div class="fg"><label class="fl">출발일</label><input type="date" id="df"/></div>
@@ -700,6 +707,7 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
       <div class="kpi" data-icon="📅"><div class="kpi-val" id="kpiYears">0</div><div class="kpi-lbl">여행 연도</div><div class="kpi-sub">년간</div></div>
       <div class="kpi" data-icon="🌐"><div class="kpi-val" id="kpiCont">0</div><div class="kpi-lbl">방문 대륙</div><div class="kpi-sub">개 대륙</div></div>
       <div class="kpi" data-icon="🔁"><div class="kpi-val" id="kpiAvg">0</div><div class="kpi-lbl">연평균 여행</div><div class="kpi-sub">회/년</div></div>
+      <div class="kpi" data-icon="💰"><div class="kpi-val" id="kpiCost">—</div><div class="kpi-lbl">총 여행경비</div><div class="kpi-sub" id="kpiCostSub">입력된 금액 합계</div></div>
     </div>
   </div>
 
@@ -844,6 +852,22 @@ const COUNTRIES=[
 
 const AIRPORTS={"도쿄": {"x": 459.4, "y": 196.6, "country": "Japan", "airport": "나리타"}, "오사카": {"x": 445.1, "y": 198.8, "country": "Japan", "airport": "간사이"}, "교토": {"x": 446.6, "y": 197.9, "country": "Japan", "airport": "오사카간사이"}, "삿포로": {"x": 463.0, "y": 183.9, "country": "Japan", "airport": "신치토세"}, "후쿠오카": {"x": 431.8, "y": 200.3, "country": "Japan", "airport": "후쿠오카"}, "나고야": {"x": 449.5, "y": 198.1, "country": "Japan", "airport": "주부"}, "히로시마": {"x": 438.7, "y": 198.8, "country": "Japan", "airport": "히로시마"}, "서울": {"x": 420.7, "y": 193.6, "country": "South Korea", "airport": "인천"}, "부산": {"x": 428.0, "y": 197.6, "country": "South Korea", "airport": "김해"}, "제주": {"x": 420.8, "y": 200.4, "country": "South Korea", "airport": "제주"}, "베이징": {"x": 393.3, "y": 188.9, "country": "China", "airport": "수도"}, "상하이": {"x": 407.8, "y": 204.3, "country": "China", "airport": "푸둥"}, "홍콩": {"x": 385.9, "y": 218.1, "country": "Hong Kong", "airport": "첵랍콕"}, "타이베이": {"x": 406.2, "y": 213.9, "country": "Taiwan", "airport": "도원"}, "마카오": {"x": 384.8, "y": 218.3, "country": "Macau", "airport": "마카오"}, "광저우": {"x": 384.2, "y": 216.5, "country": "China", "airport": "바이윈"}, "청두": {"x": 358.2, "y": 205.2, "country": "China", "airport": "청두"}, "시안": {"x": 371.5, "y": 198.8, "country": "China", "airport": "시안"}, "하얼빈": {"x": 420.1, "y": 178.4, "country": "China", "airport": "하얼빈"}, "쿤밍": {"x": 354.8, "y": 214.0, "country": "China", "airport": "창수이"}, "울란바토르": {"x": 366.0, "y": 173.9, "country": "Mongolia", "airport": "징기스칸"}, "방콕": {"x": 349.3, "y": 230.8, "country": "Thailand", "airport": "수완나품"}, "치앙마이": {"x": 344.3, "y": 223.4, "country": "Thailand", "airport": "치앙마이"}, "푸켓": {"x": 342.5, "y": 238.7, "country": "Thailand", "airport": "푸켓"}, "파타야": {"x": 349.3, "y": 230.8, "country": "Thailand", "airport": "수완나품"}, "하노이": {"x": 363.4, "y": 219.7, "country": "Vietnam", "airport": "노이바이"}, "다낭": {"x": 370.0, "y": 227.3, "country": "Vietnam", "airport": "다낭"}, "호치민": {"x": 365.7, "y": 234.8, "country": "Vietnam", "airport": "떤선녓"}, "나트랑": {"x": 372.8, "y": 233.1, "country": "Vietnam", "airport": "캄란"}, "호이안": {"x": 370.4, "y": 227.6, "country": "Vietnam", "airport": "다낭"}, "하롱베이": {"x": 365.9, "y": 220.3, "country": "Vietnam", "airport": "하이퐁"}, "발리": {"x": 389.4, "y": 262.2, "country": "Indonesia", "airport": "응우라라이"}, "자카르타": {"x": 365.7, "y": 258.6, "country": "Indonesia", "airport": "수카르노하타"}, "족자카르타": {"x": 376.2, "y": 260.9, "country": "Indonesia", "airport": "아디수치프토"}, "싱가포르": {"x": 358.3, "y": 248.1, "country": "Singapore", "airport": "창이"}, "쿠알라룸푸르": {"x": 352.0, "y": 246.2, "country": "Malaysia", "airport": "KLIA"}, "코타키나발루": {"x": 391.8, "y": 241.7, "country": "Malaysia", "airport": "코타키나발루"}, "페낭": {"x": 348.0, "y": 242.6, "country": "Malaysia", "airport": "페낭"}, "랑카위": {"x": 346.5, "y": 241.2, "country": "Malaysia", "airport": "랑카위"}, "마닐라": {"x": 405.6, "y": 229.6, "country": "Philippines", "airport": "니노이아키노"}, "세부": {"x": 413.8, "y": 235.6, "country": "Philippines", "airport": "막탄"}, "보라카이": {"x": 409.4, "y": 233.6, "country": "Philippines", "airport": "칼리보"}, "팔라완": {"x": 399.3, "y": 236.4, "country": "Philippines", "airport": "푸에르토프린세사"}, "앙코르와트": {"x": 357.8, "y": 231.1, "country": "Cambodia", "airport": "시엠립"}, "프놈펜": {"x": 360.7, "y": 233.8, "country": "Cambodia", "airport": "포첸통"}, "양곤": {"x": 336.5, "y": 226.1, "country": "Myanmar", "airport": "양곤"}, "바간": {"x": 333.1, "y": 219.8, "country": "Myanmar", "airport": "냥우"}, "비엔티안": {"x": 354.3, "y": 224.5, "country": "Laos", "airport": "와타이"}, "루앙프라방": {"x": 353.2, "y": 221.7, "country": "Laos", "airport": "루앙프라방"}, "뉴델리": {"x": 283.6, "y": 208.5, "country": "India", "airport": "인디라간디"}, "뭄바이": {"x": 271.8, "y": 222.9, "country": "India", "airport": "차트라파티"}, "콜카타": {"x": 315.1, "y": 217.6, "country": "India", "airport": "넷지수바스"}, "고아": {"x": 274.5, "y": 228.3, "country": "India", "airport": "고아다볼림"}, "아그라": {"x": 286.0, "y": 210.7, "country": "India", "airport": "아그라"}, "자이푸르": {"x": 280.0, "y": 211.2, "country": "India", "airport": "자이푸르"}, "바라나시": {"x": 299.6, "y": 213.3, "country": "India", "airport": "바라나시"}, "케랄라": {"x": 281.3, "y": 236.1, "country": "India", "airport": "코치"}, "카트만두": {"x": 306.6, "y": 209.8, "country": "Nepal", "airport": "트리부반"}, "포카라": {"x": 302.7, "y": 209.0, "country": "Nepal", "airport": "포카라"}, "콜롬보": {"x": 291.3, "y": 240.0, "country": "Sri Lanka", "airport": "반다라나이케"}, "이슬라마바드": {"x": 272.5, "y": 200.2, "country": "Pakistan", "airport": "이슬라마바드"}, "파리": {"x": 76.5, "y": 171.4, "country": "France", "airport": "샤를드골"}, "니스": {"x": 89.5, "y": 182.2, "country": "France", "airport": "코트다쥐르"}, "런던": {"x": 68.2, "y": 166.1, "country": "England", "airport": "히드로"}, "에든버러": {"x": 60.1, "y": 155.5, "country": "England", "airport": "에든버러"}, "로마": {"x": 103.4, "y": 185.8, "country": "Italy", "airport": "피우미치노"}, "밀라노": {"x": 93.7, "y": 178.4, "country": "Italy", "airport": "말펜사"}, "베네치아": {"x": 103.8, "y": 178.6, "country": "Italy", "airport": "마르코폴로"}, "피렌체": {"x": 100.6, "y": 182.0, "country": "Italy", "airport": "아메리고베스푸치"}, "나폴리": {"x": 109.1, "y": 187.5, "country": "Italy", "airport": "나폴리"}, "시칠리아": {"x": 105.8, "y": 192.4, "country": "Italy", "airport": "팔레르모"}, "아말피": {"x": 110.0, "y": 187.9, "country": "Italy", "airport": "나폴리"}, "바르셀로나": {"x": 75.2, "y": 186.7, "country": "Spain", "airport": "엘프라트"}, "마드리드": {"x": 59.5, "y": 188.2, "country": "Spain", "airport": "아돌포수아레스"}, "세비야": {"x": 53.1, "y": 193.7, "country": "Spain", "airport": "세비야"}, "그라나다": {"x": 59.0, "y": 194.1, "country": "Spain", "airport": "그라나다"}, "베를린": {"x": 107.0, "y": 164.0, "country": "Germany", "airport": "브란덴부르크"}, "뮌헨": {"x": 102.2, "y": 172.8, "country": "Germany", "airport": "뮌헨"}, "프랑크푸르트": {"x": 93.3, "y": 169.2, "country": "Germany", "airport": "프랑크푸르트"}, "함부르크": {"x": 97.2, "y": 161.1, "country": "Germany", "airport": "함부르크"}, "암스테르담": {"x": 82.7, "y": 164.2, "country": "Netherlands", "airport": "스키폴"}, "프라하": {"x": 109.1, "y": 169.1, "country": "Czech Republic", "airport": "바츨라프하벨"}, "체스키크룸로프": {"x": 109.2, "y": 171.9, "country": "Czech Republic", "airport": "프라하"}, "비엔나": {"x": 115.5, "y": 173.3, "country": "Austria", "airport": "비엔나"}, "잘츠부르크": {"x": 105.6, "y": 174.0, "country": "Austria", "airport": "잘츠부르크"}, "취리히": {"x": 93.2, "y": 174.7, "country": "Switzerland", "airport": "취리히"}, "인터라켄": {"x": 90.3, "y": 175.7, "country": "Switzerland", "airport": "베른"}, "체르마트": {"x": 91.0, "y": 177.6, "country": "Switzerland", "airport": "제네바"}, "부다페스트": {"x": 122.9, "y": 174.7, "country": "Hungary", "airport": "리스트페렌츠"}, "바르샤바": {"x": 127.7, "y": 164.5, "country": "Poland", "airport": "쇼팽"}, "크라쿠프": {"x": 124.4, "y": 169.1, "country": "Poland", "airport": "크라쿠프"}, "아테네": {"x": 136.0, "y": 192.8, "country": "Greece", "airport": "엘레프테리오스"}, "산토리니": {"x": 140.2, "y": 195.5, "country": "Greece", "airport": "티라"}, "미코노스": {"x": 139.9, "y": 193.7, "country": "Greece", "airport": "미코노스"}, "크레타": {"x": 139.4, "y": 197.3, "country": "Greece", "airport": "헤라클리온"}, "이스탄불": {"x": 149.3, "y": 186.7, "country": "Turkey", "airport": "이스탄불"}, "카파도키아": {"x": 168.0, "y": 191.3, "country": "Turkey", "airport": "카이세리"}, "리스본": {"x": 44.1, "y": 191.3, "country": "Portugal", "airport": "움베르토"}, "포르투": {"x": 45.3, "y": 186.8, "country": "Portugal", "airport": "포르투"}, "두브로브니크": {"x": 120.2, "y": 184.3, "country": "Croatia", "airport": "두브로브니크"}, "코펜하겐": {"x": 104.6, "y": 156.3, "country": "Denmark", "airport": "카스트루프"}, "레이캬비크": {"x": 6.7, "y": 133.0, "country": "Iceland", "airport": "케플라비크"}, "오슬로": {"x": 100.3, "y": 144.3, "country": "Norway", "airport": "오슬로"}, "베르겐": {"x": 83.9, "y": 144.0, "country": "Norway", "airport": "베르겐"}, "스톡홀름": {"x": 119.2, "y": 145.8, "country": "Sweden", "airport": "알란다"}, "헬싱키": {"x": 138.8, "y": 144.0, "country": "Finland", "airport": "헬싱키반타"}, "모스크바": {"x": 173.4, "y": 155.5, "country": "Russia", "airport": "셰레메티예보"}, "상트페테르부르크": {"x": 153.5, "y": 145.4, "country": "Russia", "airport": "풀코보"}, "키이우": {"x": 155.3, "y": 168.6, "country": "Ukraine", "airport": "보리스필"}, "두바이": {"x": 223.2, "y": 213.6, "country": "United Arab Emirates", "airport": "두바이"}, "아부다비": {"x": 221.3, "y": 214.9, "country": "United Arab Emirates", "airport": "아부다비"}, "도하": {"x": 212.8, "y": 213.6, "country": "Qatar", "airport": "하마드"}, "리야드": {"x": 199.2, "y": 214.1, "country": "Saudi Arabia", "airport": "킹칼리드"}, "제다": {"x": 178.2, "y": 219.0, "country": "Saudi Arabia", "airport": "킹압둘아지즈"}, "텔아비브": {"x": 166.3, "y": 202.9, "country": "Israel", "airport": "벤구리온"}, "예루살렘": {"x": 166.3, "y": 202.9, "country": "Israel", "airport": "벤구리온"}, "암만": {"x": 169.4, "y": 203.3, "country": "Jordan", "airport": "퀸알리아"}, "페트라": {"x": 167.9, "y": 205.6, "country": "Jordan", "airport": "와디무사"}, "테헤란": {"x": 211.5, "y": 197.2, "country": "Iran", "airport": "이맘호메이니"}, "트빌리시": {"x": 194.3, "y": 186.0, "country": "Georgia", "airport": "트빌리시"}, "예레반": {"x": 192.8, "y": 188.8, "country": "Armenia", "airport": "즈바르트노츠"}, "알마티": {"x": 283.4, "y": 182.8, "country": "Kazakhstan", "airport": "알마티"}, "타슈켄트": {"x": 261.9, "y": 186.8, "country": "Uzbekistan", "airport": "이슬람카리모프"}, "사마르칸트": {"x": 255.5, "y": 189.6, "country": "Uzbekistan", "airport": "사마르칸트"}, "뉴욕": {"x": 864.5, "y": 187.9, "country": "USA", "airport": "JFK"}, "로스앤젤레스": {"x": 740.5, "y": 199.7, "country": "USA", "airport": "LAX"}, "샌프란시스코": {"x": 729.5, "y": 193.3, "country": "USA", "airport": "SFO"}, "라스베이거스": {"x": 749.6, "y": 196.0, "country": "USA", "airport": "해리리드"}, "시카고": {"x": 825.3, "y": 185.4, "country": "USA", "airport": "오헤어"}, "마이애미": {"x": 846.4, "y": 212.8, "country": "USA", "airport": "마이애미"}, "시애틀": {"x": 729.7, "y": 174.7, "country": "USA", "airport": "시애틀타코마"}, "보스턴": {"x": 872.2, "y": 184.7, "country": "USA", "airport": "로건"}, "워싱턴DC": {"x": 854.3, "y": 191.0, "country": "USA", "airport": "덜레스"}, "뉴올리언스": {"x": 818.7, "y": 206.2, "country": "USA", "airport": "루이암스트롱"}, "오를란도": {"x": 843.6, "y": 208.6, "country": "USA", "airport": "올랜도"}, "하와이": {"x": 630.8, "y": 219.6, "country": "USA", "airport": "호놀룰루"}, "밴쿠버": {"x": 727.3, "y": 171.0, "country": "Canada", "airport": "밴쿠버"}, "토론토": {"x": 848.3, "y": 182.2, "country": "Canada", "airport": "피어슨"}, "몬트리올": {"x": 864.6, "y": 178.7, "country": "Canada", "airport": "트뤼도"}, "퀘벡시티": {"x": 871.1, "y": 176.0, "country": "Canada", "airport": "퀘벡"}, "밴프": {"x": 752.8, "y": 166.8, "country": "Canada", "airport": "캘거리"}, "멕시코시티": {"x": 794.2, "y": 222.4, "country": "Mexico", "airport": "베니토후아레스"}, "칸쿤": {"x": 828.1, "y": 220.0, "country": "Mexico", "airport": "칸쿤"}, "아바나": {"x": 840.5, "y": 217.1, "country": "Cuba", "airport": "호세마르티"}, "리우데자네이루": {"x": 949.3, "y": 282.7, "country": "Brazil", "airport": "갈레앙"}, "상파울루": {"x": 940.4, "y": 283.6, "country": "Brazil", "airport": "과룰류스"}, "이구아수": {"x": 918.1, "y": 286.9, "country": "Brazil", "airport": "이구아수"}, "부에노스아이레스": {"x": 906.8, "y": 301.8, "country": "Argentina", "airport": "에세이사"}, "마추픽추": {"x": 869.5, "y": 269.0, "country": "Peru", "airport": "알레한드로벨라스코"}, "리마": {"x": 855.2, "y": 266.9, "country": "Peru", "airport": "호르헤차베스"}, "산티아고": {"x": 872.8, "y": 299.4, "country": "Chile", "airport": "아르투로메리노"}, "보고타": {"x": 863.5, "y": 243.4, "country": "Colombia", "airport": "엘도라도"}, "카르타헤나": {"x": 859.7, "y": 235.4, "country": "Colombia", "airport": "라파엘누녜스"}, "키토": {"x": 851.8, "y": 250.2, "country": "Ecuador", "airport": "마리스칼수크레"}, "우유니": {"x": 883.8, "y": 279.1, "country": "Bolivia", "airport": "우유니"}, "카이로": {"x": 156.7, "y": 205.9, "country": "Egypt", "airport": "카이로"}, "룩소르": {"x": 160.3, "y": 213.0, "country": "Egypt", "airport": "룩소르"}, "마라케시": {"x": 47.1, "y": 203.5, "country": "Morocco", "airport": "메나라"}, "카사블랑카": {"x": 48.4, "y": 200.6, "country": "Morocco", "airport": "무함마드5세"}, "케이프타운": {"x": 121.1, "y": 300.4, "country": "South Africa", "airport": "케이프타운"}, "요하네스버그": {"x": 147.9, "y": 287.8, "country": "South Africa", "airport": "오R탐보"}, "나이로비": {"x": 172.0, "y": 251.8, "country": "Kenya", "airport": "조모케냐타"}, "잔지바르": {"x": 178.4, "y": 258.7, "country": "United Republic of Tanzania", "airport": "잔지바르"}, "아디스아바바": {"x": 177.2, "y": 237.4, "country": "Ethiopia", "airport": "볼레"}, "라고스": {"x": 78.7, "y": 240.8, "country": "Nigeria", "airport": "무르탈라"}, "다카르": {"x": 20.9, "y": 229.2, "country": "Senegal", "airport": "레오폴드"}, "시드니": {"x": 489.4, "y": 300.3, "country": "Australia", "airport": "킹스퍼드스미스"}, "멜버른": {"x": 471.8, "y": 306.7, "country": "Australia", "airport": "멜버른"}, "브리즈번": {"x": 494.8, "y": 289.7, "country": "Australia", "airport": "브리즈번"}, "골드코스트": {"x": 495.8, "y": 290.9, "country": "Australia", "airport": "쿨랑가타"}, "케언즈": {"x": 474.3, "y": 273.9, "country": "Australia", "airport": "케언즈"}, "퍼스": {"x": 391.6, "y": 297.0, "country": "Australia", "airport": "퍼스"}, "울루루": {"x": 433.4, "y": 286.5, "country": "Australia", "airport": "에어스록"}, "오클랜드": {"x": 555.0, "y": 305.6, "country": "New Zealand", "airport": "오클랜드"}, "퀸스타운": {"x": 538.2, "y": 320.4, "country": "New Zealand", "airport": "퀸스타운"}};
 
+const _ISO={"Japan":"jp","South Korea":"kr","China":"cn","Hong Kong":"hk","Taiwan":"tw",
+"Thailand":"th","Vietnam":"vn","Indonesia":"id","Singapore":"sg","Malaysia":"my",
+"Philippines":"ph","Cambodia":"kh","Myanmar":"mm","Laos":"la","India":"in","Nepal":"np",
+"Sri Lanka":"lk","Bangladesh":"bd","Pakistan":"pk","France":"fr","Italy":"it","Spain":"es",
+"Germany":"de","England":"gb","Switzerland":"ch","Austria":"at","Netherlands":"nl",
+"Belgium":"be","Portugal":"pt","Greece":"gr","Turkey":"tr","Czech Republic":"cz",
+"Hungary":"hu","Poland":"pl","Croatia":"hr","Romania":"ro","Iceland":"is","Norway":"no",
+"Sweden":"se","Finland":"fi","Denmark":"dk","Russia":"ru","Ukraine":"ua",
+"United Arab Emirates":"ae","Israel":"il","Jordan":"jo","Saudi Arabia":"sa",
+"Iran":"ir","Qatar":"qa","Kuwait":"kw","Oman":"om","Egypt":"eg","Morocco":"ma",
+"Kenya":"ke","South Africa":"za","Ethiopia":"et","Nigeria":"ng","Tanzania":"tz",
+"USA":"us","Canada":"ca","Mexico":"mx","Cuba":"cu","Brazil":"br","Argentina":"ar",
+"Peru":"pe","Chile":"cl","Colombia":"co","Ecuador":"ec","Bolivia":"bo",
+"Australia":"au","New Zealand":"nz","Fiji":"fj","Georgia":"ge","Armenia":"am",
+"Kazakhstan":"kz","Uzbekistan":"uz","Mongolia":"mn","Maldives":"mv"};
+
 // Country lookup
 const BY_EN={},BY_KO={};
 COUNTRIES.forEach(c=>{BY_EN[c.en]=c;BY_KO[c.name]=c;});
@@ -940,29 +964,58 @@ function onCityInput(){
   document.getElementById('cityClear').style.display=q?'block':'none';
   selCity=q;showCityDrop();
 }
+let _citySearchTimer=null;
 function showCityDrop(){
-  const q=document.getElementById('cityIn').value.trim().toLowerCase();
+  const q=document.getElementById('cityIn').value.trim();
+  const ql=q.toLowerCase();
   const drop=document.getElementById('cityDrop');
+
+  // 로컬 데이터
   let cities=selCntry?[...selCntry.cities]:[];
-  // Add airports from same country or all if no country selected
   Object.entries(AIRPORTS).forEach(([k,v])=>{
     if(selCntry&&v.country!==selCntry.en)return;
     if(!cities.includes(k))cities.push(k);
   });
-  if(q)cities=cities.filter(c=>c.toLowerCase().includes(q));
-  cities=cities.slice(0,50);
-  if(!cities.length){drop.style.display='none';return;}
-  drop.innerHTML=cities.map((c,i)=>{
-    const ap=AIRPORTS[c];
-    return`<div class="ac-item" data-i="${i}" onmousedown="pickCity('${c.replace(/'/g,"\'")}')">
-      <span style="font-size:14px">🏙️</span>
-      <div><div class="ac-main">${c}</div>${ap?`<div class="ac-sub">✈ ${ap.airport}</div>`:''}
-    </div></div>`;
-  }).join('');
-  drop.style.display='block';cityFI=-1;
+  if(q)cities=cities.filter(c=>c.toLowerCase().includes(ql));
+  cities=cities.slice(0,30);
+
+  function renderDrop(extra=[]){
+    const seen=new Set();
+    const all=[
+      ...cities.map(c=>({name:c,sub:AIRPORTS[c]?'✈ '+AIRPORTS[c].airport:'',src:'local',lat:'',lon:''})),
+      ...extra
+    ].filter(x=>{if(seen.has(x.name))return false;seen.add(x.name);return true;}).slice(0,40);
+    if(!all.length){drop.style.display='none';return;}
+    drop.innerHTML=all.map((c,i)=>`<div class="ac-item" data-i="${i}" onmousedown="pickCity('${c.name.replace(/'/g,"\'")}','${c.lat||''}','${c.lon||''}')">
+      <span style="font-size:14px">${c.src==='geo'?'🔍':'🏙️'}</span>
+      <div><div class="ac-main">${c.name}</div>${c.sub?`<div class="ac-sub">${c.sub}</div>`:''}
+      </div></div>`).join('');
+    drop.style.display='block';cityFI=-1;
+  }
+  renderDrop();
+
+  // 2글자 이상이면 OpenStreetMap Nominatim으로 전세계 도시 검색
+  if(_citySearchTimer)clearTimeout(_citySearchTimer);
+  if(q.length<2)return;
+  _citySearchTimer=setTimeout(async()=>{
+    try{
+      const cc=selCntry&&_ISO[selCntry.en]?`&countrycodes=${_ISO[selCntry.en]}`:'';
+      const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&featuretype=city,town&accept-language=ko${cc}`;
+      const res=await fetch(url,{headers:{'User-Agent':'TravelTracker/1.0'}});
+      const data=await res.json();
+      const extra=data.map(d=>({
+        name:d.display_name.split(',')[0].trim(),
+        sub:d.display_name.split(',').slice(1,3).join(',').trim(),
+        lat:d.lat,lon:d.lon,src:'geo'
+      })).filter(d=>d.name.length>0);
+      renderDrop(extra);
+    }catch(e){}
+  },450);
 }
-function pickCity(name){
+function pickCity(name,lat,lon){
   selCity=name;
+  window._pickedLat=lat?parseFloat(lat):null;
+  window._pickedLon=lon?parseFloat(lon):null;
   document.getElementById('cityIn').value=name;
   document.getElementById('cityClear').style.display='block';
   document.getElementById('cityDrop').style.display='none';
@@ -1031,11 +1084,11 @@ function renderPins(){
     }
     // Find position — prefer airport, fallback centroid
     const ap=AIRPORTS[t.city];
-    if(!ap&&!c)return;
+    if(!ap&&!c&&!t.geoLat)return;
     let mx,my;
     if(ap){mx=ap.x;my=ap.y;}
+    else if(t.geoLat&&t.geoLon){mx=projX(t.geoLon);my=projY(t.geoLat);}
     else{
-      // rough centroid approximation by country
       const defaults={
         "Japan":[459,197],"South Korea":[421,194],"China":[390,200],"Hong Kong":[395,217],
         "Taiwan":[415,218],"Mongolia":[385,175],"Thailand":[368,225],"Vietnam":[385,225],
@@ -1136,10 +1189,13 @@ function renderList(){
               <div class="cc">${t.cntry}${t.continent?' · '+t.continent:''}</div>
             </div>
           </div>
-          ${t.spot?`<span class="spot-tag">📍 ${t.spot}</span>`:''}
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+            ${t.season?`<span style="font-size:11px">${t.season}</span>`:''}
+            ${t.cost?`<span style="font-size:10px;background:var(--bg2);border:1px solid var(--brd);border-radius:4px;padding:1px 6px;color:var(--text2);font-weight:700">💰${t.cost.toLocaleString()} ${t.currency||'KRW'}</span>`:''}
+            ${stars?`<span class="card-stars">${stars}</span>`:''}
+          </div>
           ${t.df?`<div class="cd">🗓 ${t.df}${t.dt&&t.dt!==t.df?' ~ '+t.dt:''}</div>`:''}
-          ${stars?`<div class="card-stars">${stars}</div>`:''}
-          ${t.memo?`<div class="cm">💬 ${t.memo}</div>`:''}
+          ${t.memo?`<div class="cm">👥 ${t.memo}</div>`:''}
           ${t.photo?`<img class="card-thumb" src="${t.photo}" alt="여행사진">`:''}
           <button class="cdel" onclick="event.stopPropagation();del(${t._i})" title="삭제">✕</button>
         </div>
@@ -1264,6 +1320,19 @@ function renderDashboard(){
   document.getElementById('kpiCont').textContent=new Set(trips.map(t=>t.continent).filter(Boolean)).size;
   const avg=years.length>0?(trips.length/years.length).toFixed(1):'—';
   document.getElementById('kpiAvg').textContent=avg;
+  // 총 여행경비 (KRW 기준만, 다른 통화는 별도 표시)
+  const costsByC={};
+  trips.forEach(t=>{if(t.cost){const cu=t.currency||'KRW';costsByC[cu]=(costsByC[cu]||0)+t.cost;}});
+  const costKeys=Object.keys(costsByC);
+  if(costKeys.length===0){document.getElementById('kpiCost').textContent='—';}
+  else if(costKeys.length===1){
+    const cu=costKeys[0],v=costsByC[cu];
+    document.getElementById('kpiCost').textContent=(cu==='KRW'?Math.round(v/10000)+'만':v.toLocaleString());
+    document.getElementById('kpiCostSub').textContent=cu;
+  }else{
+    document.getElementById('kpiCost').textContent=costKeys.length+'개 통화';
+    document.getElementById('kpiCostSub').textContent=costKeys.map(k=>costsByC[k].toLocaleString()+k).join(' / ').slice(0,30);
+  }
 
   /* Heatmap */
   renderHeatmap();
@@ -1406,9 +1475,13 @@ function flyTo(i){
   const ap=AIRPORTS[t.city];
   let mx=500,my=250;
   if(ap){mx=ap.x;my=ap.y;}
+  else if(t.geoLat&&t.geoLon){
+    // geocoded 좌표 → 지도 투영
+    mx=projX(t.geoLon); my=projY(t.geoLat);
+  }
   else{
     const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];
-    const def=c?({Japan:[459,197],  "South Korea":[421,194],"China":[390,200],"France":[76,178],"USA":[840,200],"Australia":[460,292]})[c.en]:null;
+    const def=c?({Japan:[459,197],"South Korea":[421,194],"China":[390,200],"France":[76,178],"USA":[840,200],"Australia":[460,292]})[c.en]:null;
     if(def){mx=def[0];my=def[1];}
   }
   const {x,y}=s2xy(mx,my);
@@ -1496,8 +1569,13 @@ document.querySelectorAll('.country').forEach(p=>{
 async function addTrip(){
   const cntryTxt=document.getElementById('cntryIn').value.trim();
   const city=document.getElementById('cityIn').value.trim()||selCity;
-  const spot=document.getElementById('spotIn').value.trim();
   const memo=document.getElementById('memoIn').value.trim();
+  const cost=document.getElementById('costIn')?.value.trim()||'';
+  const currency=document.getElementById('currIn')?.value||'KRW';
+  // 계절 자동 태깅
+  const _df=document.getElementById('df').value;
+  const _mon=_df?new Date(_df).getMonth()+1:0;
+  const season=_mon?(_mon>=3&&_mon<=5?'🌸봄':_mon>=6&&_mon<=8?'☀️여름':_mon>=9&&_mon<=11?'🍂가을':'❄️겨울'):'';
   const df=document.getElementById('df').value;
   const dt=document.getElementById('dt').value;
   if(!cntryTxt){document.getElementById('cntryIn').focus();toast('🌍 나라를 입력해주세요');return;}
@@ -1507,7 +1585,8 @@ async function addTrip(){
   const entry={
     cntry:c?c.name:cntryTxt.replace(/^\S+\s/,''),cntryEn:c?c.en:'',
     flag:c?c.flag:'🌍',region:c?c.region:'',continent:c?c.continent:'',
-    city,spot,memo,df:fmtD(df),dt:fmtD(dt),createdAt:Date.now()
+    city,memo,cost:cost?Number(cost):null,currency,season,df:fmtD(df),dt:fmtD(dt),createdAt:Date.now(),
+    geoLat:window._pickedLat||null,geoLon:window._pickedLon||null
   };
   const btn=document.querySelector('.btn-add');
   if(btn){btn.disabled=true;btn.textContent='저장중...';}
@@ -1519,11 +1598,12 @@ async function addTrip(){
   }catch(e){toast('저장 실패: '+e.message);if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';return;}
   if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}
   if(loader)loader.style.display='none';
-  ['cityIn','spotIn','memoIn'].forEach(id=>{
+  ['cityIn','memoIn'].forEach(id=>{
     document.getElementById(id).value='';
     const cl=document.getElementById(id.replace('In','Clear'));
     if(cl)cl.style.display='none';
   });
+  const costEl=document.getElementById('costIn');if(costEl)costEl.value='';
   selCity='';
   setTimeout(()=>{const ni=trips.length-1;if(ni>=0)flyTo(ni);},500);
   setTimeout(()=>startAuto(),4500);
@@ -1616,10 +1696,15 @@ function openModal(i){
   document.getElementById('modalContent').innerHTML=`
     <div class="modal-row"><div class="modal-lbl">나라</div><div class="modal-val">${t.cntry||'—'}</div></div>
     <div class="modal-row"><div class="modal-lbl">도시</div><input class="modal-inp" id="me_city" value="${t.city||''}"/></div>
-    <div class="modal-row"><div class="modal-lbl">지역/명소</div><input class="modal-inp" id="me_spot" value="${t.spot||''}"/></div>
     <div class="modal-row"><div class="modal-lbl">출발일</div><input class="modal-inp" id="me_df" value="${t.df||''}"/></div>
     <div class="modal-row"><div class="modal-lbl">귀국일</div><input class="modal-inp" id="me_dt" value="${t.dt||''}"/></div>
-    <div class="modal-row"><div class="modal-lbl">메모</div><textarea class="modal-inp modal-ta" id="me_memo">${t.memo||''}</textarea></div>
+    <div class="modal-row"><div class="modal-lbl">👥 누구와 함께</div><input class="modal-inp" id="me_memo" value="${t.memo||''}" placeholder="예: 가족여행, 친구와, 혼자"/></div>
+    <div class="modal-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><div class="modal-lbl">💰 경비</div><input class="modal-inp" type="number" id="me_cost" value="${t.cost||''}" placeholder="0"/></div>
+      <div><div class="modal-lbl">통화</div><select class="modal-inp" id="me_curr" style="height:36px">
+        ${['KRW','USD','JPY','EUR','CNY','THB','SGD','AUD'].map(c=>`<option${t.currency===c?' selected':''}>${c}</option>`).join('')}
+      </select></div>
+    </div>
     <div class="modal-row"><div class="modal-lbl">만족도</div><div class="star-row">${starHtml}</div></div>
     <div class="modal-row">
       <div class="modal-lbl">사진</div>
@@ -1654,10 +1739,12 @@ async function saveModal(){
   const t=trips[_editIdx];
   if(!t)return;
   t.city=document.getElementById('me_city').value.trim()||t.city;
-  t.spot=document.getElementById('me_spot').value.trim();
   t.df=document.getElementById('me_df').value.trim();
   t.dt=document.getElementById('me_dt').value.trim();
   t.memo=document.getElementById('me_memo').value.trim();
+  const _c=document.getElementById('me_cost')?.value;
+  t.cost=_c?Number(_c):null;
+  t.currency=document.getElementById('me_curr')?.value||'KRW';
   if(window._tmpStars!==undefined)t.stars=window._tmpStars;
   if(window._tmpPhoto!==undefined)t.photo=window._tmpPhoto;
   window._tmpStars=undefined;window._tmpPhoto=undefined;
