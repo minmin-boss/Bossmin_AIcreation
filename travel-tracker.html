@@ -295,7 +295,11 @@ function _startListen(uid){
   _unsub=onSnapshot(_q,snap=>{
     window._fbData=[];
     snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
-    if(window._appReady&&window._render){window.trips=window._fbData;window._render();}
+    if(window._appReady&&window._render){
+      trips=window._fbData;        // 로컬 변수도 동기화
+      window.trips=window._fbData;
+      window._render();
+    }
   });
 }
 
@@ -325,7 +329,7 @@ window._logout=async function(){
 /* ── Firestore CRUD (uid 포함) ── */
 const _col="travel_trips";
 window._fbSave=async function(t){
-  if(!window._user)return;
+  if(!window._user){trips.push(t);window.trips=trips;render();return;}
   const id=t._fbId||("t_"+Date.now()+"_"+Math.random().toString(36).slice(2,6));
   t._fbId=id;t.createdAt=t.createdAt||Date.now();t.uid=window._user.uid;
   await setDoc(doc(_db,_col,id),t);return id;
@@ -338,8 +342,8 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
 
 <div id="fbLoader"></div>
 
-<!-- 잠금 화면 (Google 로그인) -->
-<div id="lockScreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#eef4fb 0%,#dbeafe 50%,#ede9fe 100%);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'맑은 고딕','Malgun Gothic',sans-serif">
+<!-- 잠금 화면 (Google 로그인) — 데모용 비활성화 -->
+<div id="lockScreen" style="display:none">
   <div style="background:#fff;border:1.5px solid #d0dce8;border-radius:20px;padding:2.5rem 2rem;text-align:center;box-shadow:0 8px 40px rgba(58,123,213,.18);max-width:380px;width:90%">
     <div style="font-size:52px;margin-bottom:.6rem">🗺️</div>
     <div style="font-size:20px;font-weight:800;color:#2c3e50;margin-bottom:.3rem">내 여행 지도</div>
@@ -701,9 +705,14 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
     <div style="font-size:11px;color:var(--text2)">
       <span id="globeStatus">지구본을 드래그해서 회전하세요 ✈️</span>
     </div>
-    <div style="margin-left:auto;display:flex;gap:6px">
-      <button class="tool-btn" id="globePlayBtn" onclick="globeTogglePlay()">▶ 자동 비행</button>
-      <button class="tool-btn" onclick="globeReset()">🔄 초기화</button>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button id="globePlayBtn" onclick="globeTogglePlay()" style="display:flex;align-items:center;gap:6px;background:var(--accent);color:white;border:none;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s;box-shadow:0 3px 10px rgba(58,123,213,.35)">
+        <span id="globePlayIco" style="font-size:14px">▶</span>
+        <span id="globePlayTxt">자동 비행</span>
+      </button>
+      <button onclick="globeReset()" style="display:flex;align-items:center;gap:6px;background:var(--surf);color:var(--text2);border:1.5px solid var(--brd);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--brd)';this.style.color='var(--text2)'">
+        <span style="font-size:13px">↺</span> 초기화
+      </button>
     </div>
   </div>
 </div>
@@ -1090,6 +1099,15 @@ function renderStats(){
 function renderPins(){
   plEl.innerHTML='';
   document.querySelectorAll('.country.visited').forEach(e=>e.classList.remove('visited'));
+
+  // 항상 서울(인천) 홈 핀 표시
+  const _homePos=s2p(420.7,193.6);
+  const _homePin=document.createElement('div');
+  _homePin.className='pin';
+  _homePin.style.left=_homePos.left; _homePin.style.top=_homePos.top;
+  _homePin.style.animationDelay='0s';
+  _homePin.innerHTML=`<div class="pt">🇰🇷 서울 (인천) — 홈</div><div class="pinner">${flagImg('🇰🇷',24)}</div><div class="ps"></div>`;
+  plEl.appendChild(_homePin);
   trips.forEach((t,i)=>{
     // Highlight visited country
     const c=BY_KO[t.cntry]||BY_EN[t.cntryEn]||BY_EN[t.cntry];
@@ -1532,17 +1550,26 @@ function anim(){
 
 function startAuto(){
   if(autoT)clearInterval(autoT);
-  // Build chronological list filtered by current year tab
-  let ordered=chronoTrips().filter(t=>t.df||t.dt); // only dated trips
+  let ordered=chronoTrips().filter(t=>t.df||t.dt);
   if(filterYear!=='all') ordered=ordered.filter(t=>tripYear(t)===filterYear);
-  // Fallback: include undated trips if nothing else
   if(!ordered.length) ordered=chronoTrips();
   if(!ordered.length)return;
+
+  // 항상 서울(인천)로 초기화 후 출발
+  const _ic=s2xy(420.7,193.6);
+  px=_ic.x;py=_ic.y;tpts=[];
+
   autoI=0;
   const nx=()=>{
     if(!ordered.length)return;
-    const t=ordered[autoI%ordered.length];
-    flyTo(t._i);
+    // 마지막 도시에서 다시 반복할 때 서울로 리셋
+    if(autoI>0 && autoI%ordered.length===0){
+      const _ic2=s2xy(420.7,193.6);
+      px=_ic2.x;py=_ic2.y;tpts=[];
+      setTimeout(()=>{flyTo(ordered[0]._i);autoI=1;},600);
+      return;
+    }
+    flyTo(ordered[autoI%ordered.length]._i);
     autoI++;
   };
   nx();
@@ -1611,8 +1638,15 @@ async function addTrip(){
   const loader=document.getElementById('fbLoader');
   if(loader)loader.style.display='block';
   try{
-    if(window._fbSave)await window._fbSave(entry);
-    else{trips.push(entry);render();}
+    if(window._fbSave){
+      await window._fbSave(entry);
+      // onSnapshot이 자동으로 render()를 호출하지만, 즉각 반응을 위해 낙관적 업데이트
+      if(!trips.find(t=>t._fbId===entry._fbId)){
+        trips.push(entry);
+        window.trips=trips;
+        render();
+      }
+    } else{trips.push(entry);window.trips=trips;render();}
   }catch(e){toast('저장 실패: '+e.message);if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';return;}
   if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}
   if(loader)loader.style.display='none';
@@ -1661,6 +1695,9 @@ window.addEventListener('resize',()=>{
 const td=new Date().toISOString().split('T')[0];
 document.getElementById('df').value=td;document.getElementById('dt').value=td;
 
+// 로그인 여부와 무관하게 앱 부팅 (Firebase 연동 시 onSnapshot이 데이터 동기화)
+setTimeout(()=>{ if(!window._appReady) _doBootApp(); }, 900);
+
 
 /* ── Password check ── */
 const _PW="1234"; // 비밀번호 변경 시 이 값 수정
@@ -1692,13 +1729,16 @@ window._updateUserUI=function(user){
 };
 
 function _doBootApp(){
-  if(window._appReady)return; // 중복 실행 방지
+  if(window._appReady)return;
   window._appReady=true;
   window._render=render;
   trips=window._fbData||[];
+  window.trips=trips;
   gms();render();anim();
-  if(trips.length)setTimeout(startAuto,400);
-  else{const s=s2xy(490,220);px=s.x;py=s.y;tx=s.x;ty=s.y;}
+  // 항상 서울(인천)에서 출발
+const _incheon=s2xy(420.7,193.6);
+px=_incheon.x;py=_incheon.y;tx=_incheon.x;ty=_incheon.y;
+if(trips.length)setTimeout(startAuto,400);
 }
 
 /* ── Detail / edit modal ── */
@@ -1838,6 +1878,9 @@ if(window.top!==window.self&&window.location===window.parent.location){
 /* ═══════════════════════════════════════════════════════
    🌍 GLOBE VIEW — amCharts 5
    ═══════════════════════════════════════════════════════ */
+// 서울(인천) 좌표 상수 — 모든 비행의 출발지
+const SEOUL_LAT=37.4602, SEOUL_LON=126.4407;
+
 let _globeRoot=null, _globeChart=null, _globeLineSeries=null;
 let _globePlaneIdx=0, _globePlaying=false, _globeTimer=null;
 let _globeInited=false;
@@ -1866,103 +1909,137 @@ function _buildGlobe(){
   const am5=window.am5, am5map=window.am5map, am5themes_Animated=window.am5themes_Animated;
   if(!am5||!am5map) return;
 
-  const isDark=document.body.classList.contains('dark')||
-    window.matchMedia('(prefers-color-scheme:dark)').matches;
+  if(_globeRoot){try{_globeRoot.dispose();}catch(e){}; _globeRoot=null;}
 
   _globeRoot=am5.Root.new('globeDiv');
   _globeRoot.setThemes([am5themes_Animated.new(_globeRoot)]);
+  _globeRoot.interfaceColors.set('text', am5.color(0x2c3e50));
 
   _globeChart=_globeRoot.container.children.push(
     am5map.MapChart.new(_globeRoot,{
       panX:'rotateX', panY:'rotateY',
       projection: am5map.geoOrthographic(),
-      paddingBottom:20, paddingTop:20,
-      homeGeoPoint:{latitude:35,longitude:127}
+      rotateX:-SEOUL_LON, rotateY:-SEOUL_LAT
     })
   );
 
-  // 배경 (바다)
+  // 바다 배경
   const bgSeries=_globeChart.series.push(am5map.MapPolygonSeries.new(_globeRoot,{}));
-  bgSeries.mapPolygons.template.setAll({
-    fill: am5.color(isDark?0x0a1628:0xc8e0f4),
-    strokeWidth:0
-  });
+  bgSeries.mapPolygons.template.setAll({fill:am5.color(0x4db8e8),strokeWidth:0});
   bgSeries.data.push({geometry:am5map.getGeoRectangle(90,180,-90,-180)});
 
-  // 대륙
+  // 육지
   const polySeries=_globeChart.series.push(
-    am5map.MapPolygonSeries.new(_globeRoot,{
-      geoJSON: window.am5geodata_worldLow,
-      exclude:['AQ']
-    })
+    am5map.MapPolygonSeries.new(_globeRoot,{geoJSON:window.am5geodata_worldLow,exclude:['AQ']})
   );
   polySeries.mapPolygons.template.setAll({
-    fill: am5.color(isDark?0x1f4a33:0xd4e8c2),
-    stroke: am5.color(isDark?0x2a6040:0xa8c890),
-    strokeWidth:0.4,
+    fill:am5.color(0x3ab56e), stroke:am5.color(0x2d8a55), strokeWidth:0.5,
     tooltipText:'{name}'
   });
-  polySeries.mapPolygons.template.states.create('hover',{
-    fill: am5.color(isDark?0x2a5a3d:0xc0d8a8)
-  });
+  polySeries.mapPolygons.template.states.create('hover',{fill:am5.color(0x5ac87a)});
 
-  // 방문한 나라 하이라이트
+  // 방문 나라 하이라이트 (노란색)
   polySeries.events.on('datavalidated',()=>{
     const visitedEN=new Set(trips.map(t=>{
-      const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];
-      return c?c.en:'';
+      const c=BY_KO[t.cntry]||BY_EN[t.cntryEn]; return c?c.en:'';
     }).filter(Boolean));
     polySeries.mapPolygons.each(p=>{
       const id=p.dataItem?.get('id');
       if(id&&visitedEN.has(_ISO2to3(id))){
-        p.set('fill',am5.color(0xf5c842));
-        p.set('stroke',am5.color(0xe6b430));
+        p.set('fill',am5.color(0xf0c040));
+        p.set('stroke',am5.color(0xd4a820));
+        p.set('strokeWidth',1);
+      }
+    });
+    // 대한민국(KR) 항상 파란색으로 강조 (홈)
+    polySeries.mapPolygons.each(p=>{
+      if(p.dataItem?.get('id')==='KR'){
+        p.set('fill',am5.color(0x3a7bd5));
+        p.set('stroke',am5.color(0x2d6abf));
+        p.set('strokeWidth',1.5);
       }
     });
   });
 
-  // 핀 시리즈
-  const pinSeries=_globeChart.series.push(
-    am5map.MapPointSeries.new(_globeRoot,{})
-  );
-  pinSeries.bullets.push(()=>{
-    const circle=am5.Circle.new(_globeRoot,{
-      radius:6, fill:am5.color(0xe8435a),
-      stroke:am5.color(0xff8096), strokeWidth:2,
-      tooltipText:'{title}', cursorOverStyle:'pointer'
+  // ── 완료된 경로선 (전체) ──
+  _globeLineSeries=_globeChart.series.push(am5map.MapLineSeries.new(_globeRoot,{}));
+  _globeLineSeries.mapLines.template.setAll({
+    stroke:am5.color(0xffffff), strokeWidth:1.5,
+    strokeOpacity:0.4, strokeDasharray:[3,5]
+  });
+
+  // ── 현재 비행 중인 경로 (그려지는 선) ──
+  window._globeActiveLine=_globeChart.series.push(am5map.MapLineSeries.new(_globeRoot,{}));
+  window._globeActiveLine.mapLines.template.setAll({
+    stroke:am5.color(0xffcc00), strokeWidth:2.5,
+    strokeOpacity:0.9, strokeDasharray:[5,4]
+  });
+
+  // ── 도시 핀 시리즈 ──
+  const pinSeries=_globeChart.series.push(am5map.MapPointSeries.new(_globeRoot,{}));
+  pinSeries.bullets.push((r,s,di)=>{
+    const isHome=di.dataContext?.isHome;
+    const circle=am5.Circle.new(r,{
+      radius: isHome?9:6,
+      fill: am5.color(isHome?0x3a7bd5:0xff4060),
+      stroke: am5.color(isHome?0x60a5fa:0xff8096),
+      strokeWidth:2.5,
+      tooltipText:'{title}'
     });
-    circle.states.create('hover',{scale:1.4});
-    return am5.Bullet.new(_globeRoot,{sprite:circle});
+    circle.states.create('hover',{scale:1.5});
+    return am5.Bullet.new(r,{sprite:circle});
   });
   window._globePinSeries=pinSeries;
 
-  // 비행 경로 라인 시리즈
-  _globeLineSeries=_globeChart.series.push(
-    am5map.MapLineSeries.new(_globeRoot,{})
-  );
-  _globeLineSeries.mapLines.template.setAll({
-    stroke: am5.color(0x3a7bd5),
-    strokeWidth:1.5, strokeOpacity:0.6,
-    strokeDasharray:[4,6]
-  });
-
-  // 비행기 불릿
-  const planeSeries=_globeChart.series.push(
-    am5map.MapPointSeries.new(_globeRoot,{})
-  );
+  // ── 비행기 시리즈 ──
+  const planeSeries=_globeChart.series.push(am5map.MapPointSeries.new(_globeRoot,{}));
   planeSeries.bullets.push(()=>{
-    const label=am5.Label.new(_globeRoot,{
-      text:'✈', fontSize:20, centerX:am5.p50, centerY:am5.p50,
-      rotation:-45
+    // 비행기 모양 컨테이너
+    const container=am5.Container.new(_globeRoot,{
+      centerX:am5.p50, centerY:am5.p50,
+      tooltipText:'{title}'
     });
-    return am5.Bullet.new(_globeRoot,{sprite:label});
+    // 그림자 효과
+    const shadow=am5.Circle.new(_globeRoot,{
+      radius:14, fill:am5.color(0x000000), fillOpacity:0.2,
+      dy:3, dx:3
+    });
+    container.children.push(shadow);
+    // 비행기 아이콘
+    const plane=am5.Label.new(_globeRoot,{
+      text:'✈️', fontSize:22,
+      centerX:am5.p50, centerY:am5.p50
+    });
+    container.children.push(plane);
+    window._globePlaneLabel=plane;
+    return am5.Bullet.new(_globeRoot,{sprite:container});
   });
   window._globePlaneSeries=planeSeries;
 
-  // 초기 자동 회전
-  _globeChart.animate({key:'rotateX',from:0,to:360,duration:60000,loops:Infinity});
+  // 서울에 비행기 초기 위치
+  setTimeout(()=>{
+    try{planeSeries.data.setAll([{
+      geometry:{type:'Point',coordinates:[SEOUL_LON,SEOUL_LAT]},
+      title:'🇰🇷 서울 (인천)'
+    }]);}catch(e){}
+  },400);
 
+  // 초기 천천히 자동 회전
+  _startGlobeIdleRotation();
   renderGlobePins();
+}
+
+function _startGlobeIdleRotation(){
+  try{
+    if(_globeChart) _globeChart.animate({
+      key:'rotateX', from:_globeChart.get('rotateX')||(-SEOUL_LON),
+      to:(_globeChart.get('rotateX')||(-SEOUL_LON))+360,
+      duration:80000, loops:Infinity
+    });
+  }catch(e){}
+}
+function _stopGlobeIdleRotation(){
+  try{if(_globeChart) _globeChart.animate({key:'rotateX',to:_globeChart.get('rotateX'),duration:100});}catch(e){}
 }
 
 // ISO 2자리 → EN name 역매핑 (간소)
@@ -2008,7 +2085,14 @@ function renderGlobePins(){
     return null;
   }
 
-  // 핀 추가
+  // 서울(인천) 홈 핀
+  pinSeries.data.push({
+    geometry:{type:'Point',coordinates:[SEOUL_LON,SEOUL_LAT]},
+    title:'🇰🇷 서울 (인천) — 홈',
+    isHome:true
+  });
+
+  // 방문 도시 핀
   ordered.forEach((t,i)=>{
     const ll=getLL(t);
     if(!ll) return;
@@ -2019,34 +2103,47 @@ function renderGlobePins(){
     });
   });
 
-  // 경로 라인 추가
-  for(let i=1;i<ordered.length;i++){
-    const a=getLL(ordered[i-1]), b=getLL(ordered[i]);
-    if(!a||!b) continue;
+  // 경로 라인 (서울 → 첫 도시 → ... → 마지막 도시 → 서울)
+  const allPts=[[126.4407,37.4602],...ordered.map(t=>getLL(t)).filter(Boolean).map(ll=>[ll[1],ll[0]])];
+  // 마지막에 서울 복귀선 추가
+  if(allPts.length>1) allPts.push([126.4407,37.4602]);
+
+  for(let i=1;i<allPts.length;i++){
     lineSeries.data.push({
-      geometry:{
-        type:'LineString',
-        coordinates:[[a[1],a[0]],[b[1],b[0]]]
-      }
+      geometry:{type:'LineString',coordinates:[allPts[i-1],allPts[i]]}
     });
   }
 
   document.getElementById('globeStatus').textContent=
-    `${ordered.length}개 도시 · ${ordered.length-1}개 경로`;
+    `🇰🇷 서울 출발 · ${ordered.length}개 도시 · ${ordered.length+1}개 경로`;
 }
 
 let _globeAutoIdx=0;
 function globeTogglePlay(){
   _globePlaying=!_globePlaying;
+  const ico=document.getElementById('globePlayIco');
+  const txt=document.getElementById('globePlayTxt');
   const btn=document.getElementById('globePlayBtn');
   if(_globePlaying){
-    btn.textContent='⏸ 정지';
-    // 자동 회전 멈추고 순차 이동 시작
-    if(_globeChart) _globeChart.animate({key:'rotateX',to:_globeChart.get('rotateX'),duration:1});
+    if(ico)ico.textContent='⏸'; if(txt)txt.textContent='정지';
+    btn.style.background='var(--pin)';
+    _stopGlobeIdleRotation();
+    // 경로 초기화 후 서울에서 출발
+    try{if(_globeLineSeries)_globeLineSeries.data.clear();}catch(e){}
+    try{if(window._globeActiveLine)window._globeActiveLine.data.clear();}catch(e){}
     _globeAutoIdx=0;
-    _globeFlyNext();
+    _globeFromLat=SEOUL_LAT; _globeFromLon=SEOUL_LON;
+    // 서울로 먼저 이동
+    try{
+      _globeChart.animate({key:'rotateX',to:-SEOUL_LON,duration:400});
+      _globeChart.animate({key:'rotateY',to:-SEOUL_LAT*0.5,duration:400});
+    }catch(e){}
+    const el=document.getElementById('globeStatus');
+    if(el) el.textContent='🇰🇷 서울 (인천) — 출발 준비!';
+    setTimeout(_globeFlyNext,600);
   } else {
-    btn.textContent='▶ 자동 비행';
+    if(ico)ico.textContent='▶'; if(txt)txt.textContent='자동 비행';
+    btn.style.background='var(--accent)';
     if(_globeTimer) clearTimeout(_globeTimer);
     // 자동 회전 재시작
     if(_globeChart) _globeChart.animate({key:'rotateX',from:_globeChart.get('rotateX'),to:_globeChart.get('rotateX')+360,duration:60000,loops:Infinity});
@@ -2055,25 +2152,142 @@ function globeTogglePlay(){
 
 function _globeFlyNext(){
   if(!_globePlaying) return;
-  const ordered=chronoTrips().filter(t=>t.df||t.dt);
+  const ordered=_globeGetOrdered();
   if(!ordered.length) return;
-  const t=ordered[_globeAutoIdx%ordered.length];
+
+  // 모두 돌면 서울 복귀 후 재시작
+  if(_globeAutoIdx>=ordered.length){
+    _globeGoTo(SEOUL_LAT,SEOUL_LON,'🇰🇷 서울 (인천) 복귀 중...', ()=>{
+      if(!_globePlaying) return;
+      _globeAutoIdx=0;
+      _globeFromLat=SEOUL_LAT; _globeFromLon=SEOUL_LON;
+      // 전체 경로 초기화 후 재시작
+      try{if(_globeLineSeries)_globeLineSeries.data.clear();}catch(e){}
+      setTimeout(_globeFlyNext, 600);
+    });
+    return;
+  }
+
+  const t=ordered[_globeAutoIdx];
   const ll=_getGlobeLL(t);
-  if(ll&&_globeChart){
-    // 지구본 회전으로 해당 도시로 이동
-    _globeChart.animate({key:'rotateX',to:-ll[1],duration:1200,easing:window.am5?.ease?.out(window.am5?.ease?.cubic)});
-    _globeChart.animate({key:'rotateY',to:-ll[0],duration:1200});
-    // 비행기 이동
+  if(!ll){_globeAutoIdx++;setTimeout(_globeFlyNext,50);return;}
+
+  const label=`✈️ ${t.flag||''} ${t.city||t.cntry}${t.df?' — '+t.df:''}`;
+  _globeGoTo(ll[0],ll[1], label, ()=>{
+    if(!_globePlaying) return;
+    _globeAutoIdx++;
+    // 도착 후 잠깐 멈춤
+    setTimeout(_globeFlyNext, 300);
+  });
+}
+
+/* TravelBoast 스타일: 점선 그리면서 비행기가 날아감 */
+let _globeFromLat=SEOUL_LAT, _globeFromLon=SEOUL_LON;
+let _globeDrawTimer=null;
+
+function _globeGoTo(lat,lon,statusMsg,onDone){
+  if(!_globeChart) return;
+
+  const fromLat=_globeFromLat, fromLon=_globeFromLon;
+  const toLat=lat, toLon=lon;
+
+  // 지구본 회전 (목적지를 중앙으로)
+  try{
+    _globeChart.animate({key:'rotateX',to:-toLon,duration:600});
+    _globeChart.animate({key:'rotateY',to:-toLat*0.5,duration:600});
+  }catch(e){
+    try{_globeChart.set('rotateX',-toLon);_globeChart.set('rotateY',-toLat*0.5);}catch(e2){}
+  }
+
+  // 현재 경로선 초기화
+  try{if(window._globeActiveLine) window._globeActiveLine.data.clear();}catch(e){}
+
+  // 비행 진행 애니메이션 (점선이 그려지면서 비행기 이동)
+  const STEPS=40, DURATION=700;  // TravelBoast 스타일 — 빠른 비행
+  let step=0;
+  if(_globeDrawTimer) clearInterval(_globeDrawTimer);
+
+  _globeDrawTimer=setInterval(()=>{
+    step++;
+    const t=step/STEPS;
+    // 대권항로(Great Circle) 보간
+    const {lat:cLat,lon:cLon}=_gcInterp(fromLat,fromLon,toLat,toLon,t);
+
+    // 비행기 위치 업데이트
     const ps=window._globePlaneSeries;
     if(ps){
-      ps.data.setAll([{geometry:{type:'Point',coordinates:[ll[1],ll[0]]}}]);
+      try{ps.data.setAll([{
+        geometry:{type:'Point',coordinates:[cLon,cLat]},
+        title:statusMsg||''
+      }]);}catch(e){}
     }
-    document.getElementById('globeStatus').textContent=
-      `✈️ ${t.flag||''} ${t.city||t.cntry}${t.df?' — '+t.df:''}`;
+
+    // 지금까지 그려진 경로선 업데이트
+    const linePts=[];
+    for(let i=0;i<=step;i++){
+      const ti=i/STEPS;
+      const {lat:ll,lon:lo}=_gcInterp(fromLat,fromLon,toLat,toLon,ti);
+      linePts.push([lo,ll]);
+    }
+    try{
+      if(window._globeActiveLine && linePts.length>1){
+        window._globeActiveLine.data.setAll([{
+          geometry:{type:'LineString',coordinates:linePts}
+        }]);
+      }
+    }catch(e){}
+
+    if(step>=STEPS){
+      clearInterval(_globeDrawTimer);
+      _globeDrawTimer=null;
+      _globeFromLat=toLat; _globeFromLon=toLon;
+
+      // 완료된 경로를 전체 경로선으로 이동
+      try{
+        if(_globeLineSeries){
+          const existing=_globeLineSeries.data.length||0;
+          _globeLineSeries.data.push({
+            geometry:{type:'LineString',coordinates:linePts}
+          });
+        }
+        if(window._globeActiveLine) window._globeActiveLine.data.clear();
+      }catch(e){}
+
+      if(onDone) setTimeout(onDone,150);
+    }
+  }, DURATION/STEPS);
+
+  if(statusMsg){
+    const el=document.getElementById('globeStatus');
+    if(el) el.textContent=statusMsg;
   }
-  _globeAutoIdx++;
-  _globeTimer=setTimeout(_globeFlyNext,2500);
 }
+
+/* 대권항로 보간 (구면 삼각법) */
+function _gcInterp(lat1,lon1,lat2,lon2,t){
+  const toR=Math.PI/180, toD=180/Math.PI;
+  const φ1=lat1*toR, λ1=lon1*toR, φ2=lat2*toR, λ2=lon2*toR;
+  const dλ=λ2-λ1;
+  const cosφ1=Math.cos(φ1), cosφ2=Math.cos(φ2);
+  const sinφ1=Math.sin(φ1), sinφ2=Math.sin(φ2);
+  const a=Math.sin((1-t)*Math.acos(Math.max(-1,Math.min(1,
+    sinφ1*sinφ2+cosφ1*cosφ2*Math.cos(dλ)))));
+  const b=Math.sin(t*Math.acos(Math.max(-1,Math.min(1,
+    sinφ1*sinφ2+cosφ1*cosφ2*Math.cos(dλ)))));
+  const d=sinφ1*sinφ2+cosφ1*cosφ2*Math.cos(dλ);
+  const sinD=Math.sqrt(1-d*d)||0.0001;
+  const A=a/sinD, B=b/sinD;
+  const x=A*cosφ1*Math.cos(λ1)+B*cosφ2*Math.cos(λ2);
+  const y=A*cosφ1*Math.sin(λ1)+B*cosφ2*Math.sin(λ2);
+  const z=A*sinφ1+B*sinφ2;
+  return {lat:Math.atan2(z,Math.sqrt(x*x+y*y))*toD, lon:Math.atan2(y,x)*toD};
+}
+
+function _globeGetOrdered(){
+  const ordered=chronoTrips().filter(t=>t.df||t.dt);
+  return ordered.length?ordered:chronoTrips();
+}
+
 
 function _getGlobeLL(t){
   const AP_LL2={
@@ -2099,7 +2313,9 @@ function _getGlobeLL(t){
 
 function globeReset(){
   _globePlaying=false;
-  document.getElementById('globePlayBtn').textContent='▶ 자동 비행';
+  const _ico=document.getElementById('globePlayIco');const _txt=document.getElementById('globePlayTxt');
+  if(_ico)_ico.textContent='▶';if(_txt)_txt.textContent='자동 비행';
+  const _pb=document.getElementById('globePlayBtn');if(_pb)_pb.style.background='var(--accent)';
   if(_globeTimer) clearTimeout(_globeTimer);
   if(window._globePlaneSeries) window._globePlaneSeries.data.clear();
   if(_globeChart){
