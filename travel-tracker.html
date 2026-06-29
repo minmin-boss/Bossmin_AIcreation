@@ -1079,9 +1079,16 @@ async function addTrip(){
     else{trips.push(entry);window.trips=trips;render();}
   }catch(e){toast('저장 실패: '+e.message);if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';return;}
   if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';
-  ['cityIn','memoIn'].forEach(id=>{document.getElementById(id).value='';const cl=document.getElementById(id.replace('In','Clear'));if(cl)cl.style.display='none';});
+  // 폼 전체 초기화 (나라 포함)
+  ['cntryIn','cityIn','memoIn'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+    const cl=document.getElementById(id.replace('In','Clear'));if(cl)cl.style.display='none';
+  });
+  document.getElementById('cntryDrop').style.display='none';
+  document.getElementById('cityDrop').style.display='none';
   const costEl=document.getElementById('costIn');if(costEl)costEl.value='';
-  selCity='';window._pickedLat=null;window._pickedLon=null;
+  const contEl=document.getElementById('contSel');if(contEl)contEl.value='';
+  selCntry=null; selCity=''; window._pickedLat=null; window._pickedLon=null;
   setTimeout(()=>{const ni=trips.length-1;if(ni>=0)flyTo(ni);},500);
   setTimeout(()=>startAuto(),4500);
   toast(`${c?.flag||'✈️'} ${city} 추가 완료!`);
