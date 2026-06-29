@@ -229,9 +229,155 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
   h1{font-size:18px}
   .stat{padding:6px 12px}
 }
+
+/* ── Google login button ── */
+.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;border:1.5px solid #d0dce8;border-radius:10px;padding:11px 16px;font-size:14px;font-weight:700;color:#2c3e50;cursor:pointer;font-family:'맑은 고딕',sans-serif;transition:all .18s;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:.8rem}
+.google-btn:hover{border-color:#3a7bd5;box-shadow:0 3px 12px rgba(58,123,213,.2);background:#f8fbff}
+.google-btn:disabled{opacity:.6;cursor:not-allowed}
+.google-icon{width:20px;height:20px;flex-shrink:0}
+.lock-divider{display:flex;align-items:center;gap:10px;margin:.8rem 0;color:#95a5b8;font-size:11px}
+.lock-divider::before,.lock-divider::after{content:'';flex:1;height:1px;background:#d0dce8}
+/* User info in header */
+.user-info{display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--surf);border:1px solid var(--brd);border-radius:20px;cursor:pointer;transition:all .18s;font-size:11px;font-weight:700;color:var(--text2)}
+.user-info:hover{border-color:var(--pin);color:var(--pin)}
+.user-avatar{width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid var(--brd2)}
+.user-name{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
+
+<!-- Firebase SDK (type=module) -->
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot,query,where,orderBy}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const _fc={
+  apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",
+  authDomain:"travel-tracker-9f0f7.firebaseapp.com",
+  projectId:"travel-tracker-9f0f7",
+  storageBucket:"travel-tracker-9f0f7.firebasestorage.app",
+  messagingSenderId:"157327971618",
+  appId:"1:157327971618:web:b5eca73698db54034b817b"
+};
+const _app=initializeApp(_fc);
+const _db=getFirestore(_app);
+const _auth=getAuth(_app);
+const _gp=new GoogleAuthProvider();
+let _unsub=null;
+
+/* ── Auth 상태 감지 ── */
+onAuthStateChanged(_auth,user=>{
+  if(user){
+    window._user=user;
+    // 로그인 성공 → 잠금화면 숨기고 앱 시작
+    const ls=document.getElementById('lockScreen');
+    if(ls)ls.style.display='none';
+    // 사용자 정보 헤더 업데이트
+    window._updateUserUI && window._updateUserUI(user);
+    // Firestore 구독 시작 (uid별 데이터)
+    _startListen(user.uid);
+    if(!window._appReady) window._bootApp && window._bootApp();
+  } else {
+    window._user=null;
+    // 로그아웃 → 잠금화면 표시
+    const ls=document.getElementById('lockScreen');
+    if(ls)ls.style.display='flex';
+    if(_unsub){_unsub();_unsub=null;}
+    window._fbData=[];
+    window.trips=[];
+    if(window._appReady&&window._render) window._render();
+  }
+});
+
+function _startListen(uid){
+  if(_unsub){_unsub();_unsub=null;}
+  const _col="travel_trips";
+  const _q=query(collection(_db,_col),where("uid","==",uid),orderBy("createdAt","asc"));
+  _unsub=onSnapshot(_q,snap=>{
+    window._fbData=[];
+    snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
+    if(window._appReady&&window._render){window.trips=window._fbData;window._render();}
+  });
+}
+
+/* ── Google 로그인 ── */
+window._googleLogin=async function(){
+  const btn=document.getElementById('googleBtn');
+  if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
+  try{
+    await signInWithPopup(_auth,_gp);
+    // onAuthStateChanged가 자동으로 처리함
+  }catch(e){
+    const err=document.getElementById('lockErr');
+    if(err){
+      if(e.code==='auth/popup-closed-by-user') err.textContent='로그인 창이 닫혔습니다. 다시 시도해주세요.';
+      else err.textContent='로그인 실패: '+e.message;
+    }
+    if(btn){btn.disabled=false;btn.textContent='Google로 로그인';}
+  }
+};
+
+/* ── 로그아웃 ── */
+window._logout=async function(){
+  if(!confirm('로그아웃 하시겠어요?'))return;
+  await signOut(_auth);
+};
+
+/* ── Firestore CRUD (uid 포함) ── */
+const _col="travel_trips";
+window._fbSave=async function(t){
+  if(!window._user)return;
+  const id=t._fbId||("t_"+Date.now()+"_"+Math.random().toString(36).slice(2,6));
+  t._fbId=id;t.createdAt=t.createdAt||Date.now();t.uid=window._user.uid;
+  await setDoc(doc(_db,_col,id),t);return id;
+};
+window._fbDel=async function(id){await deleteDoc(doc(_db,_col,id));};
+window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_db,_col,t._fbId))));};
+</script>
 </head>
 <body>
+
+<div id="fbLoader"></div>
+
+<!-- 잠금 화면 (Google 로그인) -->
+<div id="lockScreen" style="position:fixed;inset:0;background:linear-gradient(135deg,#eef4fb 0%,#dbeafe 50%,#ede9fe 100%);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:'맑은 고딕','Malgun Gothic',sans-serif">
+  <div style="background:#fff;border:1.5px solid #d0dce8;border-radius:20px;padding:2.5rem 2rem;text-align:center;box-shadow:0 8px 40px rgba(58,123,213,.18);max-width:380px;width:90%">
+    <div style="font-size:52px;margin-bottom:.6rem">🗺️</div>
+    <div style="font-size:20px;font-weight:800;color:#2c3e50;margin-bottom:.3rem">내 여행 지도</div>
+    <div style="font-size:12px;color:#6b7c93;margin-bottom:1.8rem">My Travel Log — 나만의 여행 기록</div>
+
+    <!-- Google 로그인 버튼 -->
+    <button class="google-btn" id="googleBtn" onclick="window._googleLogin()">
+      <svg class="google-icon" viewBox="0 0 48 48">
+        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+        <path fill="none" d="M0 0h48v48H0z"/>
+      </svg>
+      Google로 로그인
+    </button>
+
+    <div class="lock-divider">또는</div>
+
+    <!-- 비밀번호 입력 (대안) -->
+    <input type="password" style="width:100%;border:1.5px solid #d0dce8;border-radius:10px;padding:10px 14px;font-size:14px;font-family:'맑은 고딕',sans-serif;outline:none;text-align:center;letter-spacing:.15em;margin-bottom:.8rem;transition:border-color .2s;background:#f8fbff;color:#2c3e50" id="lockPw" placeholder="비밀번호 입력" maxlength="20" onkeydown="if(event.key==='Enter')checkPw()"/>
+    <button style="width:100%;background:#3a7bd5;color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:800;cursor:pointer;font-family:'맑은 고딕',sans-serif;transition:background .18s" onclick="checkPw()" onmouseover="this.style.background='#2d6abf'" onmouseout="this.style.background='#3a7bd5'">비밀번호로 입장 ✈️</button>
+    <div id="lockErr" style="font-size:11px;color:#e8435a;margin-top:.5rem;min-height:16px;font-weight:700"></div>
+    <div style="font-size:10px;color:#95a5b8;margin-top:1rem">Google 로그인 시 본인 계정 데이터만 표시됩니다</div>
+  </div>
+</div>
+
+<!-- 상세/편집 모달 -->
+<div id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div class="modal-ttl" id="modalTitle">여행 상세</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
 <div class="wrap">
 <header>
   <div class="hl">
@@ -241,9 +387,16 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
       <div class="sub">My Travel Log — 방문한 곳을 기록하세요</div>
     </div>
   </div>
-  <div class="stats">
-    <div class="stat"><span class="sv" id="sc">0</span><span class="sl">나라</span></div>
-    <div class="stat"><span class="sv" id="si">0</span><span class="sl">도시</span></div>
+  <div style="display:flex;align-items:center;gap:.8rem">
+    <div class="stats">
+      <div class="stat"><span class="sv" id="sc">0</span><span class="sl">나라</span></div>
+      <div class="stat"><span class="sv" id="si">0</span><span class="sl">도시</span></div>
+    </div>
+    <div class="user-info" id="userInfo" style="display:none" onclick="window._logout()">
+      <img class="user-avatar" id="userAvatar" src="" alt=""/>
+      <span class="user-name" id="userName"></span>
+      <span style="font-size:10px;opacity:.6">로그아웃</span>
+    </div>
   </div>
 </header>
 
@@ -517,6 +670,11 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
   </div>
 </div>
 
+
+<div class="tool-row">
+  <button class="tool-btn" onclick="exportJSON()">💾 백업 내보내기</button>
+  <label class="tool-btn" style="cursor:pointer">📂 백업 불러오기<input type="file" accept=".json" style="display:none" onchange="importJSON(this)"></label>
+</div>
 <div class="list-hdr">
   <div class="list-ttl">🗺️ 방문한 곳 <span id="tripCnt" style="font-size:11px;color:var(--text2);font-weight:400"></span></div>
   <div class="lc">
@@ -691,7 +849,7 @@ const BY_EN={},BY_KO={};
 COUNTRIES.forEach(c=>{BY_EN[c.en]=c;BY_KO[c.name]=c;});
 
 /* ── State ── */
-let trips=JSON.parse(localStorage.getItem('tlog4')||'[]');
+let trips=window._fbData||[];
 let sortM='d',curIdx=-1,filterYear='all';
 let px=500,py=250,tx=500,ty=250,pang=0;
 let tpts=[],mW,mH;
@@ -834,7 +992,7 @@ document.addEventListener('click',e=>{
 });
 
 /* ── Render ── */
-function save(){localStorage.setItem('tlog4',JSON.stringify(trips));}
+function save(){/* Firebase via _fbSave */}
 
 /* Get year from trip date string "2024.04.10" -> "2024" */
 function tripYear(t){
@@ -968,8 +1126,9 @@ function renderList(){
     list.forEach((t,idx)=>{
       const isActive=t._i===curIdx;
       const hasNext=idx<list.length-1;
+      const stars=t.stars?'⭐'.repeat(t.stars):'';
       html+=`<div>
-        <div class="tc${isActive?' on':''}" onclick="flyTo(${t._i})">
+        <div class="tc${isActive?' on':''}" onclick="openModal(${t._i})">
           <div class="ct">
             <div class="cf">${flagImg(t.flag||'🌍',28)}</div>
             <div style="min-width:0">
@@ -979,7 +1138,9 @@ function renderList(){
           </div>
           ${t.spot?`<span class="spot-tag">📍 ${t.spot}</span>`:''}
           ${t.df?`<div class="cd">🗓 ${t.df}${t.dt&&t.dt!==t.df?' ~ '+t.dt:''}</div>`:''}
+          ${stars?`<div class="card-stars">${stars}</div>`:''}
           ${t.memo?`<div class="cm">💬 ${t.memo}</div>`:''}
+          ${t.photo?`<img class="card-thumb" src="${t.photo}" alt="여행사진">`:''}
           <button class="cdel" onclick="event.stopPropagation();del(${t._i})" title="삭제">✕</button>
         </div>
         ${hasNext?`<div class="tl-connector"></div>`:''}
@@ -1332,7 +1493,7 @@ document.querySelectorAll('.country').forEach(p=>{
 });
 
 /* ── Add ── */
-function addTrip(){
+async function addTrip(){
   const cntryTxt=document.getElementById('cntryIn').value.trim();
   const city=document.getElementById('cityIn').value.trim()||selCity;
   const spot=document.getElementById('spotIn').value.trim();
@@ -1346,26 +1507,50 @@ function addTrip(){
   const entry={
     cntry:c?c.name:cntryTxt.replace(/^\S+\s/,''),cntryEn:c?c.en:'',
     flag:c?c.flag:'🌍',region:c?c.region:'',continent:c?c.continent:'',
-    city,spot,memo,df:fmtD(df),dt:fmtD(dt)
+    city,spot,memo,df:fmtD(df),dt:fmtD(dt),createdAt:Date.now()
   };
-  trips.push(entry);save();render();
-  // Reset
+  const btn=document.querySelector('.btn-add');
+  if(btn){btn.disabled=true;btn.textContent='저장중...';}
+  const loader=document.getElementById('fbLoader');
+  if(loader)loader.style.display='block';
+  try{
+    if(window._fbSave)await window._fbSave(entry);
+    else{trips.push(entry);render();}
+  }catch(e){toast('저장 실패: '+e.message);if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';return;}
+  if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}
+  if(loader)loader.style.display='none';
   ['cityIn','spotIn','memoIn'].forEach(id=>{
     document.getElementById(id).value='';
     const cl=document.getElementById(id.replace('In','Clear'));
     if(cl)cl.style.display='none';
   });
   selCity='';
-  const ni=trips.length-1;
-  // Fly to newly added destination immediately
-  setTimeout(()=>{flyTo(ni);},80);
-  // Restart chrono auto-fly after 4s
-  setTimeout(()=>startAuto(),4200);
+  setTimeout(()=>{const ni=trips.length-1;if(ni>=0)flyTo(ni);},500);
+  setTimeout(()=>startAuto(),4500);
   toast(`${c?.flag||'✈️'} ${city} 여행지 추가 완료!`);
 }
 
-function del(i){trips.splice(i,1);if(curIdx>=trips.length)curIdx=trips.length-1;save();render();if(trips.length)startAuto();}
-function clearAll(){if(!trips.length)return;if(!confirm('모든 여행 기록을 삭제하시겠어요?'))return;trips=[];curIdx=-1;save();render();}
+async function del(i){
+  const t=trips[i];if(!t)return;
+  const loader=document.getElementById('fbLoader');
+  if(loader)loader.style.display='block';
+  try{
+    if(window._fbDel&&t._fbId)await window._fbDel(t._fbId);
+    else{trips.splice(i,1);if(curIdx>=trips.length)curIdx=trips.length-1;render();if(trips.length)startAuto();}
+  }catch(e){toast('삭제 실패: '+e.message);}
+  finally{if(loader)loader.style.display='none';}
+}
+async function clearAll(){
+  if(!trips.length)return;
+  if(!confirm('모든 여행 기록을 삭제하시겠어요?'))return;
+  const loader=document.getElementById('fbLoader');
+  if(loader)loader.style.display='block';
+  try{
+    if(window._fbClear)await window._fbClear(trips);
+    else{trips=[];curIdx=-1;render();}
+  }catch(e){toast('삭제 실패: '+e.message);}
+  finally{if(loader)loader.style.display='none';}
+}
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400);}
 
 document.getElementById('cntryIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('cityIn').focus();});
@@ -1378,23 +1563,172 @@ window.addEventListener('resize',()=>{
 const td=new Date().toISOString().split('T')[0];
 document.getElementById('df').value=td;document.getElementById('dt').value=td;
 
-gms();render();anim();
-if(trips.length)setTimeout(startAuto,400);
-else{const s=s2xy(490,220);px=s.x;py=s.y;tx=s.x;ty=s.y;}
+
+/* ── Password check ── */
+const _PW="1234"; // 비밀번호 변경 시 이 값 수정
+function checkPw(){
+  const v=document.getElementById('lockPw').value;
+  if(v===_PW){
+    document.getElementById('lockScreen').style.display='none';
+    _doBootApp();
+  }else{
+    document.getElementById('lockErr').textContent='비밀번호가 틀렸습니다 🔒';
+    document.getElementById('lockPw').value='';
+    document.getElementById('lockPw').focus();
+  }
+}
+
+/* Google Auth 콜백으로도 bootApp 실행됨 */
+window._bootApp=function(){_doBootApp();};
+
+/* 사용자 UI 업데이트 */
+window._updateUserUI=function(user){
+  const ui=document.getElementById('userInfo');
+  const av=document.getElementById('userAvatar');
+  const un=document.getElementById('userName');
+  if(ui&&user){
+    if(av)av.src=user.photoURL||'';
+    if(un)un.textContent=user.displayName||user.email||'사용자';
+    ui.style.display='flex';
+  }
+};
+
+function _doBootApp(){
+  if(window._appReady)return; // 중복 실행 방지
+  window._appReady=true;
+  window._render=render;
+  trips=window._fbData||[];
+  gms();render();anim();
+  if(trips.length)setTimeout(startAuto,400);
+  else{const s=s2xy(490,220);px=s.x;py=s.y;tx=s.x;ty=s.y;}
+}
+
+/* ── Detail / edit modal ── */
+let _editIdx=null;
+function openModal(i){
+  _editIdx=i;
+  const t=trips[i];
+  if(!t)return;
+  const flag=flagImg(t.flag||'🌍',22);
+  const stars=t.stars||0;
+  const starHtml=[1,2,3,4,5].map(n=>`<span class="star" onclick="setStar(${n})" id="star${n}">${n<=stars?'⭐':'☆'}</span>`).join('');
+  document.getElementById('modalTitle').innerHTML=flag+' '+( t.city||t.cntry);
+  document.getElementById('modalContent').innerHTML=`
+    <div class="modal-row"><div class="modal-lbl">나라</div><div class="modal-val">${t.cntry||'—'}</div></div>
+    <div class="modal-row"><div class="modal-lbl">도시</div><input class="modal-inp" id="me_city" value="${t.city||''}"/></div>
+    <div class="modal-row"><div class="modal-lbl">지역/명소</div><input class="modal-inp" id="me_spot" value="${t.spot||''}"/></div>
+    <div class="modal-row"><div class="modal-lbl">출발일</div><input class="modal-inp" id="me_df" value="${t.df||''}"/></div>
+    <div class="modal-row"><div class="modal-lbl">귀국일</div><input class="modal-inp" id="me_dt" value="${t.dt||''}"/></div>
+    <div class="modal-row"><div class="modal-lbl">메모</div><textarea class="modal-inp modal-ta" id="me_memo">${t.memo||''}</textarea></div>
+    <div class="modal-row"><div class="modal-lbl">만족도</div><div class="star-row">${starHtml}</div></div>
+    <div class="modal-row">
+      <div class="modal-lbl">사진</div>
+      ${t.photo?`<div class="modal-img-wrap"><img src="${t.photo}" alt="여행사진"><button class="modal-img-del" onclick="removePhoto()">✕</button></div>`:''}
+      <label class="photo-upload-btn">📷 사진 추가<input type="file" accept="image/*" style="display:none" onchange="uploadPhoto(this)"></label>
+    </div>
+    <button class="modal-save-btn" onclick="saveModal()">💾 저장하기</button>
+  `;
+  document.getElementById('modalBg').classList.add('show');
+}
+function closeModal(){document.getElementById('modalBg').classList.remove('show');_editIdx=null;}
+function setStar(n){
+  [1,2,3,4,5].forEach(i=>document.getElementById('star'+i).textContent=i<=n?'⭐':'☆');
+  document.getElementById('star'+n).dataset.val=n;
+  window._tmpStars=n;
+}
+function removePhoto(){window._tmpPhoto='';document.querySelector('.modal-img-wrap')?document.querySelector('.modal-img-wrap').remove():null;}
+function uploadPhoto(inp){
+  if(!inp.files[0])return;
+  const r=new FileReader();
+  r.onload=e=>{
+    window._tmpPhoto=e.target.result;
+    let wrap=document.querySelector('.modal-img-wrap');
+    const label=document.querySelector('.photo-upload-btn');
+    if(!wrap){wrap=document.createElement('div');wrap.className='modal-img-wrap';label.before(wrap);}
+    wrap.innerHTML=`<img src="${e.target.result}" alt="여행사진"><button class="modal-img-del" onclick="removePhoto()">✕</button>`;
+  };
+  r.readAsDataURL(inp.files[0]);
+}
+async function saveModal(){
+  if(_editIdx===null)return;
+  const t=trips[_editIdx];
+  if(!t)return;
+  t.city=document.getElementById('me_city').value.trim()||t.city;
+  t.spot=document.getElementById('me_spot').value.trim();
+  t.df=document.getElementById('me_df').value.trim();
+  t.dt=document.getElementById('me_dt').value.trim();
+  t.memo=document.getElementById('me_memo').value.trim();
+  if(window._tmpStars!==undefined)t.stars=window._tmpStars;
+  if(window._tmpPhoto!==undefined)t.photo=window._tmpPhoto;
+  window._tmpStars=undefined;window._tmpPhoto=undefined;
+  const loader=document.getElementById('fbLoader');
+  if(loader)loader.style.display='block';
+  try{if(window._fbSave)await window._fbSave(t);}
+  catch(e){toast('저장 실패: '+e.message);}
+  finally{if(loader)loader.style.display='none';}
+  closeModal();render();toast('✅ 수정 저장 완료!');
+}
+
+/* ── JSON export / import ── */
+function exportJSON(){
+  const data=JSON.stringify(trips,null,2);
+  const a=document.createElement('a');
+  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(data);
+  a.download='travel_backup_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();
+  toast('💾 백업 파일 다운로드 완료!');
+}
+async function importJSON(inp){
+  if(!inp.files[0])return;
+  const text=await inp.files[0].text();
+  try{
+    const arr=JSON.parse(text);
+    if(!Array.isArray(arr))throw new Error('올바른 백업 파일이 아닙니다');
+    if(!confirm(`${arr.length}개 여행지를 불러올까요? 기존 데이터에 추가됩니다.`))return;
+    const loader=document.getElementById('fbLoader');
+    if(loader)loader.style.display='block';
+    for(const t of arr){delete t._fbId;if(window._fbSave)await window._fbSave(t);}
+    if(loader)loader.style.display='none';
+    toast(`✅ ${arr.length}개 여행지 불러오기 완료!`);
+  }catch(e){toast('❌ 불러오기 실패: '+e.message);}
+}
+
 </script>
 
 <!-- boss_min_ 워터마크 -->
-<div style="position:fixed;right:18px;bottom:18px;font-family:Gaegu,cursive;font-size:15px;font-weight:700;color:#ff6584;opacity:.22;letter-spacing:1px;z-index:9999;pointer-events:none;-webkit-user-select:none;user-select:none;">boss_min_</div>
+<div style="position:fixed;right:16px;bottom:14px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:10px;font-weight:300;color:#c8c8c8;opacity:.25;letter-spacing:1.5px;z-index:9999;pointer-events:none;-webkit-user-select:none;user-select:none;">boss_min_</div>
 
 <script>
-/* 우클릭 차단 */
-document.addEventListener("contextmenu",function(e){e.preventDefault();});
-/* F12 / 개발자도구 단축키 차단 */
-document.addEventListener("keydown",function(e){
-  if(e.keyCode===123||(e.ctrlKey&&e.shiftKey&&(e.keyCode===73||e.keyCode===67))||(e.ctrlKey&&e.keyCode===85)){e.preventDefault();}
+/* ── 강화 보호 ── */
+// 우클릭 차단
+document.addEventListener("contextmenu",e=>e.preventDefault());
+// 키보드 단축키 차단 (F12, Ctrl+Shift+I/J/C/U, Ctrl+U, Ctrl+S)
+document.addEventListener("keydown",e=>{
+  const b=e.keyCode===123||
+    (e.ctrlKey&&e.shiftKey&&[73,74,67,75].includes(e.keyCode))||
+    (e.ctrlKey&&[85,83,65,80].includes(e.keyCode))||
+    e.keyCode===44; // PrintScreen
+  if(b){e.preventDefault();e.stopPropagation();}
 });
-/* 드래그·선택 차단 */
-document.addEventListener("dragstart",function(e){e.preventDefault();});
+// 드래그 차단
+document.addEventListener("dragstart",e=>e.preventDefault());
+// 텍스트 선택 차단 (Ctrl+A)
+document.addEventListener("selectstart",e=>{if(!e.target.matches('input,textarea,select'))e.preventDefault();});
+// 개발자도구 감지 (크기 변화)
+(function(){
+  let _w=window.outerWidth-window.innerWidth,_h=window.outerHeight-window.innerHeight;
+  setInterval(()=>{
+    if(window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160){
+      if(!window._appReady)return;
+      document.body.style.filter='blur(8px)';
+      setTimeout(()=>{document.body.style.filter='';},1500);
+    }
+  },1000);
+})();
+// iframe 임베딩 차단
+if(window.top!==window.self&&window.location===window.parent.location){
+  try{window.top.location=window.location;}catch(e){}
+}
 </script>
 </body>
 </html>
