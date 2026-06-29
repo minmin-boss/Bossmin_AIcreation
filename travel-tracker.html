@@ -39,7 +39,10 @@ function _startListen(uid){
   _unsub=onSnapshot(q,snap=>{
     window._fbData=[];
     snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
-    if(window._appReady&&window._render){trips=window._fbData;window.trips=trips;window._render();}
+    // 저장 중 플래그가 있으면 onSnapshot 렌더 건너뜀 (addTrip이 직접 처리)
+    if(window._appReady&&window._render&&!window._saving){
+      trips=window._fbData;window.trips=trips;window._render();
+    }
   });
 }
 window._googleLogin=async function(){
@@ -55,7 +58,8 @@ window._googleLogin=async function(){
 window._logout=async function(){if(!confirm('로그아웃 하시겠어요?'))return;await signOut(_auth);};
 const _COL='travel_trips';
 window._fbSave=async function(t){
-  if(!window._user||!t._fbId)return; // 로그인 없으면 skip (로컬은 이미 저장됨)
+  if(!window._user)return;
+  if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
   t.uid=window._user.uid;
   await setDoc(doc(_db,_COL,t._fbId),t);
 };
@@ -1055,7 +1059,7 @@ function onCityKey(e){
 document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')){document.getElementById('cntryDrop').style.display='none';document.getElementById('cityDrop').style.display='none';}});
 
 // ── Add / Edit / Delete ──
-async function addTrip(){
+function addTrip(){
   const cntryTxt=document.getElementById('cntryIn').value.trim();
   const city=document.getElementById('cityIn').value.trim()||selCity;
   const memo=document.getElementById('memoIn').value.trim();
@@ -1069,7 +1073,9 @@ async function addTrip(){
   if(!city){document.getElementById('cityIn').focus();toast('🏙️ 도시를 입력해주세요');return;}
   const c=selCntry||COUNTRIES.find(x=>cntryTxt.includes(x.name)||cntryTxt.includes(x.en));
   const fmtD=d=>d?d.replace(/-/g,'.'):null;
+  const fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
   const entry={
+    _fbId:fbId,
     cntry:c?c.name:cntryTxt.replace(/^\S+\s/,''),cntryEn:c?c.en:'',
     flag:c?c.flag:'🌍',region:c?c.region:'',continent:c?c.continent:'',
     city,memo,cost:cost?Number(cost):null,currency,season,
@@ -1077,12 +1083,15 @@ async function addTrip(){
     geoLat:window._pickedLat||null,geoLon:window._pickedLon||null
   };
 
-  // ① 즉시 로컬 반영 + 버튼 복구 (Firebase와 무관하게)
+  // ① 저장 플래그 ON — onSnapshot이 render() 호출 안 하도록
+  window._saving=true;
+
+  // ② 즉시 로컬 반영
   trips.push(entry);
   window.trips=trips;
   render();
 
-  // ② 폼 초기화
+  // ③ 폼 초기화
   ['cntryIn','cityIn','memoIn'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
     const cl=document.getElementById(id.replace('In','Clear'));if(cl)cl.style.display='none';
@@ -1096,15 +1105,18 @@ async function addTrip(){
   setTimeout(()=>{const ni=trips.length-1;if(ni>=0)flyTo(ni);},300);
   setTimeout(()=>startAuto(),4000);
 
-  // ③ Firebase 백그라운드 저장 (실패해도 UI에는 영향 없음)
-  if(window._fbSave && window._user){
-    try{
-      const id='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-      entry._fbId=id;entry.uid=window._user.uid;
-      await window._fbSave(entry);
-    }catch(e){
-      console.warn('Firebase 저장 실패 (로컬에는 저장됨):', e.message);
-    }
+  // ④ Firebase 백그라운드 저장
+  if(window._fbSave&&window._user){
+    entry.uid=window._user.uid;
+    window._fbSave(entry)
+      .then(()=>{window._saving=false;})
+      .catch(e=>{
+        console.warn('Firebase 저장 실패:', e.message);
+        window._saving=false;
+      });
+  } else {
+    // Firebase 없을 땐 바로 플래그 해제
+    window._saving=false;
   }
 }
 
