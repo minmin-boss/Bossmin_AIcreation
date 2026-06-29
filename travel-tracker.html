@@ -4,47 +4,105 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>✈ 내 여행 지도</title>
+
+<!-- Firebase SDK -->
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot,query,where,orderBy}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+const _fc={apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",authDomain:"travel-tracker-9f0f7.firebaseapp.com",projectId:"travel-tracker-9f0f7",storageBucket:"travel-tracker-9f0f7.firebasestorage.app",messagingSenderId:"157327971618",appId:"1:157327971618:web:b5eca73698db54034b817b"};
+const _app=initializeApp(_fc);
+const _db=getFirestore(_app);
+const _auth=getAuth(_app);
+const _gp=new GoogleAuthProvider();
+let _unsub=null;
+
+onAuthStateChanged(_auth,user=>{
+  if(user){
+    window._user=user;
+    const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
+    window._updateUserUI&&window._updateUserUI(user);
+    _startListen(user.uid);
+    if(!window._appReady)window._bootApp&&window._bootApp();
+  }else{
+    window._user=null;
+    const ls=document.getElementById('lockScreen');if(ls)ls.style.display='flex';
+    if(_unsub){_unsub();_unsub=null;}
+    window._fbData=[];trips=[];window.trips=[];
+    if(window._appReady&&window._render)window._render();
+  }
+});
+
+function _startListen(uid){
+  if(_unsub){_unsub();_unsub=null;}
+  const q=query(collection(_db,'travel_trips'),where('uid','==',uid),orderBy('createdAt','asc'));
+  _unsub=onSnapshot(q,snap=>{
+    window._fbData=[];
+    snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
+    if(window._appReady&&window._render){trips=window._fbData;window.trips=trips;window._render();}
+  });
+}
+window._googleLogin=async function(){
+  const btn=document.getElementById('googleBtn');
+  if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
+  try{await signInWithPopup(_auth,_gp);}
+  catch(e){
+    const err=document.getElementById('lockErr');
+    if(err)err.textContent=e.code==='auth/popup-closed-by-user'?'로그인 창이 닫혔습니다.':'로그인 실패: '+e.message;
+    if(btn){btn.disabled=false;btn.textContent='Google로 로그인';}
+  }
+};
+window._logout=async function(){if(!confirm('로그아웃 하시겠어요?'))return;await signOut(_auth);};
+const _COL='travel_trips';
+window._fbSave=async function(t){
+  if(!window._user){trips.push(t);window.trips=trips;render();return;}
+  const id=t._fbId||('t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6));
+  t._fbId=id;t.createdAt=t.createdAt||Date.now();t.uid=window._user.uid;
+  await setDoc(doc(_db,_COL,id),t);return id;
+};
+window._fbDel=async function(id){await deleteDoc(doc(_db,_COL,id));};
+window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_db,_COL,t._fbId))));};
+</script>
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#eef4fb;
-  --bg2:#e2edf8;
-  --ocean:#c8e0f4;
-  --ocean2:#b8d4ed;
-  --land:#d4e8c2;
-  --land-s:#b8d4a0;
-  --land-v:#f5c842;
-  --land-vs:#e6b430;
-  --land-b:#a8c890;
-  --accent:#3a7bd5;
-  --accent2:#2d6abf;
-  --acl:#ebf2fd;
-  --pin:#e8435a;
-  --pin2:#ff6b7a;
-  --text:#2c3e50;
-  --text2:#6b7c93;
-  --text3:#95a5b8;
-  --surf:#ffffff;
-  --surf2:rgba(255,255,255,0.7);
-  --brd:#d0dce8;
-  --brd2:#b8ccdc;
-  --shadow:rgba(58,123,213,0.12);
+  --bg:#eef4fb;--bg2:#e2edf8;--ocean:#c8e0f4;
+  --land:#d4e8c2;--land-b:#a8c890;--land-v:#f5c842;--land-vs:#e6b430;
+  --accent:#3a7bd5;--accent2:#2d6abf;--acl:#ebf2fd;
+  --pin:#e8435a;--text:#2c3e50;--text2:#6b7c93;--text3:#95a5b8;
+  --surf:#fff;--brd:#d0dce8;--brd2:#b8ccdc;--shadow:rgba(58,123,213,.12);
   --f:'맑은 고딕','Malgun Gothic',sans-serif;
-  --ef:'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji','Twemoji Mozilla',sans-serif;
+  --ef:'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif;
 }
 body{background:var(--bg);color:var(--text);font-family:var(--f);min-height:100vh}
 .wrap{max-width:1280px;margin:0 auto;padding:1.2rem 1rem}
 
+/* ── Lock ── */
+#lockScreen{position:fixed;inset:0;background:linear-gradient(135deg,#eef4fb,#dbeafe,#ede9fe);display:flex;align-items:center;justify-content:center;z-index:9999;font-family:var(--f)}
+.lock-box{background:#fff;border:1.5px solid var(--brd);border-radius:20px;padding:2.5rem 2rem;text-align:center;box-shadow:0 8px 40px var(--shadow);max-width:380px;width:90%}
+.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;border:1.5px solid var(--brd);border-radius:10px;padding:11px 16px;font-size:14px;font-weight:700;color:var(--text);cursor:pointer;font-family:var(--f);transition:all .18s;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:.8rem}
+.google-btn:hover{border-color:var(--accent);box-shadow:0 3px 12px rgba(58,123,213,.2)}
+.google-btn:disabled{opacity:.6;cursor:not-allowed}
+.lock-divider{display:flex;align-items:center;gap:10px;margin:.8rem 0;color:var(--text3);font-size:11px}
+.lock-divider::before,.lock-divider::after{content:'';flex:1;height:1px;background:var(--brd)}
+
 /* ── Header ── */
 header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.1rem;padding-bottom:1rem;border-bottom:1.5px solid var(--brd)}
 .hl{display:flex;align-items:center;gap:12px}
-.logo-icon{font-size:28px;filter:drop-shadow(0 2px 4px rgba(58,123,213,.3))}
-.hl h1{font-size:22px;font-weight:800;color:var(--text);letter-spacing:-.02em}
-.hl .sub{font-size:11px;color:var(--text2);letter-spacing:.05em;margin-top:2px;font-weight:400}
-.stats{display:flex;gap:1rem}
+.hl h1{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.stats{display:flex;align-items:center;gap:.8rem}
 .stat{background:var(--surf);border:1px solid var(--brd);border-radius:10px;padding:8px 16px;text-align:center;box-shadow:0 2px 8px var(--shadow)}
 .sv{display:block;font-size:22px;font-weight:800;color:var(--accent);line-height:1}
 .sl{font-size:9px;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;font-weight:700}
+.user-info{display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--surf);border:1px solid var(--brd);border-radius:20px;cursor:pointer;font-size:11px;font-weight:700;color:var(--text2);transition:all .18s}
+.user-info:hover{border-color:var(--pin);color:var(--pin)}
+.user-avatar{width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid var(--brd2)}
+
+/* ── Tabs ── */
+.page-tabs{display:flex;gap:0;margin-bottom:1.1rem;background:var(--bg2);border-radius:10px;padding:4px;border:1.5px solid var(--brd)}
+.page-tab{flex:1;text-align:center;padding:7px;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;transition:all .18s;color:var(--text2);border:none;background:none;font-family:var(--f)}
+.page-tab.on{background:var(--surf);color:var(--accent);box-shadow:0 2px 8px var(--shadow)}
 
 /* ── Map ── */
 .map-outer{position:relative;width:100%;background:var(--ocean);border-radius:16px;border:1.5px solid var(--brd2);overflow:hidden;margin-bottom:1.1rem;box-shadow:0 4px 20px var(--shadow)}
@@ -53,15 +111,14 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .country:hover{fill:#c0d8a8}
 .country.visited{fill:var(--land-v);stroke:var(--land-vs);stroke-width:.5px}
 .country.visited:hover{fill:#f0c030}
-/* Grid lines */
 .gl{stroke:rgba(58,123,213,.07);stroke-width:.5px;fill:none}
 .eq{stroke:rgba(58,123,213,.18);stroke-width:.6px;stroke-dasharray:4 10;fill:none}
-.tropic{stroke:rgba(58,123,213,.08);stroke-width:.4px;stroke-dasharray:2 8;fill:none}
-/* Ocean labels */
-.olabel{fill:rgba(58,123,213,.35);text-anchor:middle;font-family:var(--f);pointer-events:none;font-style:italic;letter-spacing:.05em}
+.olabel{fill:rgba(58,123,213,.35);text-anchor:middle;font-family:var(--f);pointer-events:none;font-style:italic}
 #tc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .pins{position:absolute;inset:0;pointer-events:none}
 #mtt{position:absolute;background:rgba(255,255,255,.96);border:1px solid var(--brd);border-radius:8px;padding:5px 11px;font-size:11px;color:var(--text);pointer-events:none;white-space:nowrap;display:none;z-index:50;font-family:var(--f);box-shadow:0 4px 12px var(--shadow);font-weight:700}
+#fbLoader{position:fixed;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#60a5fa,var(--accent));background-size:200% 100%;animation:fbLoad .8s linear infinite;z-index:600;display:none}
+@keyframes fbLoad{0%{background-position:200% 0}100%{background-position:-200% 0}}
 
 /* ── Pin ── */
 .pin{position:absolute;transform:translate(-50%,-100%);cursor:pointer;pointer-events:all;z-index:10;animation:pd .45s cubic-bezier(.34,1.56,.64,1) both}
@@ -76,21 +133,29 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .pin:hover .pt{opacity:1}
 #plane{position:absolute;font-size:20px;pointer-events:none;z-index:30;filter:drop-shadow(0 2px 5px rgba(0,0,0,.3))}
 
+/* ── Globe ── */
+.globe-wrap{background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px var(--shadow);margin-bottom:.8rem}
+#globeDiv{width:100%;height:520px}
+.globe-ctrl{display:flex;align-items:center;gap:10px;padding:0 4px;flex-wrap:wrap;margin-bottom:1.1rem}
+#globeStatus{font-size:12px;color:var(--text2);font-weight:700}
+.globe-play-btn{display:flex;align-items:center;gap:6px;background:var(--accent);color:white;border:none;border-radius:20px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s;box-shadow:0 3px 10px rgba(58,123,213,.35)}
+.globe-play-btn:hover{background:var(--accent2)}
+.globe-play-btn.playing{background:var(--pin)}
+.globe-reset-btn{display:flex;align-items:center;gap:6px;background:var(--surf);color:var(--text2);border:1.5px solid var(--brd);border-radius:20px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s}
+.globe-reset-btn:hover{border-color:var(--accent);color:var(--accent)}
+
 /* ── Form ── */
 .form-box{background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;padding:1.3rem;margin-bottom:1.1rem;box-shadow:0 2px 12px var(--shadow)}
 .sec-ttl{font-size:13px;font-weight:800;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
-.sec-ttl .plane-ico{font-size:18px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
 .row-btn{display:grid;grid-template-columns:1fr 1fr auto;gap:10px}
 .fg{display:flex;flex-direction:column;gap:4px}
 .fl{font-size:10px;color:var(--text2);letter-spacing:.07em;text-transform:uppercase;font-weight:700}
-
-/* Autocomplete */
 .ac-wrap{position:relative}
 .ac-input{position:relative}
 .ac-input input{padding-right:28px}
-.ac-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0;line-height:1;display:none}
+.ac-clear{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;padding:0;display:none}
 .ac-clear:hover{color:var(--pin)}
 .ac-drop{position:absolute;top:calc(100% + 3px);left:0;right:0;background:var(--surf);border:1.5px solid var(--brd);border-radius:10px;max-height:220px;overflow-y:auto;z-index:200;display:none;box-shadow:0 8px 28px rgba(58,123,213,.15)}
 .ac-drop::-webkit-scrollbar{width:4px}
@@ -101,46 +166,77 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .ac-main{font-weight:700;font-size:12px}
 .ac-sub{font-size:10px;color:var(--text2);margin-top:1px}
 .ac-no{padding:10px;font-size:11px;color:var(--text2);text-align:center}
-
-input,select,textarea{background:var(--bg2);border:1.5px solid var(--brd);border-radius:8px;color:var(--text);font-family:var(--f);font-size:12px;height:36px;padding:0 10px;outline:none;transition:border-color .2s,background .2s;width:100%}
+input,select,textarea{background:var(--bg2);border:1.5px solid var(--brd);border-radius:8px;color:var(--text);font-family:var(--f);font-size:12px;height:36px;padding:0 10px;outline:none;transition:border-color .2s;width:100%}
 input::placeholder{color:var(--text3)}
 select option{background:white;font-family:var(--f)}
 input:focus,select:focus{border-color:var(--accent);background:white;box-shadow:0 0 0 3px rgba(58,123,213,.1)}
 textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5}
-.btn-add{height:36px;align-self:flex-end;padding:0 22px;background:var(--accent);color:white;border:none;border-radius:8px;font-family:var(--f);font-size:12px;font-weight:800;cursor:pointer;transition:background .18s,transform .1s,box-shadow .18s;white-space:nowrap;letter-spacing:.04em;box-shadow:0 3px 10px rgba(58,123,213,.35)}
-.btn-add:hover{background:var(--accent2);box-shadow:0 4px 14px rgba(58,123,213,.45)}
+.btn-add{height:36px;align-self:flex-end;padding:0 22px;background:var(--accent);color:white;border:none;border-radius:8px;font-family:var(--f);font-size:12px;font-weight:800;cursor:pointer;transition:all .18s;white-space:nowrap;box-shadow:0 3px 10px rgba(58,123,213,.35)}
+.btn-add:hover{background:var(--accent2)}
 .btn-add:active{transform:scale(.97)}
 
-/* ── Trips list ── */
+/* ── List ── */
 .list-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
 .list-ttl{font-size:13px;font-weight:800;color:var(--text)}
 .lc{display:flex;gap:6px}
-.sb,.bcl{font-size:10px;color:var(--text2);background:var(--surf);border:1px solid var(--brd);border-radius:6px;cursor:pointer;font-family:var(--f);padding:4px 10px;transition:all .18s;letter-spacing:.04em;font-weight:700}
+.sb,.bcl{font-size:10px;color:var(--text2);background:var(--surf);border:1px solid var(--brd);border-radius:6px;cursor:pointer;font-family:var(--f);padding:4px 10px;transition:all .18s;font-weight:700}
 .sb.on{color:var(--accent);border-color:var(--accent);background:var(--acl)}
 .sb:hover{color:var(--accent);border-color:var(--accent)}
 .bcl:hover{color:var(--pin);border-color:var(--pin)}
-.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:9px;padding-bottom:1rem}
+.year-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem}
+.yt{font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;border:1.5px solid var(--brd);background:var(--surf);color:var(--text2);cursor:pointer;transition:all .18s}
+.yt:hover{border-color:var(--accent);color:var(--accent)}
+.yt.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,123,213,.3)}
+.tg{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:9px}
 .tc{background:var(--surf);border:1.5px solid var(--brd);border-radius:13px;padding:12px 13px;cursor:pointer;transition:all .18s;animation:ci .3s ease both;position:relative;box-shadow:0 2px 8px var(--shadow)}
 @keyframes ci{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 .tc:hover{border-color:var(--accent);box-shadow:0 4px 16px rgba(58,123,213,.2);transform:translateY(-1px)}
-.tc.on{border-color:var(--accent);background:var(--acl);box-shadow:0 4px 16px rgba(58,123,213,.2)}
+.tc.on{border-color:var(--accent);background:var(--acl)}
 .ct{display:flex;align-items:center;gap:9px;margin-bottom:5px}
-.cf{flex-shrink:0;line-height:1;display:flex;align-items:center}
+.cf{flex-shrink:0;display:flex;align-items:center}
 .cf img{width:28px;height:28px;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
 .cn{font-size:13px;font-weight:800;color:var(--text)}
 .cc{font-size:10px;color:var(--text2);margin-top:1px}
 .cd{font-size:10px;color:var(--accent);margin-top:4px;font-weight:700}
 .cm{font-size:10px;color:var(--text2);margin-top:3px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.spot-tag{display:inline-block;background:var(--bg2);border:1px solid var(--brd);border-radius:4px;padding:2px 7px;font-size:10px;color:var(--text2);margin-top:4px;font-weight:700}
-.cdel{position:absolute;top:7px;right:7px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;border-radius:5px;opacity:0;transition:opacity .18s,color .18s,background .18s}
+.card-stars{font-size:11px;margin-top:3px}
+.card-thumb{width:100%;height:70px;object-fit:cover;border-radius:8px;margin-top:6px}
+.cdel{position:absolute;top:7px;right:7px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;border-radius:5px;opacity:0;transition:opacity .18s}
 .tc:hover .cdel{opacity:1}
 .cdel:hover{color:white;background:var(--pin)}
+.yr-sec{margin-bottom:1.6rem}
+.yr-hdr{display:flex;align-items:center;gap:10px;margin-bottom:.8rem;padding:8px 12px;background:var(--bg2);border-radius:10px;border-left:4px solid var(--accent)}
+.yr-label{font-size:16px;font-weight:800;color:var(--text)}
+.yr-badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px;background:rgba(58,123,213,.12);color:var(--accent)}
+.yr-cntbadge{font-size:10px;color:var(--text2)}
+.yr-flags{display:flex;gap:3px;flex-wrap:wrap;margin-left:auto}
+.yr-flags img{width:18px;height:14px;border-radius:2px}
+.tl-connector{display:flex;align-items:center;padding:0 0 0 14px;height:16px}
+.tl-connector::before{content:'✈';font-size:10px;color:var(--accent);margin-right:4px}
+.tl-connector::after{content:'';flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--accent) 0,var(--accent) 4px,transparent 4px,transparent 8px);opacity:.4}
 .empty{text-align:center;padding:3rem;color:var(--text3);font-size:12px;grid-column:1/-1}
-.empty-ico{font-size:36px;margin-bottom:.8rem;display:block}
 
-/* Twemoji image sizing */
-.pinner img.emoji,.pinner img{width:24px;height:24px;border-radius:2px}
-.pt img{width:13px;height:13px;vertical-align:middle;border-radius:1px;margin-right:2px}
+/* ── Modal ── */
+#modalBg{position:fixed;inset:0;background:rgba(44,62,80,.45);backdrop-filter:blur(3px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+#modalBg.show{display:flex}
+.modal-box{background:#fff;border-radius:16px;padding:1.5rem;width:100%;max-width:500px;box-shadow:0 16px 40px rgba(58,123,213,.2);max-height:90vh;overflow-y:auto;font-family:var(--f)}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+.modal-ttl{font-size:16px;font-weight:800;color:var(--text)}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--text2);padding:0}
+.modal-row{margin-bottom:.8rem}
+.modal-lbl{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.modal-inp{width:100%;border:1.5px solid var(--brd);border-radius:8px;padding:8px 10px;font-size:12px;font-family:var(--f);outline:none;color:var(--text);background:var(--bg2);height:36px}
+.modal-inp:focus{border-color:var(--accent)}
+.modal-ta{height:72px;resize:none}
+.star-row{display:flex;gap:4px}
+.star{font-size:22px;cursor:pointer;transition:transform .1s;user-select:none}
+.star:hover{transform:scale(1.2)}
+.modal-img-wrap{position:relative;display:inline-block;margin-top:8px}
+.modal-img-wrap img{max-width:100%;border-radius:10px}
+.modal-img-del{position:absolute;top:4px;right:4px;background:rgba(232,67,90,.9);border:none;color:#fff;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
+.photo-upload-btn{display:inline-block;background:var(--bg2);border:1.5px dashed var(--brd2);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--accent);cursor:pointer;font-weight:700;margin-top:4px}
+.modal-save-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--f);margin-top:.6rem}
+.modal-save-btn:hover{background:var(--accent2)}
 
 /* ── Dashboard ── */
 .dash-section{margin-bottom:1.4rem}
@@ -155,32 +251,23 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .dash-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1.1rem}
 .dash-card{background:var(--surf);border:1.5px solid var(--brd);border-radius:13px;padding:16px;box-shadow:0 2px 8px var(--shadow)}
 .dash-card-full{background:var(--surf);border:1.5px solid var(--brd);border-radius:13px;padding:16px;box-shadow:0 2px 8px var(--shadow);margin-bottom:1.1rem}
-.dash-card h4{font-size:12px;font-weight:800;color:var(--text);margin-bottom:12px;display:flex;align-items:center;gap:6px}
-/* Bar chart */
+.dash-card h4,.dash-card-full h4{font-size:12px;font-weight:800;color:var(--text);margin-bottom:12px}
 .bar-wrap{display:flex;flex-direction:column;gap:7px}
 .bar-row{display:flex;align-items:center;gap:8px}
 .bar-lbl{font-size:11px;color:var(--text);width:70px;flex-shrink:0;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bar-track{flex:1;height:10px;background:var(--bg2);border-radius:5px;overflow:hidden}
-.bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .6s cubic-bezier(.34,1.2,.64,1)}
+.bar-fill{height:100%;border-radius:5px;background:linear-gradient(90deg,var(--accent2),var(--accent));transition:width .6s}
 .bar-cnt{font-size:10px;color:var(--text2);width:24px;text-align:right;font-weight:700}
-/* Year trend chart */
 .trend-wrap{display:flex;align-items:flex-end;gap:6px;height:80px;padding-bottom:4px}
 .trend-col{display:flex;flex-direction:column;align-items:center;gap:3px;flex:1}
-.trend-bar{width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--accent),var(--accent2));min-height:4px;transition:height .6s cubic-bezier(.34,1.2,.64,1)}
-.trend-lbl{font-size:9px;color:var(--text2);font-weight:700;text-align:center;white-space:nowrap}
+.trend-bar{width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--accent),var(--accent2));min-height:4px;transition:height .6s}
+.trend-lbl{font-size:9px;color:var(--text2);font-weight:700;text-align:center}
 .trend-val{font-size:9px;color:var(--accent);font-weight:800}
-/* Top cities */
 .city-list{display:flex;flex-direction:column;gap:6px}
 .city-row{display:flex;align-items:center;gap:8px}
 .city-rank{font-size:10px;font-weight:800;color:var(--text3);width:14px}
-.city-flag{flex-shrink:0}
 .city-name{font-size:11px;font-weight:700;color:var(--text);flex:1}
 .city-cnt{font-size:10px;color:var(--text2);background:var(--bg2);padding:1px 7px;border-radius:10px;font-weight:700}
-/* Heatmap legend */
-.hmap-legend{display:flex;align-items:center;gap:6px;margin-top:8px;justify-content:flex-end}
-.hmap-grad{width:80px;height:8px;border-radius:4px;background:linear-gradient(90deg,#d4e8c2,#f0c040,#e8435a)}
-.hmap-lbl{font-size:9px;color:var(--text2)}
-/* Continent donut-like list */
 .cont-list{display:flex;flex-direction:column;gap:5px}
 .cont-row{display:flex;align-items:center;gap:8px}
 .cont-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
@@ -188,38 +275,20 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .cont-pct{font-size:10px;color:var(--text2);font-weight:700}
 .cont-bar-track{flex:2;height:6px;background:var(--bg2);border-radius:3px;overflow:hidden}
 .cont-bar-fill{height:100%;border-radius:3px;transition:width .6s}
-/* Heatmap map */
-.hmap-outer{position:relative;width:100%;background:var(--ocean);border-radius:10px;overflow:hidden}
+.hmap-outer{width:100%;background:var(--ocean);border-radius:10px;overflow:hidden}
 .hmap-outer svg{display:block;width:100%;height:auto}
 .hm-country{fill:var(--land);stroke:#b8d4a0;stroke-width:.25px}
+.hmap-legend{display:flex;align-items:center;gap:6px;margin-top:8px;justify-content:flex-end}
+.hmap-grad{width:80px;height:8px;border-radius:4px;background:linear-gradient(90deg,#d4e8c2,#f0c040,#e8435a)}
+.hmap-lbl{font-size:9px;color:var(--text2)}
 
-/* Tab nav for map/dashboard */
-.page-tabs{display:flex;gap:0;margin-bottom:1.1rem;background:var(--bg2);border-radius:10px;padding:4px;border:1.5px solid var(--brd)}
-.page-tab{flex:1;text-align:center;padding:7px;font-size:12px;font-weight:700;border-radius:7px;cursor:pointer;transition:all .18s;color:var(--text2);border:none;background:none;font-family:var(--f)}
-.page-tab.on{background:var(--surf);color:var(--accent);box-shadow:0 2px 8px var(--shadow)}
-
-/* year filter tabs stay same */
-.year-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;align-items:center}
-.yt{font-size:11px;font-weight:700;padding:5px 14px;border-radius:20px;border:1.5px solid var(--brd);background:var(--surf);color:var(--text2);cursor:pointer;transition:all .18s;white-space:nowrap}
-.yt:hover{border-color:var(--accent);color:var(--accent)}
-.yt.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,123,213,.3)}
-
-/* Year section */
-.yr-sec{margin-bottom:1.6rem}
-.yr-hdr{display:flex;align-items:center;gap:10px;margin-bottom:.8rem;padding:8px 12px;background:var(--bg2);border-radius:10px;border-left:4px solid var(--accent)}
-.yr-label{font-size:16px;font-weight:800;color:var(--text)}
-.yr-badge{font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px;background:rgba(58,123,213,.12);color:var(--accent)}
-.yr-cntbadge{font-size:10px;color:var(--text2)}
-.yr-flags{display:flex;gap:3px;flex-wrap:wrap;align-items:center;margin-left:auto}
-.yr-flags img{width:18px;height:14px;border-radius:2px;box-shadow:0 1px 3px rgba(0,0,0,.15)}
-
-/* Timeline connector between cards */
-.tl-connector{display:flex;align-items:center;padding:0 0 0 14px;height:16px}
-.tl-connector::before{content:'✈';font-size:10px;color:var(--accent);margin-right:4px}
-.tl-connector::after{content:'';flex:1;height:1px;background:repeating-linear-gradient(90deg,var(--accent) 0,var(--accent) 4px,transparent 4px,transparent 8px);opacity:.4}
-
+/* ── Toast ── */
 #toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(120px);background:var(--accent);color:white;font-family:var(--f);font-size:12px;font-weight:800;padding:10px 20px;border-radius:9px;z-index:300;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;box-shadow:0 4px 16px rgba(58,123,213,.4)}
 #toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Protection */
+body{-webkit-user-select:none;user-select:none}
+input,textarea,select{-webkit-user-select:text;user-select:text}
 
 @media(max-width:680px){
   .row3{grid-template-columns:1fr 1fr}
@@ -229,149 +298,30 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
   h1{font-size:18px}
   .stat{padding:6px 12px}
 }
-
-/* ── Google login button ── */
-.google-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;border:1.5px solid #d0dce8;border-radius:10px;padding:11px 16px;font-size:14px;font-weight:700;color:#2c3e50;cursor:pointer;font-family:'맑은 고딕',sans-serif;transition:all .18s;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:.8rem}
-.google-btn:hover{border-color:#3a7bd5;box-shadow:0 3px 12px rgba(58,123,213,.2);background:#f8fbff}
-.google-btn:disabled{opacity:.6;cursor:not-allowed}
-.google-icon{width:20px;height:20px;flex-shrink:0}
-.lock-divider{display:flex;align-items:center;gap:10px;margin:.8rem 0;color:#95a5b8;font-size:11px}
-.lock-divider::before,.lock-divider::after{content:'';flex:1;height:1px;background:#d0dce8}
-/* User info in header */
-.user-info{display:flex;align-items:center;gap:8px;padding:4px 10px;background:var(--surf);border:1px solid var(--brd);border-radius:20px;cursor:pointer;transition:all .18s;font-size:11px;font-weight:700;color:var(--text2)}
-.user-info:hover{border-color:var(--pin);color:var(--pin)}
-.user-avatar{width:24px;height:24px;border-radius:50%;object-fit:cover;border:2px solid var(--brd2)}
-.user-name{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 </style>
-
-<!-- Firebase SDK (type=module) -->
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot,query,where,orderBy}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
-const _fc={
-  apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",
-  authDomain:"travel-tracker-9f0f7.firebaseapp.com",
-  projectId:"travel-tracker-9f0f7",
-  storageBucket:"travel-tracker-9f0f7.firebasestorage.app",
-  messagingSenderId:"157327971618",
-  appId:"1:157327971618:web:b5eca73698db54034b817b"
-};
-const _app=initializeApp(_fc);
-const _db=getFirestore(_app);
-const _auth=getAuth(_app);
-const _gp=new GoogleAuthProvider();
-let _unsub=null;
-
-/* ── Auth 상태 감지 ── */
-onAuthStateChanged(_auth,user=>{
-  if(user){
-    window._user=user;
-    // 로그인 성공 → 잠금화면 숨기고 앱 시작
-    const ls=document.getElementById('lockScreen');
-    if(ls)ls.style.display='none';
-    // 사용자 정보 헤더 업데이트
-    window._updateUserUI && window._updateUserUI(user);
-    // Firestore 구독 시작 (uid별 데이터)
-    _startListen(user.uid);
-    if(!window._appReady) window._bootApp && window._bootApp();
-  } else {
-    window._user=null;
-    // 로그아웃 → 잠금화면 표시
-    const ls=document.getElementById('lockScreen');
-    if(ls)ls.style.display='flex';
-    if(_unsub){_unsub();_unsub=null;}
-    window._fbData=[];
-    window.trips=[];
-    if(window._appReady&&window._render) window._render();
-  }
-});
-
-function _startListen(uid){
-  if(_unsub){_unsub();_unsub=null;}
-  const _col="travel_trips";
-  const _q=query(collection(_db,_col),where("uid","==",uid),orderBy("createdAt","asc"));
-  _unsub=onSnapshot(_q,snap=>{
-    window._fbData=[];
-    snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
-    if(window._appReady&&window._render){
-      trips=window._fbData;        // 로컬 변수도 동기화
-      window.trips=window._fbData;
-      window._render();
-    }
-  });
-}
-
-/* ── Google 로그인 ── */
-window._googleLogin=async function(){
-  const btn=document.getElementById('googleBtn');
-  if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
-  try{
-    await signInWithPopup(_auth,_gp);
-    // onAuthStateChanged가 자동으로 처리함
-  }catch(e){
-    const err=document.getElementById('lockErr');
-    if(err){
-      if(e.code==='auth/popup-closed-by-user') err.textContent='로그인 창이 닫혔습니다. 다시 시도해주세요.';
-      else err.textContent='로그인 실패: '+e.message;
-    }
-    if(btn){btn.disabled=false;btn.textContent='Google로 로그인';}
-  }
-};
-
-/* ── 로그아웃 ── */
-window._logout=async function(){
-  if(!confirm('로그아웃 하시겠어요?'))return;
-  await signOut(_auth);
-};
-
-/* ── Firestore CRUD (uid 포함) ── */
-const _col="travel_trips";
-window._fbSave=async function(t){
-  if(!window._user){trips.push(t);window.trips=trips;render();return;}
-  const id=t._fbId||("t_"+Date.now()+"_"+Math.random().toString(36).slice(2,6));
-  t._fbId=id;t.createdAt=t.createdAt||Date.now();t.uid=window._user.uid;
-  await setDoc(doc(_db,_col,id),t);return id;
-};
-window._fbDel=async function(id){await deleteDoc(doc(_db,_col,id));};
-window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_db,_col,t._fbId))));};
-</script>
 </head>
 <body>
 
 <div id="fbLoader"></div>
 
-<!-- 잠금 화면 (Google 로그인) — 데모용 비활성화 -->
+<!-- Lock Screen -->
 <div id="lockScreen" style="display:none">
-  <div style="background:#fff;border:1.5px solid #d0dce8;border-radius:20px;padding:2.5rem 2rem;text-align:center;box-shadow:0 8px 40px rgba(58,123,213,.18);max-width:380px;width:90%">
+  <div class="lock-box">
     <div style="font-size:52px;margin-bottom:.6rem">🗺️</div>
-    <div style="font-size:20px;font-weight:800;color:#2c3e50;margin-bottom:.3rem">내 여행 지도</div>
-    <div style="font-size:12px;color:#6b7c93;margin-bottom:1.8rem">My Travel Log — 나만의 여행 기록</div>
-
-    <!-- Google 로그인 버튼 -->
+    <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:.3rem">내 여행 지도</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:1.8rem">My Travel Log</div>
     <button class="google-btn" id="googleBtn" onclick="window._googleLogin()">
-      <svg class="google-icon" viewBox="0 0 48 48">
-        <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-        <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-        <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-        <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-        <path fill="none" d="M0 0h48v48H0z"/>
-      </svg>
+      <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.36-8.16 2.36-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 로그인
     </button>
-
     <div class="lock-divider">또는</div>
-
-    <!-- 비밀번호 입력 (대안) -->
-    <input type="password" style="width:100%;border:1.5px solid #d0dce8;border-radius:10px;padding:10px 14px;font-size:14px;font-family:'맑은 고딕',sans-serif;outline:none;text-align:center;letter-spacing:.15em;margin-bottom:.8rem;transition:border-color .2s;background:#f8fbff;color:#2c3e50" id="lockPw" placeholder="비밀번호 입력" maxlength="20" onkeydown="if(event.key==='Enter')checkPw()"/>
-    <button style="width:100%;background:#3a7bd5;color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:800;cursor:pointer;font-family:'맑은 고딕',sans-serif;transition:background .18s" onclick="checkPw()" onmouseover="this.style.background='#2d6abf'" onmouseout="this.style.background='#3a7bd5'">비밀번호로 입장 ✈️</button>
-    <div id="lockErr" style="font-size:11px;color:#e8435a;margin-top:.5rem;min-height:16px;font-weight:700"></div>
-    <div style="font-size:10px;color:#95a5b8;margin-top:1rem">Google 로그인 시 본인 계정 데이터만 표시됩니다</div>
+    <input type="password" id="lockPw" placeholder="비밀번호 입력" maxlength="20" style="-webkit-user-select:text;user-select:text;width:100%;border:1.5px solid var(--brd);border-radius:10px;padding:10px 14px;font-size:14px;font-family:var(--f);outline:none;text-align:center;letter-spacing:.15em;margin-bottom:.8rem;background:var(--bg2);color:var(--text)" onkeydown="if(event.key==='Enter')checkPw()"/>
+    <button onclick="checkPw()" style="width:100%;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:11px;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--f)">비밀번호로 입장 ✈️</button>
+    <div id="lockErr" style="font-size:11px;color:var(--pin);margin-top:.5rem;min-height:16px;font-weight:700"></div>
   </div>
 </div>
 
-<!-- 상세/편집 모달 -->
+<!-- Modal -->
 <div id="modalBg" onclick="if(event.target===this)closeModal()">
   <div class="modal-box">
     <div class="modal-hdr">
@@ -385,25 +335,24 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
 <div class="wrap">
 <header>
   <div class="hl">
-    <span class="logo-icon">🗺️</span>
+    <span style="font-size:28px">🗺️</span>
     <div>
       <h1>내 여행 지도</h1>
-      <div class="sub">My Travel Log — 방문한 곳을 기록하세요</div>
+      <div style="font-size:11px;color:var(--text2);margin-top:2px">My Travel Log — 방문한 곳을 기록하세요</div>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:.8rem">
-    <div class="stats">
-      <div class="stat"><span class="sv" id="sc">0</span><span class="sl">나라</span></div>
-      <div class="stat"><span class="sv" id="si">0</span><span class="sl">도시</span></div>
-    </div>
+  <div class="stats">
+    <div class="stat"><span class="sv" id="sc">0</span><span class="sl">나라</span></div>
+    <div class="stat"><span class="sv" id="si">0</span><span class="sl">도시</span></div>
     <div class="user-info" id="userInfo" style="display:none" onclick="window._logout()">
       <img class="user-avatar" id="userAvatar" src="" alt=""/>
-      <span class="user-name" id="userName"></span>
+      <span id="userName"></span>
       <span style="font-size:10px;opacity:.6">로그아웃</span>
     </div>
   </div>
 </header>
 
+<!-- Tabs -->
 <div class="page-tabs">
   <button class="page-tab on" id="tabMap" onclick="switchTab('map')">🗺️ 평면 지도</button>
   <button class="page-tab" id="tabGlobe" onclick="switchTab('globe')">🌍 지구본</button>
@@ -415,35 +364,21 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
 <div class="map-outer" id="mw">
   <svg class="world" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
     <rect width="1000" height="500" fill="#c8e0f4"/>
-    <!-- lat/lon grid -->
     <g class="gl">
-      <line x1="0" y1="83"  x2="1000" y2="83"/>
-      <line x1="0" y1="166" x2="1000" y2="166"/>
-      <line x1="0" y1="250" x2="1000" y2="250"/>
-      <line x1="0" y1="333" x2="1000" y2="333"/>
+      <line x1="0" y1="83" x2="1000" y2="83"/><line x1="0" y1="166" x2="1000" y2="166"/>
+      <line x1="0" y1="250" x2="1000" y2="250"/><line x1="0" y1="333" x2="1000" y2="333"/>
       <line x1="0" y1="416" x2="1000" y2="416"/>
-      <line x1="100" y1="0"  x2="100"  y2="500"/>
-      <line x1="200" y1="0"  x2="200"  y2="500"/>
-      <line x1="300" y1="0"  x2="300"  y2="500"/>
-      <line x1="400" y1="0"  x2="400"  y2="500"/>
-      <line x1="500" y1="0"  x2="500"  y2="500"/>
-      <line x1="600" y1="0"  x2="600"  y2="500"/>
-      <line x1="700" y1="0"  x2="700"  y2="500"/>
-      <line x1="800" y1="0"  x2="800"  y2="500"/>
-      <line x1="900" y1="0"  x2="900"  y2="500"/>
+      <line x1="100" y1="0" x2="100" y2="500"/><line x1="200" y1="0" x2="200" y2="500"/>
+      <line x1="300" y1="0" x2="300" y2="500"/><line x1="400" y1="0" x2="400" y2="500"/>
+      <line x1="500" y1="0" x2="500" y2="500"/><line x1="600" y1="0" x2="600" y2="500"/>
+      <line x1="700" y1="0" x2="700" y2="500"/><line x1="800" y1="0" x2="800" y2="500"/>
+      <line x1="900" y1="0" x2="900" y2="500"/>
     </g>
-    <!-- Equator -->
     <line class="eq" x1="0" y1="250" x2="1000" y2="250"/>
-    <!-- Tropics -->
-    <line class="tropic" x1="0" y1="212" x2="1000" y2="212"/>
-    <line class="tropic" x1="0" y1="291" x2="1000" y2="291"/>
-    <!-- Ocean labels -->
     <text class="olabel" x="490" y="280" font-size="11">태평양</text>
     <text class="olabel" x="150" y="200" font-size="9">인도양</text>
     <text class="olabel" x="80" y="170" font-size="8">대서양</text>
     <text class="olabel" x="870" y="200" font-size="10">북대서양</text>
-    <text class="olabel" x="850" y="295" font-size="9">대서양</text>
-    <!-- Countries -->
 <path id="c-Afghanistan" class="country" data-name="Afghanistan" d="M239.5,196.8L244.4,197.2L245.0,196.4L248.7,195.6L249.3,194.2L252.1,193.3L258.7,194.4L261.7,194.2L262.6,193.4L264.2,193.4L266.1,191.8L267.6,192.2L267.9,194.3L269.0,194.9L272.9,193.6L278.2,194.2L269.0,195.3L267.4,196.0L268.4,197.6L266.3,199.6L263.7,199.5L264.8,200.6L261.8,202.1L262.0,203.1L255.4,204.0L253.8,205.0L253.7,206.3L247.6,207.2L243.2,207.2L238.5,206.4L241.1,205.0L240.8,203.9L238.7,203.6L237.6,201.3L238.8,200.4L237.6,200.1L239.5,196.8Z"/>
 <path id="c-Angola" class="country" data-name="Angola" d="M114.8,258.2L118.0,261.3L122.3,261.2L123.4,260.0L125.3,259.7L126.7,259.7L126.4,260.2L129.8,260.2L131.0,265.5L135.9,265.3L136.2,268.1L130.4,268.1L130.2,272.7L133.9,274.8L128.8,275.4L122.1,275.2L120.2,274.5L108.5,274.7L106.8,274.0L102.0,274.5L103.3,270.4L107.6,265.8L105.2,262.8L106.2,262.0L103.4,258.8L106.6,258.2L114.8,258.2ZM104.0,257.9L103.3,258.1L102.5,257.0L104.5,256.2L105.5,256.7L104.0,257.9Z"/>
 <path id="c-Albania" class="country" data-name="Albania" d="M126.6,185.7L127.8,188.0L125.4,189.8L123.4,188.6L123.1,185.0L124.3,184.1L126.6,185.7Z"/>
@@ -628,8 +563,9 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
   <div id="mtt"></div>
 </div>
 
+<!-- Add Form -->
 <div class="form-box">
-  <div class="sec-ttl"><span class="plane-ico">✈️</span> 새 여행지 추가</div>
+  <div class="sec-ttl"><span style="font-size:18px">✈️</span> 새 여행지 추가</div>
   <div class="row3">
     <div class="fg">
       <label class="fl">대륙</label>
@@ -643,8 +579,7 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
       <label class="fl">나라</label>
       <div class="ac-wrap">
         <div class="ac-input">
-          <input type="text" id="cntryIn" placeholder="나라 검색 또는 직접 입력" autocomplete="off"
-            oninput="onCntryInput()" onfocus="onCntryInput()" onkeydown="onCntryKey(event)"/>
+          <input type="text" id="cntryIn" placeholder="나라 검색 또는 입력" autocomplete="off" oninput="onCntryInput()" onfocus="onCntryInput()" onkeydown="onCntryKey(event)"/>
           <button class="ac-clear" id="cntryClear" onclick="clearCntry()">✕</button>
         </div>
         <div class="ac-drop" id="cntryDrop"></div>
@@ -654,8 +589,7 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
       <label class="fl">도시</label>
       <div class="ac-wrap">
         <div class="ac-input">
-          <input type="text" id="cityIn" placeholder="도시 검색 또는 직접 입력" autocomplete="off"
-            oninput="onCityInput()" onfocus="onCityFocus()" onkeydown="onCityKey(event)"/>
+          <input type="text" id="cityIn" placeholder="도시 검색 또는 입력" autocomplete="off" oninput="onCityInput()" onfocus="onCityFocus()" onkeydown="onCityKey(event)"/>
           <button class="ac-clear" id="cityClear" onclick="clearCity()">✕</button>
         </div>
         <div class="ac-drop" id="cityDrop"></div>
@@ -663,14 +597,13 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
     </div>
   </div>
   <div class="row2">
-    <div class="fg"><label class="fl">✍️ 메모 (누구와 함께)</label>
-      <input type="text" id="memoIn" placeholder="예: 가족여행, 친구와, 혼자, 커플여행"/></div>
+    <div class="fg"><label class="fl">👥 누구와 함께</label>
+      <input type="text" id="memoIn" placeholder="예: 가족여행, 친구와, 혼자"/></div>
     <div class="fg"><label class="fl">💰 여행 경비</label>
       <div style="position:relative">
-        <input type="number" id="costIn" placeholder="0" min="0" style="padding-right:48px"/>
-        <select id="currIn" style="position:absolute;right:0;top:0;width:54px;height:36px;border-left:none;border-radius:0 7px 7px 0;font-size:11px;padding:0 2px">
-          <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option>
-          <option>CNY</option><option>THB</option><option>SGD</option><option>AUD</option>
+        <input type="number" id="costIn" placeholder="0" min="0" style="padding-right:54px"/>
+        <select id="currIn" style="position:absolute;right:0;top:0;width:58px;height:36px;border-left:none;border-radius:0 7px 7px 0;font-size:11px;padding:0 2px">
+          <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
         </select>
       </div>
     </div>
@@ -682,8 +615,7 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
   </div>
 </div>
 
-
-
+<!-- List -->
 <div class="list-hdr">
   <div class="list-ttl">🗺️ 방문한 곳 <span id="tripCnt" style="font-size:11px;color:var(--text2);font-weight:400"></span></div>
   <div class="lc">
@@ -697,31 +629,21 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
 </div><!-- /pageMap -->
 
 <!-- GLOBE PAGE -->
-<div id="pageGlobe" style="display:none;margin-bottom:1.1rem">
-  <div style="background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px var(--shadow)">
-    <div id="globeDiv" style="width:100%;height:520px"></div>
-  </div>
-  <div style="display:flex;align-items:center;gap:10px;margin-top:.8rem;padding:0 4px;flex-wrap:wrap">
-    <div style="font-size:11px;color:var(--text2)">
-      <span id="globeStatus">지구본을 드래그해서 회전하세요 ✈️</span>
-    </div>
+<div id="pageGlobe" style="display:none">
+  <div class="globe-wrap"><div id="globeDiv"></div></div>
+  <div class="globe-ctrl">
+    <span id="globeStatus">🇰🇷 서울(인천) 대기 중</span>
     <div style="margin-left:auto;display:flex;gap:8px">
-      <button id="globePlayBtn" onclick="globeTogglePlay()" style="display:flex;align-items:center;gap:6px;background:var(--accent);color:white;border:none;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s;box-shadow:0 3px 10px rgba(58,123,213,.35)">
-        <span id="globePlayIco" style="font-size:14px">▶</span>
-        <span id="globePlayTxt">자동 비행</span>
+      <button class="globe-play-btn" id="globePlayBtn" onclick="globeTogglePlay()">
+        <span id="globePlayIco">▶</span><span id="globePlayTxt">자동 비행</span>
       </button>
-      <button onclick="globeReset()" style="display:flex;align-items:center;gap:6px;background:var(--surf);color:var(--text2);border:1.5px solid var(--brd);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--brd)';this.style.color='var(--text2)'">
-        <span style="font-size:13px">↺</span> 초기화
-      </button>
+      <button class="globe-reset-btn" onclick="globeReset()">↺ 초기화</button>
     </div>
   </div>
-</div>
-
+</div><!-- /pageGlobe -->
 
 <!-- DASHBOARD PAGE -->
 <div id="pageDash" style="display:none">
-
-  <!-- KPI Cards -->
   <div class="dash-section">
     <div class="dash-ttl">핵심 여행 지표</div>
     <div class="kpi-grid">
@@ -730,58 +652,31 @@ window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_
       <div class="kpi" data-icon="🏙️"><div class="kpi-val" id="kpiCity">0</div><div class="kpi-lbl">방문 도시</div><div class="kpi-sub">곳</div></div>
       <div class="kpi" data-icon="📅"><div class="kpi-val" id="kpiYears">0</div><div class="kpi-lbl">여행 연도</div><div class="kpi-sub">년간</div></div>
       <div class="kpi" data-icon="🌐"><div class="kpi-val" id="kpiCont">0</div><div class="kpi-lbl">방문 대륙</div><div class="kpi-sub">개 대륙</div></div>
-      <div class="kpi" data-icon="🔁"><div class="kpi-val" id="kpiAvg">0</div><div class="kpi-lbl">연평균 여행</div><div class="kpi-sub">회/년</div></div>
-      <div class="kpi" data-icon="💰"><div class="kpi-val" id="kpiCost">—</div><div class="kpi-lbl">총 여행경비</div><div class="kpi-sub" id="kpiCostSub">입력된 금액 합계</div></div>
+      <div class="kpi" data-icon="💰"><div class="kpi-val" id="kpiCost">—</div><div class="kpi-lbl">총 여행경비</div><div class="kpi-sub" id="kpiCostSub">입력된 금액</div></div>
     </div>
   </div>
-
-  <!-- Heatmap + Continent -->
   <div class="dash-card-full">
-    <h4>🌡️ 방문 횟수 히트맵 <span style="font-size:10px;color:var(--text2);font-weight:400">— 진할수록 여러 번 방문</span></h4>
-    <div class="hmap-outer" id="hmapWrap">
-      <svg id="hmapSvg" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg">
-        <rect width="1000" height="500" fill="#c8e0f4"/>
-      </svg>
-    </div>
-    <div class="hmap-legend">
-      <span class="hmap-lbl">1회</span>
-      <div class="hmap-grad"></div>
-      <span class="hmap-lbl">5회+</span>
-    </div>
+    <h4>🌡️ 방문 횟수 히트맵</h4>
+    <div class="hmap-outer"><svg id="hmapSvg" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg"><rect width="1000" height="500" fill="#c8e0f4"/></svg></div>
+    <div class="hmap-legend"><span class="hmap-lbl">1회</span><div class="hmap-grad"></div><span class="hmap-lbl">5회+</span></div>
   </div>
-
-  <!-- Charts row -->
   <div class="dash-row">
-    <!-- Continent breakdown -->
-    <div class="dash-card">
-      <h4>🌐 대륙별 방문</h4>
-      <div class="cont-list" id="contList"></div>
-    </div>
-    <!-- Top cities -->
-    <div class="dash-card">
-      <h4>🏙️ 많이 방문한 도시</h4>
-      <div class="city-list" id="cityList"></div>
-    </div>
+    <div class="dash-card"><h4>🌐 대륙별 방문</h4><div class="cont-list" id="contList"></div></div>
+    <div class="dash-card"><h4>🏙️ 많이 방문한 도시</h4><div class="city-list" id="cityList"></div></div>
   </div>
-
-  <!-- Year trend -->
-  <div class="dash-card-full">
-    <h4>📈 연도별 여행 추이</h4>
-    <div class="trend-wrap" id="trendWrap"></div>
-  </div>
-
-  <!-- Continent bar -->
-  <div class="dash-card-full">
-    <h4>🗺️ 대륙별 방문 국가</h4>
-    <div class="bar-wrap" id="contBar"></div>
-  </div>
-
+  <div class="dash-card-full"><h4>📈 연도별 여행 추이</h4><div class="trend-wrap" id="trendWrap"></div></div>
+  <div class="dash-card-full"><h4>🗺️ 대륙별 방문 국가</h4><div class="bar-wrap" id="contBar"></div></div>
 </div><!-- /pageDash -->
 
 </div><!-- /wrap -->
 <div id="toast"></div>
 
 <script>
+// ── 서울(인천) 기준점 ──
+const SEOUL_LAT=37.4602, SEOUL_LON=126.4407;
+const SEOUL_X=420.7, SEOUL_Y=193.6;
+
+// ── 데이터 ──
 const COUNTRIES=[
   {name:"일본",en:"Japan",flag:"🇯🇵",continent:"아시아",region:"동아시아",cities:["도쿄","오사카","교토","삿포로","후쿠오카","나고야","히로시마","나라","하코네","닛코","가마쿠라"]},
   {name:"한국",en:"South Korea",flag:"🇰🇷",continent:"아시아",region:"동아시아",cities:["서울","부산","제주","경주","인천","강릉","전주","여수","광주","대구"]},
@@ -892,20 +787,19 @@ const _ISO={"Japan":"jp","South Korea":"kr","China":"cn","Hong Kong":"hk","Taiwa
 "Australia":"au","New Zealand":"nz","Fiji":"fj","Georgia":"ge","Armenia":"am",
 "Kazakhstan":"kz","Uzbekistan":"uz","Mongolia":"mn","Maldives":"mv"};
 
-// Country lookup
-const BY_EN={},BY_KO={};
-COUNTRIES.forEach(c=>{BY_EN[c.en]=c;BY_KO[c.name]=c;});
+const BY_EN={}, BY_KO={};
+COUNTRIES.forEach(c=>{BY_EN[c.en]=c; BY_KO[c.name]=c;});
 
-/* ── State ── */
+// ── 상태 ──
 let trips=window._fbData||[];
-let sortM='d',curIdx=-1,filterYear='all';
-let px=500,py=250,tx=500,ty=250,pang=0;
-let tpts=[],mW,mH;
-let autoT=null,autoI=0;
-let selCntry=null,selCity='';
-let cntryFI=-1,cityFI=-1;
+let sortM='d', curIdx=-1, filterYear='all';
+let selCntry=null, selCity='', cntryFI=-1, cityFI=-1;
+let px, py, tx, ty, pang=0, tpts=[], mW, mH;
+let autoT=null, autoI=0;
+let _citySearchTimer=null;
+let curTab='map';
 
-/* ── DOM ── */
+// ── 지도 크기 ──
 const mwEl=document.getElementById('mw');
 const plEl=document.getElementById('pl');
 const plnEl=document.getElementById('plane');
@@ -913,179 +807,37 @@ const canv=document.getElementById('tc');
 const ctx2=canv.getContext('2d');
 const mttEl=document.getElementById('mtt');
 
-/* ── Size ── */
 function gms(){mW=mwEl.offsetWidth;mH=mwEl.offsetHeight;canv.width=mW;canv.height=mH;}
 function s2p(x,y){return{left:(x/1000*100).toFixed(2)+'%',top:(y/500*100).toFixed(2)+'%'}}
 function s2xy(x,y){gms();return{x:x/1000*mW,y:y/500*mH}}
+function projX(lon){const sh=lon-155;return((sh<-180?sh+360:sh>180?sh-360:sh)+180)/360*1000;}
+function projY(lat){lat=Math.max(Math.min(lat,85),-85);const r=lat*Math.PI/180,m=Math.log(Math.tan(Math.PI/4+r/2)),t=Math.log(Math.tan(Math.PI/4+85*Math.PI/360));return(1-(m+t)/(2*t))*500;}
 
-/* ── Continent ── */
-function onContChange(){
-  selCntry=null;
-  document.getElementById('cntryIn').value='';
-  document.getElementById('cntryClear').style.display='none';
-  document.getElementById('cntryDrop').style.display='none';
-  clearCity();
+// ── Twemoji ──
+function flagImg(emoji,size){
+  if(!emoji||emoji==='🌍')return`<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f30d.svg" width="${size}" height="${size}" style="vertical-align:middle;border-radius:50%">`;
+  try{const cp=[...emoji].map(c=>c.codePointAt(0).toString(16)).filter(x=>x!=='200d').join('-');return`<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/${cp}.svg" width="${size}" height="${size}" style="vertical-align:middle;border-radius:2px" onerror="this.style.display='none'">`;}
+  catch(e){return`<span style="font-size:${size}px">${emoji}</span>`;}
 }
 
-/* ── Country AC ── */
-function filtC(){
-  const cont=document.getElementById('contSel').value;
-  const q=document.getElementById('cntryIn').value.trim().toLowerCase();
-  return COUNTRIES.filter(c=>{
-    if(cont&&c.continent!==cont)return false;
-    if(!q)return true;
-    return c.name.includes(q)||c.en.toLowerCase().includes(q)||(c.region||'').includes(q);
+// ── Tab ──
+function switchTab(tab){
+  curTab=tab;
+  ['pageMap','pageGlobe','pageDash'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.style.display=id==='page'+tab.charAt(0).toUpperCase()+tab.slice(1)?'':'none';
   });
-}
-
-function onCntryInput(){
-  const q=document.getElementById('cntryIn').value.trim();
-  document.getElementById('cntryClear').style.display=q?'block':'none';
-  const drop=document.getElementById('cntryDrop');
-  const list=filtC().slice(0,80);
-  if(!list.length){drop.innerHTML='<div class="ac-no">검색 결과 없음</div>';drop.style.display='block';return;}
-  drop.innerHTML=list.map((c,i)=>
-    `<div class="ac-item" data-i="${i}" onmousedown="pickCntry('${c.name.replace(/'/g,"\'")}')">
-      <span style="font-size:16px">${c.flag}</span>
-      <div><div class="ac-main">${c.name}</div><div class="ac-sub">${c.continent} · ${c.region}</div></div>
-    </div>`).join('');
-  drop.style.display='block';
-  cntryFI=-1;
-}
-function pickCntry(name){
-  const c=COUNTRIES.find(x=>x.name===name);if(!c)return;
-  selCntry=c;
-  document.getElementById('cntryIn').value=c.flag+' '+c.name;
-  document.getElementById('cntryClear').style.display='block';
-  document.getElementById('cntryDrop').style.display='none';
-  if(!document.getElementById('cityIn').value&&c.cities.length){
-    document.getElementById('cityIn').value=c.cities[0];
-    selCity=c.cities[0];
-    document.getElementById('cityClear').style.display='block';
-  }
-}
-function clearCntry(){
-  selCntry=null;
-  document.getElementById('cntryIn').value='';
-  document.getElementById('cntryClear').style.display='none';
-  document.getElementById('cntryDrop').style.display='none';
-  clearCity();
-}
-function onCntryKey(e){
-  const drop=document.getElementById('cntryDrop');
-  const items=[...drop.querySelectorAll('.ac-item')];
-  if(!items.length)return;
-  if(e.key==='ArrowDown'){e.preventDefault();cntryFI=Math.min(cntryFI+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('foc',i===cntryFI));if(cntryFI>=0)items[cntryFI].scrollIntoView({block:'nearest'});}
-  else if(e.key==='ArrowUp'){e.preventDefault();cntryFI=Math.max(cntryFI-1,0);items.forEach((el,i)=>el.classList.toggle('foc',i===cntryFI));}
-  else if(e.key==='Enter'&&cntryFI>=0){items[cntryFI].onmousedown();}
-  else if(e.key==='Escape'){drop.style.display='none';}
-}
-
-/* ── City AC ── */
-function onCityFocus(){if(selCntry||document.getElementById('cityIn').value)showCityDrop();}
-function onCityInput(){
-  const q=document.getElementById('cityIn').value.trim();
-  document.getElementById('cityClear').style.display=q?'block':'none';
-  selCity=q;showCityDrop();
-}
-let _citySearchTimer=null;
-function showCityDrop(){
-  const q=document.getElementById('cityIn').value.trim();
-  const ql=q.toLowerCase();
-  const drop=document.getElementById('cityDrop');
-
-  // 로컬 데이터
-  let cities=selCntry?[...selCntry.cities]:[];
-  Object.entries(AIRPORTS).forEach(([k,v])=>{
-    if(selCntry&&v.country!==selCntry.en)return;
-    if(!cities.includes(k))cities.push(k);
+  ['tabMap','tabGlobe','tabDash'].forEach(id=>{
+    document.getElementById(id).classList.toggle('on',id==='tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
   });
-  if(q)cities=cities.filter(c=>c.toLowerCase().includes(ql));
-  cities=cities.slice(0,30);
-
-  function renderDrop(extra=[]){
-    const seen=new Set();
-    const all=[
-      ...cities.map(c=>({name:c,sub:AIRPORTS[c]?'✈ '+AIRPORTS[c].airport:'',src:'local',lat:'',lon:''})),
-      ...extra
-    ].filter(x=>{if(seen.has(x.name))return false;seen.add(x.name);return true;}).slice(0,40);
-    if(!all.length){drop.style.display='none';return;}
-    drop.innerHTML=all.map((c,i)=>`<div class="ac-item" data-i="${i}" onmousedown="pickCity('${c.name.replace(/'/g,"\'")}','${c.lat||''}','${c.lon||''}')">
-      <span style="font-size:14px">${c.src==='geo'?'🔍':'🏙️'}</span>
-      <div><div class="ac-main">${c.name}</div>${c.sub?`<div class="ac-sub">${c.sub}</div>`:''}
-      </div></div>`).join('');
-    drop.style.display='block';cityFI=-1;
-  }
-  renderDrop();
-
-  // 2글자 이상이면 OpenStreetMap Nominatim으로 전세계 도시 검색
-  if(_citySearchTimer)clearTimeout(_citySearchTimer);
-  if(q.length<2)return;
-  _citySearchTimer=setTimeout(async()=>{
-    try{
-      const cc=selCntry&&_ISO[selCntry.en]?`&countrycodes=${_ISO[selCntry.en]}`:'';
-      const url=`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&featuretype=city,town&accept-language=ko${cc}`;
-      const res=await fetch(url,{headers:{'User-Agent':'TravelTracker/1.0'}});
-      const data=await res.json();
-      const extra=data.map(d=>({
-        name:d.display_name.split(',')[0].trim(),
-        sub:d.display_name.split(',').slice(1,3).join(',').trim(),
-        lat:d.lat,lon:d.lon,src:'geo'
-      })).filter(d=>d.name.length>0);
-      renderDrop(extra);
-    }catch(e){}
-  },450);
-}
-function pickCity(name,lat,lon){
-  selCity=name;
-  window._pickedLat=lat?parseFloat(lat):null;
-  window._pickedLon=lon?parseFloat(lon):null;
-  document.getElementById('cityIn').value=name;
-  document.getElementById('cityClear').style.display='block';
-  document.getElementById('cityDrop').style.display='none';
-}
-function clearCity(){
-  selCity='';
-  document.getElementById('cityIn').value='';
-  document.getElementById('cityClear').style.display='none';
-  document.getElementById('cityDrop').style.display='none';
-}
-function onCityKey(e){
-  const drop=document.getElementById('cityDrop');
-  const items=[...drop.querySelectorAll('.ac-item')];
-  if(!items.length)return;
-  if(e.key==='ArrowDown'){e.preventDefault();cityFI=Math.min(cityFI+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('foc',i===cityFI));if(cityFI>=0)items[cityFI].scrollIntoView({block:'nearest'});}
-  else if(e.key==='ArrowUp'){e.preventDefault();cityFI=Math.max(cityFI-1,0);items.forEach((el,i)=>el.classList.toggle('foc',i===cityFI));}
-  else if(e.key==='Enter'){if(cityFI>=0)items[cityFI].onmousedown();else if(document.getElementById('cityIn').value)addTrip();}
-  else if(e.key==='Escape'){drop.style.display='none';}
+  if(tab==='dash')renderDashboard();
+  if(tab==='globe')initGlobe();
 }
 
-/* close dropdowns on outside click */
-document.addEventListener('click',e=>{
-  if(!e.target.closest('.ac-wrap')){
-    document.getElementById('cntryDrop').style.display='none';
-    document.getElementById('cityDrop').style.display='none';
-  }
-});
-
-/* ── Render ── */
-function save(){/* Firebase via _fbSave */}
-
-/* Get year from trip date string "2024.04.10" -> "2024" */
-function tripYear(t){
-  const d=t.df||t.dt||'';
-  const m=d.match(/^(\d{4})/);
-  return m?m[1]:'날짜없음';
-}
-
-/* Sorted by date for timeline/flight order */
-function chronoTrips(){
-  return [...trips].map((t,i)=>({...t,_i:i})).sort((a,b)=>{
-    const ad=a.df||a.dt||'9999';
-    const bd=b.df||b.dt||'9999';
-    return ad.localeCompare(bd);
-  });
-}
+// ── Render ──
+function save(){}
+function render(){renderStats();renderPins();renderList();}
+window._render=render;
 
 function renderStats(){
   const cs=new Set(trips.map(t=>t.cntry));
@@ -1096,102 +848,60 @@ function renderStats(){
   renderYearTabs();
 }
 
+// ── Year tabs ──
+function tripYear(t){const d=t.df||t.dt||'';const m=d.match(/^(\d{4})/);return m?m[1]:'날짜없음';}
+function chronoTrips(){return[...trips].map((t,i)=>({...t,_i:i})).sort((a,b)=>(a.df||a.dt||'9999').localeCompare(b.df||b.dt||'9999'));}
+
+function renderYearTabs(){
+  const tabEl=document.getElementById('yearTabs');
+  if(!tabEl||!trips.length){if(tabEl)tabEl.innerHTML='';return;}
+  const years=[...new Set(trips.map(tripYear))].filter(y=>y!=='날짜없음').sort((a,b)=>b-a);
+  let html=`<button class="yt${filterYear==='all'?' on':''}" onclick="setYear('all')">전체</button>`;
+  years.forEach(y=>{html+=`<button class="yt${filterYear===y?' on':''}" onclick="setYear('${y}')">${y}년</button>`;});
+  tabEl.innerHTML=html;
+}
+function setYear(y){filterYear=y;renderYearTabs();renderList();startAuto();}
+
 function renderPins(){
   plEl.innerHTML='';
   document.querySelectorAll('.country.visited').forEach(e=>e.classList.remove('visited'));
+  // 서울 홈핀
+  const hp=document.createElement('div');
+  hp.className='pin';hp.style.left=s2p(SEOUL_X,SEOUL_Y).left;hp.style.top=s2p(SEOUL_X,SEOUL_Y).top;
+  hp.innerHTML=`<div class="pt">🇰🇷 서울 (인천) — 홈</div><div class="pinner">${flagImg('🇰🇷',24)}</div><div class="ps"></div>`;
+  plEl.appendChild(hp);
 
-  // 항상 서울(인천) 홈 핀 표시
-  const _homePos=s2p(420.7,193.6);
-  const _homePin=document.createElement('div');
-  _homePin.className='pin';
-  _homePin.style.left=_homePos.left; _homePin.style.top=_homePos.top;
-  _homePin.style.animationDelay='0s';
-  _homePin.innerHTML=`<div class="pt">🇰🇷 서울 (인천) — 홈</div><div class="pinner">${flagImg('🇰🇷',24)}</div><div class="ps"></div>`;
-  plEl.appendChild(_homePin);
   trips.forEach((t,i)=>{
-    // Highlight visited country
-    const c=BY_KO[t.cntry]||BY_EN[t.cntryEn]||BY_EN[t.cntry];
-    if(c){
-      const el=document.getElementById('c-'+c.en.replace(/ /g,'_').replace(/[()]/g,'').replace(/'/g,''));
-      if(el)el.classList.add('visited');
-    }
-    // Find position — prefer airport, fallback centroid
+    const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];
+    if(c){const el=document.getElementById('c-'+c.en.replace(/ /g,'_').replace(/[()]/g,'').replace(/'/g,''));if(el)el.classList.add('visited');}
     const ap=AIRPORTS[t.city];
     if(!ap&&!c&&!t.geoLat)return;
     let mx,my;
     if(ap){mx=ap.x;my=ap.y;}
     else if(t.geoLat&&t.geoLon){mx=projX(t.geoLon);my=projY(t.geoLat);}
     else{
-      const defaults={
-        "Japan":[459,197],"South Korea":[421,194],"China":[390,200],"Hong Kong":[395,217],
-        "Taiwan":[415,218],"Mongolia":[385,175],"Thailand":[368,225],"Vietnam":[385,225],
-        "Indonesia":[430,260],"Singapore":[390,255],"Malaysia":[385,248],"Philippines":[430,220],
-        "Cambodia":[378,232],"Myanmar":[365,218],"Laos":[372,222],"India":[310,230],
-        "Nepal":[320,205],"Sri Lanka":[320,258],"France":[76,178],"Italy":[95,185],
-        "Spain":[55,183],"Germany":[90,168],"England":[56,163],"Switzerland":[86,178],
-        "Austria":[96,175],"Netherlands":[82,163],"Portugal":[45,186],"Greece":[108,188],
-        "Turkey":[140,183],"Czech Republic":[96,170],"Hungary":[102,173],"Poland":[100,163],
-        "Croatia":[98,179],"Norway":[82,148],"Sweden":[92,148],"Finland":[106,148],
-        "Russia":[250,155],"Ukraine":[120,165],"Iceland":[12,148],
-        "United Arab Emirates":[222,214],"Israel":[134,193],"Jordan":[138,198],
-        "Saudi Arabia":[195,210],"Iran":[225,192],"Qatar":[218,213],"Egypt":[133,196],
-        "Morocco":[52,195],"Kenya":[162,255],"South Africa":[135,310],"Ethiopia":[165,250],
-        "Nigeria":[88,248],"Tanzania":[160,265],"USA":[840,200],"Canada":[810,160],
-        "Mexico":[810,230],"Cuba":[870,215],"Brazil":[900,275],"Argentina":[880,310],
-        "Peru":[855,265],"Chile":[870,300],"Colombia":[855,250],"Ecuador":[845,255],
-        "Australia":[460,292],"New Zealand":[527,320]
-      };
-      const def=c?defaults[c.en]:null;
-      if(!def)return;
-      [mx,my]=def;
+      const defs={Japan:[459,197],"South Korea":[421,194],China:[390,200],France:[76,178],USA:[840,200],Australia:[460,292],Germany:[100,168],Italy:[102,183],Spain:[62,188],England:[67,165],Thailand:[348,228],Vietnam:[368,226],Indonesia:[380,260]};
+      const def=c?defs[c.en]:null;
+      if(!def)return;[mx,my]=def;
     }
-    if(isNaN(mx)||isNaN(my))return;
+    if(isNaN(mx))return;
     const pos=s2p(mx,my);
     const pin=document.createElement('div');
     pin.className='pin'+(i===curIdx?' active':'');
     pin.style.left=pos.left;pin.style.top=pos.top;
     pin.style.animationDelay=(i*.03)+'s';
-    const flag=t.flag||'🌍';
-    pin.innerHTML=`<div class="pt">${flagImg(flag,14)} ${t.city||t.cntry}</div><div class="pinner">${flagImg(flag,24)}</div><div class="ps"></div>`;
-    pin.addEventListener('click',()=>flyTo(i));
+    pin.innerHTML=`<div class="pt">${flagImg(t.flag||'🌍',14)} ${t.city||t.cntry}</div><div class="pinner">${flagImg(t.flag||'🌍',24)}</div><div class="ps"></div>`;
+    pin.addEventListener('click',()=>openModal(i));
     plEl.appendChild(pin);
   });
 }
 
-function renderYearTabs(){
-  const tabEl=document.getElementById('yearTabs');
-  if(!tabEl)return;
-  const years=[...new Set(trips.map(tripYear))].filter(y=>y!=='날짜없음').sort((a,b)=>b-a);
-  const hasNoDate=trips.some(t=>!t.df&&!t.dt);
-  if(!trips.length){tabEl.innerHTML='';return;}
-  let html=`<button class="yt${filterYear==='all'?' on':''}" onclick="setYear('all')">전체</button>`;
-  years.forEach(y=>{html+=`<button class="yt${filterYear===y?' on':''}" onclick="setYear('${y}')">${y}년</button>`;});
-  if(hasNoDate)html+=`<button class="yt${filterYear==='날짜없음'?' on':''}" onclick="setYear('날짜없음')">날짜없음</button>`;
-  tabEl.innerHTML=html;
-}
-
-function setYear(y){
-  filterYear=y;
-  renderYearTabs();
-  renderList();
-  startAuto();
-}
-
 function renderList(){
   const tl=document.getElementById('tl');
-  if(!trips.length){
-    tl.innerHTML='<div class="empty" style="text-align:center;padding:3rem;color:var(--text3);font-size:12px"><span style="font-size:36px;display:block;margin-bottom:.8rem">✈️</span>아직 추가한 여행지가 없어요<br>위 폼으로 첫 여행지를 추가해보세요!</div>';
-    return;
-  }
-  // Always sort chronologically
+  if(!trips.length){tl.innerHTML='<div class="empty">아직 추가한 여행지가 없어요 ✈️<br><small style="margin-top:.5rem;display:block">위 폼으로 첫 여행지를 추가해보세요!</small></div>';return;}
   let sorted=chronoTrips();
-  // Filter by selected year
-  if(filterYear!=='all') sorted=sorted.filter(t=>tripYear(t)===filterYear);
-  if(!sorted.length){
-    tl.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3);font-size:12px">해당 연도의 여행 기록이 없어요</div>';
-    return;
-  }
-  // Group by year
+  if(filterYear!=='all')sorted=sorted.filter(t=>tripYear(t)===filterYear);
+  if(!sorted.length){tl.innerHTML='<div style="text-align:center;padding:2rem;color:var(--text3);font-size:12px">해당 연도의 여행 기록이 없어요</div>';return;}
   const groups={};
   sorted.forEach(t=>{const y=tripYear(t);if(!groups[y])groups[y]=[];groups[y].push(t);});
   const yearKeys=Object.keys(groups).sort((a,b)=>b.localeCompare(a));
@@ -1201,328 +911,39 @@ function renderList(){
     const flags=[...new Set(list.map(t=>t.flag||'🌍'))];
     const flagImgs=flags.slice(0,12).map(f=>flagImg(f,18)).join('');
     const cntries=new Set(list.map(t=>t.cntry)).size;
-    html+=`<div class="yr-sec">
-      <div class="yr-hdr">
-        <span class="yr-label">${yr==='날짜없음'?'날짜 미입력':yr+'년'}</span>
-        <span class="yr-badge">${list.length}회</span>
-        <span class="yr-cntbadge">${cntries}개국</span>
-        <div class="yr-flags">${flagImgs}</div>
-      </div>
-      <div class="tg">`;
+    html+=`<div class="yr-sec"><div class="yr-hdr"><span class="yr-label">${yr==='날짜없음'?'날짜 미입력':yr+'년'}</span><span class="yr-badge">${list.length}회</span><span class="yr-cntbadge">${cntries}개국</span><div class="yr-flags">${flagImgs}</div></div><div class="tg">`;
     list.forEach((t,idx)=>{
-      const isActive=t._i===curIdx;
-      const hasNext=idx<list.length-1;
       const stars=t.stars?'⭐'.repeat(t.stars):'';
-      html+=`<div>
-        <div class="tc${isActive?' on':''}" onclick="openModal(${t._i})">
-          <div class="ct">
-            <div class="cf">${flagImg(t.flag||'🌍',28)}</div>
-            <div style="min-width:0">
-              <div class="cn">${t.city||t.cntry}</div>
-              <div class="cc">${t.cntry}${t.continent?' · '+t.continent:''}</div>
-            </div>
-          </div>
-          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
-            ${t.season?`<span style="font-size:11px">${t.season}</span>`:''}
-            ${t.cost?`<span style="font-size:10px;background:var(--bg2);border:1px solid var(--brd);border-radius:4px;padding:1px 6px;color:var(--text2);font-weight:700">💰${t.cost.toLocaleString()} ${t.currency||'KRW'}</span>`:''}
-            ${stars?`<span class="card-stars">${stars}</span>`:''}
-          </div>
-          ${t.df?`<div class="cd">🗓 ${t.df}${t.dt&&t.dt!==t.df?' ~ '+t.dt:''}</div>`:''}
-          ${t.memo?`<div class="cm">👥 ${t.memo}</div>`:''}
-          ${t.photo?`<img class="card-thumb" src="${t.photo}" alt="여행사진">`:''}
-          <button class="cdel" onclick="event.stopPropagation();del(${t._i})" title="삭제">✕</button>
+      const isActive=t._i===curIdx;
+      html+=`<div><div class="tc${isActive?' on':''}" onclick="openModal(${t._i})">
+        <div class="ct"><div class="cf">${flagImg(t.flag||'🌍',28)}</div>
+        <div style="min-width:0"><div class="cn">${t.city||t.cntry}</div><div class="cc">${t.cntry}${t.continent?' · '+t.continent:''}</div></div></div>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px">
+          ${t.season?`<span style="font-size:11px">${t.season}</span>`:''}
+          ${t.cost?`<span style="font-size:10px;background:var(--bg2);border:1px solid var(--brd);border-radius:4px;padding:1px 6px;color:var(--text2);font-weight:700">💰${t.cost.toLocaleString()} ${t.currency||'KRW'}</span>`:''}
+          ${stars?`<span class="card-stars">${stars}</span>`:''}
         </div>
-        ${hasNext?`<div class="tl-connector"></div>`:''}
-      </div>`;
+        ${t.df?`<div class="cd">🗓 ${t.df}${t.dt&&t.dt!==t.df?' ~ '+t.dt:''}</div>`:''}
+        ${t.memo?`<div class="cm">👥 ${t.memo}</div>`:''}
+        ${t.photo?`<img class="card-thumb" src="${t.photo}" alt="">`:''}
+        <button class="cdel" onclick="event.stopPropagation();del(${t._i})">✕</button>
+      </div>${idx<list.length-1?'<div class="tl-connector"></div>':''}</div>`;
     });
     html+=`</div></div>`;
   });
   tl.innerHTML=html;
 }
 
-function render(){renderStats();renderPins();renderList();renderDashboard();}
-
-/* ── Tab switching ── */
-let curTab='map';
-function switchTab(tab){
-  curTab=tab;
-  document.getElementById('pageMap').style.display=tab==='map'?'':'none';
-  document.getElementById('pageGlobe').style.display=tab==='globe'?'':'none';
-  document.getElementById('pageDash').style.display=tab==='dash'?'':'none';
-  document.getElementById('tabMap').classList.toggle('on',tab==='map');
-  document.getElementById('tabGlobe').classList.toggle('on',tab==='globe');
-  document.getElementById('tabDash').classList.toggle('on',tab==='dash');
-  if(tab==='dash') renderDashboard();
-  if(tab==='globe') initGlobe();
-}
-
-/* ── Haversine distance (km) ── */
-function haversine(lat1,lon1,lat2,lon2){
-  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-/* Airport lat/lon lookup */
-const AP_LATLON={
-  "도쿄":[35.7647,140.3864],"오사카":[34.4347,135.2440],"서울":[37.4602,126.4407],
-  "부산":[35.1796,129.0756],"제주":[33.5112,126.4922],"베이징":[40.0799,116.6031],
-  "상하이":[31.1443,121.8083],"홍콩":[22.3080,113.9185],"타이베이":[25.0797,121.2342],
-  "방콕":[13.6811,100.7472],"치앙마이":[18.7668,98.9626],"푸켓":[8.1132,98.3017],
-  "하노이":[21.2212,105.8072],"다낭":[16.0440,108.1992],"호치민":[10.8188,106.6519],
-  "발리":[-8.7482,115.1672],"자카르타":[-6.1275,106.6537],"싱가포르":[1.3502,103.9940],
-  "쿠알라룸푸르":[2.7456,101.7072],"마닐라":[14.5086,121.0194],"세부":[10.3075,123.9795],
-  "뉴델리":[28.5562,77.1000],"뭄바이":[19.0896,72.8656],"카트만두":[27.6966,85.3591],
-  "파리":[49.0097,2.5479],"런던":[51.4700,-0.4543],"로마":[41.8003,12.2389],
-  "바르셀로나":[41.2974,2.0833],"마드리드":[40.4936,-3.5668],"베를린":[52.3667,13.5033],
-  "뮌헨":[48.3537,11.7750],"암스테르담":[52.3105,4.7683],"프라하":[50.1008,14.2600],
-  "비엔나":[48.1103,16.5697],"취리히":[47.4647,8.5492],"아테네":[37.9364,23.9445],
-  "이스탄불":[41.2753,28.7519],"리스본":[38.7813,-9.1359],"두바이":[25.2532,55.3657],
-  "텔아비브":[32.0055,34.8854],"카이로":[30.1219,31.4056],"나이로비":[-1.3192,36.9275],
-  "케이프타운":[-33.9715,18.6021],"요하네스버그":[-26.1392,28.2460],
-  "뉴욕":[40.6413,-73.7781],"로스앤젤레스":[33.9425,-118.4081],
-  "샌프란시스코":[37.6213,-122.3790],"시카고":[41.9742,-87.9073],
-  "마이애미":[25.7959,-80.2870],"밴쿠버":[49.1967,-123.1815],"토론토":[43.6777,-79.6248],
-  "멕시코시티":[19.4363,-99.0721],"리우데자네이루":[-22.8099,-43.2505],
-  "부에노스아이레스":[-34.8222,-58.5358],"리마":[-12.0219,-77.1143],
-  "시드니":[-33.9399,151.1753],"멜버른":[-37.6690,144.8410],
-  "오클랜드":[-37.0082,174.7850],"하와이":[21.3245,-157.9251]
-};
-
-/* Country lat/lon centroids for heatmap */
-const CTRY_LATLON={
-  "Japan":[36,138],"South Korea":[36,128],"China":[35,105],"Hong Kong":[22.3,114.2],
-  "Taiwan":[23.7,121],"Mongolia":[46,105],"Thailand":[15,101],"Vietnam":[16,108],
-  "Indonesia":[-5,120],"Singapore":[1.3,103.8],"Malaysia":[4,109],"Philippines":[13,122],
-  "Cambodia":[12,105],"Myanmar":[19,96],"Laos":[18,103],"India":[20,77],
-  "Nepal":[28,84],"Sri Lanka":[8,81],"Bangladesh":[24,90],"Pakistan":[30,70],
-  "France":[46,2],"Italy":[43,12],"Spain":[40,-4],"Germany":[51,10],
-  "England":[52,-1],"Switzerland":[47,8],"Austria":[48,15],"Netherlands":[52,5],
-  "Portugal":[39,-8],"Greece":[39,22],"Turkey":[39,35],"Czech Republic":[50,15],
-  "Hungary":[47,19],"Poland":[52,20],"Croatia":[45,16],"Romania":[46,25],
-  "Norway":[62,10],"Sweden":[62,16],"Finland":[64,26],"Denmark":[56,10],
-  "Russia":[60,100],"Ukraine":[49,32],"Iceland":[65,-18],
-  "United Arab Emirates":[24,54],"Israel":[31,35],"Jordan":[31,36],
-  "Saudi Arabia":[25,45],"Iran":[33,53],"Qatar":[25.3,51.5],"Egypt":[27,30],
-  "Morocco":[32,-6],"Kenya":[-1,38],"South Africa":[-29,25],
-  "Ethiopia":[9,40],"Nigeria":[10,8],"Tanzania":[-6,35],"Senegal":[14,-14],
-  "Madagascar":[-20,47],"USA":[38,-97],"Canada":[56,-106],"Mexico":[24,-102],
-  "Cuba":[22,-80],"Brazil":[-10,-55],"Argentina":[-35,-65],
-  "Peru":[-10,-76],"Chile":[-33,-71],"Colombia":[4,-72],
-  "Australia":[-25,134],"New Zealand":[-42,172]
-};
-
-/* Map projection (same as world map) */
-function projX(lon){const sh=lon-155;return((sh<-180?sh+360:sh>180?sh-360:sh)+180)/360*1000;}
-function projY(lat){
-  lat=Math.max(Math.min(lat,85),-85);
-  const r=lat*Math.PI/180,m=Math.log(Math.tan(Math.PI/4+r/2)),t=Math.log(Math.tan(Math.PI/4+85*Math.PI/360));
-  return(1-(m+t)/(2*t))*500;
-}
-
-/* Heatmap colors */
-function heatColor(count,max){
-  const t=Math.min(count/Math.max(max,1),1);
-  if(t<0.33){const s=t/0.33;return lerpColor('#d4e8c2','#f0c040',s);}
-  const s=(t-0.33)/0.67;return lerpColor('#f0c040','#e8435a',s);
-}
-function lerpColor(c1,c2,t){
-  const h=s=>parseInt(s,16);
-  const r1=h(c1.slice(1,3)),g1=h(c1.slice(3,5)),b1=h(c1.slice(5,7));
-  const r2=h(c2.slice(1,3)),g2=h(c2.slice(3,5)),b2=h(c2.slice(5,7));
-  return `rgb(${Math.round(r1+(r2-r1)*t)},${Math.round(g1+(g2-g1)*t)},${Math.round(b1+(b2-b1)*t)})`;
-}
-
-const CONT_COLORS={'아시아':'#3a7bd5','유럽':'#e8435a','북미':'#f0a030','남미':'#30b87a','아프리카':'#9b59b6','오세아니아':'#e67e22','기타':'#7f8c8d'};
-
-/* ── Main dashboard render ── */
-function renderDashboard(){
-  if(!document.getElementById('pageDash')) return;
-
-  const chrono=chronoTrips();
-  const years=[...new Set(trips.map(tripYear))].filter(y=>y!=='날짜없음').sort();
-
-  /* KPIs */
-  // Total flight distance (chrono order by date)
-  let dist=0;
-  for(let i=1;i<chrono.length;i++){
-    const a=AP_LATLON[chrono[i-1].city],b=AP_LATLON[chrono[i].city];
-    if(a&&b) dist+=haversine(a[0],a[1],b[0],b[1]);
-  }
-  document.getElementById('kpiDist').textContent=dist>0?Math.round(dist).toLocaleString():'—';
-  document.getElementById('kpiCnt').textContent=new Set(trips.map(t=>t.cntry)).size;
-  document.getElementById('kpiCity').textContent=new Set(trips.map(t=>t.city)).size;
-  document.getElementById('kpiYears').textContent=years.length||'—';
-  document.getElementById('kpiCont').textContent=new Set(trips.map(t=>t.continent).filter(Boolean)).size;
-  const avg=years.length>0?(trips.length/years.length).toFixed(1):'—';
-  document.getElementById('kpiAvg').textContent=avg;
-  // 총 여행경비 (KRW 기준만, 다른 통화는 별도 표시)
-  const costsByC={};
-  trips.forEach(t=>{if(t.cost){const cu=t.currency||'KRW';costsByC[cu]=(costsByC[cu]||0)+t.cost;}});
-  const costKeys=Object.keys(costsByC);
-  if(costKeys.length===0){document.getElementById('kpiCost').textContent='—';}
-  else if(costKeys.length===1){
-    const cu=costKeys[0],v=costsByC[cu];
-    document.getElementById('kpiCost').textContent=(cu==='KRW'?Math.round(v/10000)+'만':v.toLocaleString());
-    document.getElementById('kpiCostSub').textContent=cu;
-  }else{
-    document.getElementById('kpiCost').textContent=costKeys.length+'개 통화';
-    document.getElementById('kpiCostSub').textContent=costKeys.map(k=>costsByC[k].toLocaleString()+k).join(' / ').slice(0,30);
-  }
-
-  /* Heatmap */
-  renderHeatmap();
-
-  /* Continent breakdown */
-  const contMap={};
-  trips.forEach(t=>{const c=t.continent||'기타';contMap[c]=(contMap[c]||0)+1;});
-  const contTotal=trips.length||1;
-  const contSorted=Object.entries(contMap).sort((a,b)=>b[1]-a[1]);
-  document.getElementById('contList').innerHTML=contSorted.map(([c,n])=>`
-    <div class="cont-row">
-      <div class="cont-dot" style="background:${CONT_COLORS[c]||'#7f8c8d'}"></div>
-      <span class="cont-name">${c}</span>
-      <div class="cont-bar-track"><div class="cont-bar-fill" style="width:${n/contTotal*100}%;background:${CONT_COLORS[c]||'#7f8c8d'}"></div></div>
-      <span class="cont-pct">${n}회</span>
-    </div>`).join('');
-
-  /* Top cities */
-  const cityMap={};
-  trips.forEach(t=>{const k=t.city||t.cntry;cityMap[k]=(cityMap[k]||{count:0,flag:t.flag});cityMap[k].count++;});
-  const topCities=Object.entries(cityMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6);
-  document.getElementById('cityList').innerHTML=topCities.map(([city,d],i)=>`
-    <div class="city-row">
-      <span class="city-rank">${i+1}</span>
-      <span class="city-flag">${flagImg(d.flag||'🌍',16)}</span>
-      <span class="city-name">${city}</span>
-      <span class="city-cnt">${d.count}회</span>
-    </div>`).join('') || '<div style="font-size:11px;color:var(--text3)">데이터 없음</div>';
-
-  /* Year trend */
-  const yearMap={};
-  trips.forEach(t=>{const y=tripYear(t);if(y!=='날짜없음')yearMap[y]=(yearMap[y]||0)+1;});
-  const yearSorted=Object.entries(yearMap).sort((a,b)=>a[0]-b[0]);
-  const maxYearCnt=Math.max(...Object.values(yearMap),1);
-  document.getElementById('trendWrap').innerHTML=yearSorted.length?yearSorted.map(([y,n])=>`
-    <div class="trend-col">
-      <span class="trend-val">${n}</span>
-      <div class="trend-bar" style="height:${Math.max(n/maxYearCnt*68,4)}px"></div>
-      <span class="trend-lbl">${y.slice(2)}</span>
-    </div>`).join(''):'<div style="font-size:11px;color:var(--text3);margin:auto">날짜가 입력된 여행이 없어요</div>';
-
-  /* Continent country bar */
-  const contCntryMap={};
-  trips.forEach(t=>{
-    const co=t.continent||'기타',cn=t.cntry;
-    if(!contCntryMap[co])contCntryMap[co]=new Set();
-    contCntryMap[co].add(cn);
-  });
-  const maxC=Math.max(...Object.values(contCntryMap).map(s=>s.size),1);
-  document.getElementById('contBar').innerHTML=Object.entries(contCntryMap)
-    .sort((a,b)=>b[1].size-a[1].size)
-    .map(([c,s])=>`
-    <div class="bar-row">
-      <span class="bar-lbl">${c}</span>
-      <div class="bar-track"><div class="bar-fill" style="width:${s.size/maxC*100}%;background:${CONT_COLORS[c]||'#7f8c8d'}"></div></div>
-      <span class="bar-cnt">${s.size}</span>
-    </div>`).join('') || '<div style="font-size:11px;color:var(--text3)">데이터 없음</div>';
-}
-
-function renderHeatmap(){
-  const svg=document.getElementById('hmapSvg');
-  if(!svg)return;
-
-  // Count visits per country (English name)
-  const visitMap={};
-  trips.forEach(t=>{
-    const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];
-    const en=c?c.en:(t.cntryEn||t.cntry);
-    visitMap[en]=(visitMap[en]||0)+1;
-  });
-  const maxV=Math.max(...Object.values(visitMap),1);
-
-  // Rebuild SVG with heatmap paths
-  // Get existing path data from world map
-  const worldPaths=document.querySelectorAll('#mw .country');
-  let pathHTML='<rect width="1000" height="500" fill="#c8e0f4"/>';
-  // Grid lines
-  pathHTML+=`<g stroke="rgba(58,123,213,.05)" stroke-width=".4" fill="none">
-    <line x1="0" y1="125" x2="1000" y2="125"/><line x1="0" y1="250" x2="1000" y2="250"/>
-    <line x1="0" y1="375" x2="1000" y2="375"/><line x1="250" y1="0" x2="250" y2="500"/>
-    <line x1="500" y1="0" x2="500" y2="500"/><line x1="750" y1="0" x2="750" y2="500"/>
-  </g>`;
-  pathHTML+=`<line x1="0" y1="250" x2="1000" y2="250" stroke="rgba(58,123,213,.15)" stroke-width=".6" stroke-dasharray="4 10" fill="none"/>`;
-
-  worldPaths.forEach(p=>{
-    const name=p.dataset.name;
-    const v=visitMap[name]||0;
-    const col=v>0?heatColor(v,maxV):'#d4e8c2';
-    const stroke=v>0?'rgba(0,0,0,.2)':'#b8d4a0';
-    const sw=v>0?'.5':'0.25';
-    pathHTML+=`<path class="hm-country" data-name="${name}" d="${p.getAttribute('d')}" fill="${col}" stroke="${stroke}" stroke-width="${sw}"/>`;
-  });
-
-  // Add visit count labels for visited countries
-  Object.entries(visitMap).forEach(([en,v])=>{
-    const ll=CTRY_LATLON[en];
-    if(!ll||v<1)return;
-    const x=projX(ll[1]),y=projY(ll[0]);
-    pathHTML+=`<circle cx="${x}" cy="${y}" r="6" fill="rgba(255,255,255,0.85)" stroke="rgba(0,0,0,.2)" stroke-width=".5"/>`;
-    pathHTML+=`<text x="${x}" y="${y+3.5}" text-anchor="middle" font-size="7" font-weight="800" fill="#2c3e50" font-family="'맑은 고딕',sans-serif">${v}</text>`;
-  });
-
-  svg.innerHTML=pathHTML;
-
-  // Add tooltip
-  svg.querySelectorAll('.hm-country').forEach(p=>{
-    p.style.cursor='default';
-    const name=p.dataset.name;
-    const v=visitMap[name]||0;
-    p.addEventListener('mouseenter',e=>{
-      if(v>0){
-        const tt=document.createElement('div');
-        tt.id='hmtt';
-        tt.style.cssText='position:fixed;background:rgba(255,255,255,.96);border:1px solid #d0dce8;border-radius:8px;padding:5px 11px;font-size:11px;font-weight:700;pointer-events:none;z-index:100;box-shadow:0 4px 12px rgba(58,123,213,.15);font-family:"맑은 고딕",sans-serif';
-        tt.textContent=`${name}: ${v}회 방문`;
-        document.body.appendChild(tt);
-      }
-    });
-    p.addEventListener('mousemove',e=>{
-      const tt=document.getElementById('hmtt');
-      if(tt){tt.style.left=(e.clientX+12)+'px';tt.style.top=(e.clientY-8)+'px';}
-    });
-    p.addEventListener('mouseleave',()=>{const tt=document.getElementById('hmtt');if(tt)tt.remove();});
-  });
-}
-
-/* Convert flag emoji to Twemoji CDN img — works on all OS including Windows */
-function flagImg(emoji,size){
-  if(!emoji||emoji==='🌍'){return`<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f30d.svg" width="${size}" height="${size}" style="vertical-align:middle;border-radius:50%">`;}
-  try{
-    const cp=[...emoji].map(c=>c.codePointAt(0).toString(16)).filter(x=>x!=='200d').join('-');
-    return`<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/${cp}.svg" width="${size}" height="${size}" style="vertical-align:middle;border-radius:2px" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<span style=\\'font-size:${size}px\\'>${emoji}</span>')">`;
-  }catch(e){return`<span style="font-size:${size}px">${emoji}</span>`;}
-}
-
-/* ── Plane ── */
+// ── 평면지도 비행기 ──
 function flyTo(i){
   if(!trips[i])return;
   curIdx=i;const t=trips[i];
   const ap=AIRPORTS[t.city];
-  let mx=500,my=250;
+  let mx=SEOUL_X,my=SEOUL_Y;
   if(ap){mx=ap.x;my=ap.y;}
-  else if(t.geoLat&&t.geoLon){
-    // geocoded 좌표 → 지도 투영
-    mx=projX(t.geoLon); my=projY(t.geoLat);
-  }
-  else{
-    const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];
-    const def=c?({Japan:[459,197],"South Korea":[421,194],"China":[390,200],"France":[76,178],"USA":[840,200],"Australia":[460,292]})[c.en]:null;
-    if(def){mx=def[0];my=def[1];}
-  }
+  else if(t.geoLat&&t.geoLon){mx=projX(t.geoLon);my=projY(t.geoLat);}
   const {x,y}=s2xy(mx,my);
-  const dx=x-px,dy=y-py;
-  pang=Math.atan2(dy,dx)*180/Math.PI;
+  pang=Math.atan2(y-py,x-px)*180/Math.PI;
   tx=x;ty=y;tpts=[{x:px,y:py}];
   render();
 }
@@ -1551,73 +972,96 @@ function anim(){
 function startAuto(){
   if(autoT)clearInterval(autoT);
   let ordered=chronoTrips().filter(t=>t.df||t.dt);
-  if(filterYear!=='all') ordered=ordered.filter(t=>tripYear(t)===filterYear);
-  if(!ordered.length) ordered=chronoTrips();
+  if(filterYear!=='all')ordered=ordered.filter(t=>tripYear(t)===filterYear);
+  if(!ordered.length)ordered=chronoTrips();
   if(!ordered.length)return;
-
-  // 항상 서울(인천)로 초기화 후 출발
-  const _ic=s2xy(420.7,193.6);
-  px=_ic.x;py=_ic.y;tpts=[];
-
+  // 서울에서 시작
+  const ic=s2xy(SEOUL_X,SEOUL_Y);
+  px=ic.x;py=ic.y;tpts=[];
   autoI=0;
   const nx=()=>{
-    if(!ordered.length)return;
-    // 마지막 도시에서 다시 반복할 때 서울로 리셋
-    if(autoI>0 && autoI%ordered.length===0){
-      const _ic2=s2xy(420.7,193.6);
-      px=_ic2.x;py=_ic2.y;tpts=[];
-      setTimeout(()=>{flyTo(ordered[0]._i);autoI=1;},600);
-      return;
+    if(autoI>0&&autoI%ordered.length===0){
+      const ic2=s2xy(SEOUL_X,SEOUL_Y);px=ic2.x;py=ic2.y;tpts=[];
+      setTimeout(()=>{flyTo(ordered[0]._i);autoI=1;},600);return;
     }
-    flyTo(ordered[autoI%ordered.length]._i);
-    autoI++;
+    flyTo(ordered[autoI%ordered.length]._i);autoI++;
   };
-  nx();
-  autoT=setInterval(nx,3000);
+  nx();autoT=setInterval(nx,3000);
 }
 
-function setSort(m){
-  // Sort mode only affects display label, timeline is always chrono
-  sortM=m;
-  document.getElementById('sdBtn').classList.toggle('on',m==='d');
-  document.getElementById('srBtn').classList.toggle('on',m==='r');
-  renderList();
+// ── 나라 자동완성 ──
+function onContChange(){selCntry=null;document.getElementById('cntryIn').value='';document.getElementById('cntryClear').style.display='none';document.getElementById('cntryDrop').style.display='none';clearCity();}
+function filtC(){const cont=document.getElementById('contSel').value;const q=document.getElementById('cntryIn').value.trim().toLowerCase();return COUNTRIES.filter(c=>{if(cont&&c.continent!==cont)return false;if(!q)return true;return c.name.includes(q)||c.en.toLowerCase().includes(q);});}
+function onCntryInput(){
+  const q=document.getElementById('cntryIn').value.trim();
+  document.getElementById('cntryClear').style.display=q?'block':'none';
+  const drop=document.getElementById('cntryDrop');
+  const list=filtC().slice(0,80);
+  if(!list.length){drop.innerHTML='<div class="ac-no">검색 결과 없음</div>';drop.style.display='block';return;}
+  drop.innerHTML=list.map((c,i)=>`<div class="ac-item" data-i="${i}" onmousedown="pickCntry('${c.name.replace(/'/g,"\'")}')"><span style="font-size:16px">${c.flag}</span><div><div class="ac-main">${c.name}</div><div class="ac-sub">${c.continent} · ${c.region}</div></div></div>`).join('');
+  drop.style.display='block';cntryFI=-1;
+}
+function pickCntry(name){
+  const c=COUNTRIES.find(x=>x.name===name);if(!c)return;
+  selCntry=c;document.getElementById('cntryIn').value=c.flag+' '+c.name;
+  document.getElementById('cntryClear').style.display='block';document.getElementById('cntryDrop').style.display='none';
+  if(!document.getElementById('cityIn').value&&c.cities.length){document.getElementById('cityIn').value=c.cities[0];selCity=c.cities[0];document.getElementById('cityClear').style.display='block';}
+}
+function clearCntry(){selCntry=null;document.getElementById('cntryIn').value='';document.getElementById('cntryClear').style.display='none';document.getElementById('cntryDrop').style.display='none';clearCity();}
+function onCntryKey(e){
+  const drop=document.getElementById('cntryDrop');const items=[...drop.querySelectorAll('.ac-item')];if(!items.length)return;
+  if(e.key==='ArrowDown'){e.preventDefault();cntryFI=Math.min(cntryFI+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('foc',i===cntryFI));}
+  else if(e.key==='ArrowUp'){e.preventDefault();cntryFI=Math.max(cntryFI-1,0);items.forEach((el,i)=>el.classList.toggle('foc',i===cntryFI));}
+  else if(e.key==='Enter'&&cntryFI>=0)items[cntryFI].onmousedown();
+  else if(e.key==='Escape')drop.style.display='none';
 }
 
-/* ── Map hover ── */
-document.querySelectorAll('.country').forEach(p=>{
-  p.addEventListener('mouseenter',()=>{mttEl.style.display='block';mttEl.textContent=p.dataset.name;});
-  p.addEventListener('mousemove',e=>{
-    const r=mwEl.getBoundingClientRect();
-    let lx=e.clientX-r.left+14,ly=e.clientY-r.top-12;
-    if(lx+150>mW)lx-=165;
-    mttEl.style.left=lx+'px';mttEl.style.top=ly+'px';
-  });
-  p.addEventListener('mouseleave',()=>{mttEl.style.display='none';});
-  p.addEventListener('click',()=>{
-    const c=BY_EN[p.dataset.name];
-    if(c){
-      selCntry=c;
-      document.getElementById('cntryIn').value=c.flag+' '+c.name;
-      document.getElementById('cntryClear').style.display='block';
-      if(c.cities.length&&!document.getElementById('cityIn').value){
-        document.getElementById('cityIn').value=c.cities[0];
-        selCity=c.cities[0];
-        document.getElementById('cityClear').style.display='block';
-      }
-      document.querySelector('.form-box').scrollIntoView({behavior:'smooth',block:'nearest'});
-    }
-  });
-});
+// ── 도시 자동완성 (Nominatim) ──
+function onCityFocus(){if(selCntry||document.getElementById('cityIn').value)showCityDrop();}
+function onCityInput(){const q=document.getElementById('cityIn').value.trim();document.getElementById('cityClear').style.display=q?'block':'none';selCity=q;showCityDrop();}
+function showCityDrop(){
+  const q=document.getElementById('cityIn').value.trim();const ql=q.toLowerCase();const drop=document.getElementById('cityDrop');
+  let cities=selCntry?[...selCntry.cities]:[];
+  Object.entries(AIRPORTS).forEach(([k,v])=>{if(selCntry&&v.country!==selCntry.en)return;if(!cities.includes(k))cities.push(k);});
+  if(q)cities=cities.filter(c=>c.toLowerCase().includes(ql));
+  cities=cities.slice(0,30);
+  function renderDrop(extra=[]){
+    const seen=new Set();
+    const all=[...cities.map(c=>({name:c,sub:AIRPORTS[c]?'✈ '+AIRPORTS[c].airport:'',src:'local',lat:'',lon:''})),...extra].filter(x=>{if(seen.has(x.name))return false;seen.add(x.name);return true;}).slice(0,40);
+    if(!all.length){drop.style.display='none';return;}
+    drop.innerHTML=all.map((c,i)=>`<div class="ac-item" data-i="${i}" onmousedown="pickCity('${c.name.replace(/'/g,"\'")}','${c.lat||''}','${c.lon||''}')"><span style="font-size:14px">${c.src==='geo'?'🔍':'🏙️'}</span><div><div class="ac-main">${c.name}</div>${c.sub?`<div class="ac-sub">${c.sub}</div>`:''}</div></div>`).join('');
+    drop.style.display='block';cityFI=-1;
+  }
+  renderDrop();
+  if(_citySearchTimer)clearTimeout(_citySearchTimer);
+  if(q.length<2)return;
+  _citySearchTimer=setTimeout(async()=>{
+    try{
+      const cc=selCntry&&_ISO[selCntry.en]?`&countrycodes=${_ISO[selCntry.en]}`:'';
+      const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=8&featuretype=city,town&accept-language=ko${cc}`,{headers:{'User-Agent':'TravelTracker/1.0'}});
+      const data=await res.json();
+      renderDrop(data.map(d=>({name:d.display_name.split(',')[0].trim(),sub:d.display_name.split(',').slice(1,3).join(',').trim(),lat:d.lat,lon:d.lon,src:'geo'})).filter(d=>d.name));
+    }catch(e){}
+  },450);
+}
+function pickCity(name,lat,lon){selCity=name;window._pickedLat=lat?parseFloat(lat):null;window._pickedLon=lon?parseFloat(lon):null;document.getElementById('cityIn').value=name;document.getElementById('cityClear').style.display='block';document.getElementById('cityDrop').style.display='none';}
+function clearCity(){selCity='';document.getElementById('cityIn').value='';document.getElementById('cityClear').style.display='none';document.getElementById('cityDrop').style.display='none';}
+function onCityKey(e){
+  const drop=document.getElementById('cityDrop');const items=[...drop.querySelectorAll('.ac-item')];if(!items.length)return;
+  if(e.key==='ArrowDown'){e.preventDefault();cityFI=Math.min(cityFI+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('foc',i===cityFI));}
+  else if(e.key==='ArrowUp'){e.preventDefault();cityFI=Math.max(cityFI-1,0);items.forEach((el,i)=>el.classList.toggle('foc',i===cityFI));}
+  else if(e.key==='Enter'){if(cityFI>=0)items[cityFI].onmousedown();else if(document.getElementById('cityIn').value)addTrip();}
+  else if(e.key==='Escape')drop.style.display='none';
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')){document.getElementById('cntryDrop').style.display='none';document.getElementById('cityDrop').style.display='none';}});
 
-/* ── Add ── */
+// ── Add / Edit / Delete ──
 async function addTrip(){
   const cntryTxt=document.getElementById('cntryIn').value.trim();
   const city=document.getElementById('cityIn').value.trim()||selCity;
   const memo=document.getElementById('memoIn').value.trim();
   const cost=document.getElementById('costIn')?.value.trim()||'';
   const currency=document.getElementById('currIn')?.value||'KRW';
-  // 계절 자동 태깅
   const _df=document.getElementById('df').value;
   const _mon=_df?new Date(_df).getMonth()+1:0;
   const season=_mon?(_mon>=3&&_mon<=5?'🌸봄':_mon>=6&&_mon<=8?'☀️여름':_mon>=9&&_mon<=11?'🍂가을':'❄️겨울'):'';
@@ -1627,704 +1071,401 @@ async function addTrip(){
   if(!city){document.getElementById('cityIn').focus();toast('🏙️ 도시를 입력해주세요');return;}
   const c=selCntry||COUNTRIES.find(x=>cntryTxt.includes(x.name)||cntryTxt.includes(x.en));
   const fmtD=d=>d?d.replace(/-/g,'.'):null;
-  const entry={
-    cntry:c?c.name:cntryTxt.replace(/^\S+\s/,''),cntryEn:c?c.en:'',
-    flag:c?c.flag:'🌍',region:c?c.region:'',continent:c?c.continent:'',
-    city,memo,cost:cost?Number(cost):null,currency,season,df:fmtD(df),dt:fmtD(dt),createdAt:Date.now(),
-    geoLat:window._pickedLat||null,geoLon:window._pickedLon||null
-  };
-  const btn=document.querySelector('.btn-add');
-  if(btn){btn.disabled=true;btn.textContent='저장중...';}
-  const loader=document.getElementById('fbLoader');
-  if(loader)loader.style.display='block';
+  const entry={cntry:c?c.name:cntryTxt.replace(/^\S+\s/,''),cntryEn:c?c.en:'',flag:c?c.flag:'🌍',region:c?c.region:'',continent:c?c.continent:'',city,memo,cost:cost?Number(cost):null,currency,season,df:fmtD(df),dt:fmtD(dt),createdAt:Date.now(),geoLat:window._pickedLat||null,geoLon:window._pickedLon||null};
+  const btn=document.querySelector('.btn-add');if(btn){btn.disabled=true;btn.textContent='저장중...';}
+  const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
   try{
-    if(window._fbSave){
-      await window._fbSave(entry);
-      // onSnapshot이 자동으로 render()를 호출하지만, 즉각 반응을 위해 낙관적 업데이트
-      if(!trips.find(t=>t._fbId===entry._fbId)){
-        trips.push(entry);
-        window.trips=trips;
-        render();
-      }
-    } else{trips.push(entry);window.trips=trips;render();}
+    if(window._fbSave){await window._fbSave(entry);if(!trips.find(t=>t._fbId===entry._fbId)){trips.push(entry);window.trips=trips;render();}}
+    else{trips.push(entry);window.trips=trips;render();}
   }catch(e){toast('저장 실패: '+e.message);if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';return;}
-  if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}
-  if(loader)loader.style.display='none';
-  ['cityIn','memoIn'].forEach(id=>{
-    document.getElementById(id).value='';
-    const cl=document.getElementById(id.replace('In','Clear'));
-    if(cl)cl.style.display='none';
-  });
+  if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';
+  ['cityIn','memoIn'].forEach(id=>{document.getElementById(id).value='';const cl=document.getElementById(id.replace('In','Clear'));if(cl)cl.style.display='none';});
   const costEl=document.getElementById('costIn');if(costEl)costEl.value='';
-  selCity='';
+  selCity='';window._pickedLat=null;window._pickedLon=null;
   setTimeout(()=>{const ni=trips.length-1;if(ni>=0)flyTo(ni);},500);
   setTimeout(()=>startAuto(),4500);
-  toast(`${c?.flag||'✈️'} ${city} 여행지 추가 완료!`);
+  toast(`${c?.flag||'✈️'} ${city} 추가 완료!`);
 }
 
 async function del(i){
   const t=trips[i];if(!t)return;
-  const loader=document.getElementById('fbLoader');
-  if(loader)loader.style.display='block';
-  try{
-    if(window._fbDel&&t._fbId)await window._fbDel(t._fbId);
-    else{trips.splice(i,1);if(curIdx>=trips.length)curIdx=trips.length-1;render();if(trips.length)startAuto();}
-  }catch(e){toast('삭제 실패: '+e.message);}
+  const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
+  try{if(window._fbDel&&t._fbId)await window._fbDel(t._fbId);else{trips.splice(i,1);window.trips=trips;if(curIdx>=trips.length)curIdx=trips.length-1;render();if(trips.length)startAuto();}}
+  catch(e){toast('삭제 실패: '+e.message);}
   finally{if(loader)loader.style.display='none';}
 }
 async function clearAll(){
-  if(!trips.length)return;
-  if(!confirm('모든 여행 기록을 삭제하시겠어요?'))return;
-  const loader=document.getElementById('fbLoader');
-  if(loader)loader.style.display='block';
-  try{
-    if(window._fbClear)await window._fbClear(trips);
-    else{trips=[];curIdx=-1;render();}
-  }catch(e){toast('삭제 실패: '+e.message);}
-  finally{if(loader)loader.style.display='none';}
+  if(!trips.length)return;if(!confirm('모든 여행 기록을 삭제하시겠어요?'))return;
+  const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
+  try{if(window._fbClear)await window._fbClear(trips);else{trips=[];window.trips=[];curIdx=-1;render();}}
+  catch(e){toast('삭제 실패: '+e.message);}finally{if(loader)loader.style.display='none';}
 }
+function setSort(m){sortM=m;document.getElementById('sdBtn').classList.toggle('on',m==='d');document.getElementById('srBtn').classList.toggle('on',m==='r');renderList();}
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400);}
 
-document.getElementById('cntryIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('cityIn').focus();});
-
-window.addEventListener('resize',()=>{
-  gms();
-  if(curIdx>=0&&trips[curIdx]){const ap=AIRPORTS[trips[curIdx].city];if(ap){const{x,y}=s2xy(ap.x,ap.y);px=x;py=y;tx=x;ty=y;}}
-});
-
-const td=new Date().toISOString().split('T')[0];
-document.getElementById('df').value=td;document.getElementById('dt').value=td;
-
-// 로그인 여부와 무관하게 앱 부팅 (Firebase 연동 시 onSnapshot이 데이터 동기화)
-setTimeout(()=>{ if(!window._appReady) _doBootApp(); }, 900);
-
-
-/* ── Password check ── */
-const _PW="1234"; // 비밀번호 변경 시 이 값 수정
-function checkPw(){
-  const v=document.getElementById('lockPw').value;
-  if(v===_PW){
-    document.getElementById('lockScreen').style.display='none';
-    _doBootApp();
-  }else{
-    document.getElementById('lockErr').textContent='비밀번호가 틀렸습니다 🔒';
-    document.getElementById('lockPw').value='';
-    document.getElementById('lockPw').focus();
-  }
-}
-
-/* Google Auth 콜백으로도 bootApp 실행됨 */
-window._bootApp=function(){_doBootApp();};
-
-/* 사용자 UI 업데이트 */
-window._updateUserUI=function(user){
-  const ui=document.getElementById('userInfo');
-  const av=document.getElementById('userAvatar');
-  const un=document.getElementById('userName');
-  if(ui&&user){
-    if(av)av.src=user.photoURL||'';
-    if(un)un.textContent=user.displayName||user.email||'사용자';
-    ui.style.display='flex';
-  }
-};
-
-function _doBootApp(){
-  if(window._appReady)return;
-  window._appReady=true;
-  window._render=render;
-  trips=window._fbData||[];
-  window.trips=trips;
-  gms();render();anim();
-  // 항상 서울(인천)에서 출발
-const _incheon=s2xy(420.7,193.6);
-px=_incheon.x;py=_incheon.y;tx=_incheon.x;ty=_incheon.y;
-if(trips.length)setTimeout(startAuto,400);
-}
-
-/* ── Detail / edit modal ── */
+// ── Modal ──
 let _editIdx=null;
 function openModal(i){
-  _editIdx=i;
-  const t=trips[i];
-  if(!t)return;
+  _editIdx=i;const t=trips[i];if(!t)return;
   const flag=flagImg(t.flag||'🌍',22);
   const stars=t.stars||0;
   const starHtml=[1,2,3,4,5].map(n=>`<span class="star" onclick="setStar(${n})" id="star${n}">${n<=stars?'⭐':'☆'}</span>`).join('');
-  document.getElementById('modalTitle').innerHTML=flag+' '+( t.city||t.cntry);
+  document.getElementById('modalTitle').innerHTML=flag+' '+(t.city||t.cntry);
   document.getElementById('modalContent').innerHTML=`
-    <div class="modal-row"><div class="modal-lbl">나라</div><div class="modal-val">${t.cntry||'—'}</div></div>
+    <div class="modal-row"><div class="modal-lbl">나라</div><div style="font-size:13px;font-weight:700">${t.cntry||'—'}</div></div>
     <div class="modal-row"><div class="modal-lbl">도시</div><input class="modal-inp" id="me_city" value="${t.city||''}"/></div>
     <div class="modal-row"><div class="modal-lbl">출발일</div><input class="modal-inp" id="me_df" value="${t.df||''}"/></div>
     <div class="modal-row"><div class="modal-lbl">귀국일</div><input class="modal-inp" id="me_dt" value="${t.dt||''}"/></div>
-    <div class="modal-row"><div class="modal-lbl">👥 누구와 함께</div><input class="modal-inp" id="me_memo" value="${t.memo||''}" placeholder="예: 가족여행, 친구와, 혼자"/></div>
+    <div class="modal-row"><div class="modal-lbl">👥 누구와 함께</div><input class="modal-inp" id="me_memo" value="${t.memo||''}" placeholder="가족여행, 친구와, 혼자"/></div>
     <div class="modal-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
       <div><div class="modal-lbl">💰 경비</div><input class="modal-inp" type="number" id="me_cost" value="${t.cost||''}" placeholder="0"/></div>
-      <div><div class="modal-lbl">통화</div><select class="modal-inp" id="me_curr" style="height:36px">
-        ${['KRW','USD','JPY','EUR','CNY','THB','SGD','AUD'].map(c=>`<option${t.currency===c?' selected':''}>${c}</option>`).join('')}
-      </select></div>
+      <div><div class="modal-lbl">통화</div><select class="modal-inp" id="me_curr" style="height:36px">${['KRW','USD','JPY','EUR','CNY','THB'].map(cu=>`<option${t.currency===cu?' selected':''}>${cu}</option>`).join('')}</select></div>
     </div>
     <div class="modal-row"><div class="modal-lbl">만족도</div><div class="star-row">${starHtml}</div></div>
     <div class="modal-row">
       <div class="modal-lbl">사진</div>
-      ${t.photo?`<div class="modal-img-wrap"><img src="${t.photo}" alt="여행사진"><button class="modal-img-del" onclick="removePhoto()">✕</button></div>`:''}
+      ${t.photo?`<div class="modal-img-wrap"><img src="${t.photo}" alt=""><button class="modal-img-del" onclick="removePhoto()">✕</button></div>`:''}
       <label class="photo-upload-btn">📷 사진 추가<input type="file" accept="image/*" style="display:none" onchange="uploadPhoto(this)"></label>
     </div>
-    <button class="modal-save-btn" onclick="saveModal()">💾 저장하기</button>
-  `;
+    <button class="modal-save-btn" onclick="saveModal()">💾 저장하기</button>`;
   document.getElementById('modalBg').classList.add('show');
 }
-function closeModal(){document.getElementById('modalBg').classList.remove('show');_editIdx=null;}
-function setStar(n){
-  [1,2,3,4,5].forEach(i=>document.getElementById('star'+i).textContent=i<=n?'⭐':'☆');
-  document.getElementById('star'+n).dataset.val=n;
-  window._tmpStars=n;
-}
-function removePhoto(){window._tmpPhoto='';document.querySelector('.modal-img-wrap')?document.querySelector('.modal-img-wrap').remove():null;}
-function uploadPhoto(inp){
-  if(!inp.files[0])return;
-  const r=new FileReader();
-  r.onload=e=>{
-    window._tmpPhoto=e.target.result;
-    let wrap=document.querySelector('.modal-img-wrap');
-    const label=document.querySelector('.photo-upload-btn');
-    if(!wrap){wrap=document.createElement('div');wrap.className='modal-img-wrap';label.before(wrap);}
-    wrap.innerHTML=`<img src="${e.target.result}" alt="여행사진"><button class="modal-img-del" onclick="removePhoto()">✕</button>`;
-  };
-  r.readAsDataURL(inp.files[0]);
-}
+function closeModal(){document.getElementById('modalBg').classList.remove('show');_editIdx=null;window._tmpStars=undefined;window._tmpPhoto=undefined;}
+function setStar(n){[1,2,3,4,5].forEach(i=>document.getElementById('star'+i).textContent=i<=n?'⭐':'☆');window._tmpStars=n;}
+function removePhoto(){window._tmpPhoto='';document.querySelector('.modal-img-wrap')?.remove();}
+function uploadPhoto(inp){if(!inp.files[0])return;const r=new FileReader();r.onload=e=>{window._tmpPhoto=e.target.result;let wrap=document.querySelector('.modal-img-wrap');const label=document.querySelector('.photo-upload-btn');if(!wrap){wrap=document.createElement('div');wrap.className='modal-img-wrap';label.before(wrap);}wrap.innerHTML=`<img src="${e.target.result}" alt=""><button class="modal-img-del" onclick="removePhoto()">✕</button>`;};r.readAsDataURL(inp.files[0]);}
 async function saveModal(){
-  if(_editIdx===null)return;
-  const t=trips[_editIdx];
-  if(!t)return;
+  if(_editIdx===null)return;const t=trips[_editIdx];if(!t)return;
   t.city=document.getElementById('me_city').value.trim()||t.city;
-  t.df=document.getElementById('me_df').value.trim();
-  t.dt=document.getElementById('me_dt').value.trim();
+  t.df=document.getElementById('me_df').value.trim();t.dt=document.getElementById('me_dt').value.trim();
   t.memo=document.getElementById('me_memo').value.trim();
-  const _c=document.getElementById('me_cost')?.value;
-  t.cost=_c?Number(_c):null;
+  const _c=document.getElementById('me_cost')?.value;t.cost=_c?Number(_c):null;
   t.currency=document.getElementById('me_curr')?.value||'KRW';
   if(window._tmpStars!==undefined)t.stars=window._tmpStars;
   if(window._tmpPhoto!==undefined)t.photo=window._tmpPhoto;
   window._tmpStars=undefined;window._tmpPhoto=undefined;
-  const loader=document.getElementById('fbLoader');
-  if(loader)loader.style.display='block';
-  try{if(window._fbSave)await window._fbSave(t);}
-  catch(e){toast('저장 실패: '+e.message);}
+  const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
+  try{if(window._fbSave)await window._fbSave(t);}catch(e){toast('저장 실패: '+e.message);}
   finally{if(loader)loader.style.display='none';}
   closeModal();render();toast('✅ 수정 저장 완료!');
 }
 
-/* ── JSON export / import ── */
-function exportJSON(){
-  const data=JSON.stringify(trips,null,2);
-  const a=document.createElement('a');
-  a.href='data:application/json;charset=utf-8,'+encodeURIComponent(data);
-  a.download='travel_backup_'+new Date().toISOString().slice(0,10)+'.json';
-  a.click();
-  toast('💾 백업 파일 다운로드 완료!');
-}
-async function importJSON(inp){
-  if(!inp.files[0])return;
-  const text=await inp.files[0].text();
-  try{
-    const arr=JSON.parse(text);
-    if(!Array.isArray(arr))throw new Error('올바른 백업 파일이 아닙니다');
-    if(!confirm(`${arr.length}개 여행지를 불러올까요? 기존 데이터에 추가됩니다.`))return;
-    const loader=document.getElementById('fbLoader');
-    if(loader)loader.style.display='block';
-    for(const t of arr){delete t._fbId;if(window._fbSave)await window._fbSave(t);}
-    if(loader)loader.style.display='none';
-    toast(`✅ ${arr.length}개 여행지 불러오기 완료!`);
-  }catch(e){toast('❌ 불러오기 실패: '+e.message);}
-}
-
-</script>
-
-<!-- boss_min_ 워터마크 -->
-<div style="position:fixed;right:16px;bottom:14px;font-family:-apple-system,BlinkMacSystemFont,sans-serif;font-size:10px;font-weight:300;color:#c8c8c8;opacity:.25;letter-spacing:1.5px;z-index:9999;pointer-events:none;-webkit-user-select:none;user-select:none;">boss_min_</div>
-
-<script>
-/* ── 강화 보호 ── */
-// 우클릭 차단
-document.addEventListener("contextmenu",e=>e.preventDefault());
-// 키보드 단축키 차단 (F12, Ctrl+Shift+I/J/C/U, Ctrl+U, Ctrl+S)
-document.addEventListener("keydown",e=>{
-  const b=e.keyCode===123||
-    (e.ctrlKey&&e.shiftKey&&[73,74,67,75].includes(e.keyCode))||
-    (e.ctrlKey&&[85,83,65,80].includes(e.keyCode))||
-    e.keyCode===44; // PrintScreen
-  if(b){e.preventDefault();e.stopPropagation();}
+// ── Map tooltip ──
+document.querySelectorAll('.country').forEach(p=>{
+  p.addEventListener('mouseenter',()=>{mttEl.style.display='block';mttEl.textContent=p.dataset.name;});
+  p.addEventListener('mousemove',e=>{const r=mwEl.getBoundingClientRect();let lx=e.clientX-r.left+14,ly=e.clientY-r.top-12;if(lx+150>mW)lx-=165;mttEl.style.left=lx+'px';mttEl.style.top=ly+'px';});
+  p.addEventListener('mouseleave',()=>{mttEl.style.display='none';});
+  p.addEventListener('click',()=>{const c=BY_EN[p.dataset.name];if(c){selCntry=c;document.getElementById('cntryIn').value=c.flag+' '+c.name;document.getElementById('cntryClear').style.display='block';if(c.cities.length&&!document.getElementById('cityIn').value){document.getElementById('cityIn').value=c.cities[0];selCity=c.cities[0];document.getElementById('cityClear').style.display='block';}document.querySelector('.form-box').scrollIntoView({behavior:'smooth',block:'nearest'});}});
 });
-// 드래그 차단
-document.addEventListener("dragstart",e=>e.preventDefault());
-// 텍스트 선택 차단 (Ctrl+A)
-document.addEventListener("selectstart",e=>{if(!e.target.matches('input,textarea,select'))e.preventDefault();});
-// 개발자도구 감지 (크기 변화)
-(function(){
-  let _w=window.outerWidth-window.innerWidth,_h=window.outerHeight-window.innerHeight;
-  setInterval(()=>{
-    if(window.outerWidth-window.innerWidth>160||window.outerHeight-window.innerHeight>160){
-      if(!window._appReady)return;
-      document.body.style.filter='blur(8px)';
-      setTimeout(()=>{document.body.style.filter='';},1500);
-    }
-  },1000);
-})();
-// iframe 임베딩 차단
-if(window.top!==window.self&&window.location===window.parent.location){
-  try{window.top.location=window.location;}catch(e){}
+window.addEventListener('resize',()=>{gms();if(curIdx>=0&&trips[curIdx]){const ap=AIRPORTS[trips[curIdx].city];if(ap){const{x,y}=s2xy(ap.x,ap.y);px=x;py=y;tx=x;ty=y;}}});
+
+// ── Auth UI ──
+const _PW='1234';
+function checkPw(){const v=document.getElementById('lockPw').value;if(v===_PW){document.getElementById('lockScreen').style.display='none';_doBootApp();}else{document.getElementById('lockErr').textContent='비밀번호가 틀렸습니다 🔒';document.getElementById('lockPw').value='';document.getElementById('lockPw').focus();}}
+window._bootApp=function(){_doBootApp();};
+window._updateUserUI=function(user){const ui=document.getElementById('userInfo');const av=document.getElementById('userAvatar');const un=document.getElementById('userName');if(ui&&user){if(av)av.src=user.photoURL||'';if(un)un.textContent=user.displayName||user.email||'사용자';ui.style.display='flex';}};
+function _doBootApp(){
+  if(window._appReady)return;
+  window._appReady=true;window._render=render;
+  trips=window._fbData||[];window.trips=trips;
+  gms();render();anim();
+  if(trips.length)setTimeout(startAuto,400);
+  else{const s=s2xy(SEOUL_X,SEOUL_Y);px=s.x;py=s.y;tx=s.x;ty=s.y;}
 }
 
-/* ═══════════════════════════════════════════════════════
-   🌍 GLOBE VIEW — amCharts 5
-   ═══════════════════════════════════════════════════════ */
-// 서울(인천) 좌표 상수 — 모든 비행의 출발지
-const SEOUL_LAT=37.4602, SEOUL_LON=126.4407;
+// ── Dashboard ──
+const CONT_COLORS={'아시아':'#3a7bd5','유럽':'#e8435a','북미':'#f0a030','남미':'#30b87a','아프리카':'#9b59b6','오세아니아':'#e67e22','기타':'#7f8c8d'};
+const AP_LATLON={"도쿄":[35.7647,140.3864],"오사카":[34.4347,135.2440],"서울":[37.4602,126.4407],"베이징":[40.0799,116.6031],"상하이":[31.1443,121.8083],"홍콩":[22.308,113.918],"타이베이":[25.0797,121.2342],"방콕":[13.681,100.747],"하노이":[21.221,105.807],"다낭":[16.044,108.199],"호치민":[10.819,106.652],"발리":[-8.748,115.167],"싱가포르":[1.365,103.994],"쿠알라룸푸르":[2.746,101.707],"마닐라":[14.509,121.019],"자카르타":[-6.128,106.654],"뉴델리":[28.556,77.100],"뭄바이":[19.090,72.866],"파리":[49.010,2.548],"런던":[51.47,-0.454],"로마":[41.800,12.239],"바르셀로나":[41.297,2.083],"베를린":[52.367,13.503],"암스테르담":[52.311,4.768],"두바이":[25.253,55.366],"카이로":[30.122,31.406],"나이로비":[-1.319,36.928],"케이프타운":[-33.972,18.602],"뉴욕":[40.641,-73.778],"로스앤젤레스":[33.943,-118.408],"시드니":[-33.940,151.175],"오클랜드":[-37.008,174.785]};
+function haversine(a,b,c,d){const R=6371,dL=(c-a)*Math.PI/180,dO=(d-b)*Math.PI/180;const x=Math.sin(dL/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dO/2)**2;return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+function heatColor(v,mx){const t=Math.min(v/Math.max(mx,1),1);const lc=(c1,c2,t)=>{const h=s=>parseInt(s,16);const[r1,g1,b1]=[h(c1.slice(1,3)),h(c1.slice(3,5)),h(c1.slice(5,7))];const[r2,g2,b2]=[h(c2.slice(1,3)),h(c2.slice(3,5)),h(c2.slice(5,7))];return`rgb(${Math.round(r1+(r2-r1)*t)},${Math.round(g1+(g2-g1)*t)},${Math.round(b1+(b2-b1)*t)})`;};return t<0.33?lc('#d4e8c2','#f0c040',t/0.33):lc('#f0c040','#e8435a',(t-0.33)/0.67);}
 
-let _globeRoot=null, _globeChart=null, _globeLineSeries=null;
-let _globePlaneIdx=0, _globePlaying=false, _globeTimer=null;
-let _globeInited=false;
+function renderDashboard(){
+  if(!document.getElementById('pageDash'))return;
+  const chrono=chronoTrips();const years=[...new Set(trips.map(tripYear))].filter(y=>y!=='날짜없음').sort();
+  let dist=0;for(let i=1;i<chrono.length;i++){const a=AP_LATLON[chrono[i-1].city],b=AP_LATLON[chrono[i].city];if(a&&b)dist+=haversine(a[0],a[1],b[0],b[1]);}
+  document.getElementById('kpiDist').textContent=dist>0?Math.round(dist).toLocaleString():'—';
+  document.getElementById('kpiCnt').textContent=new Set(trips.map(t=>t.cntry)).size;
+  document.getElementById('kpiCity').textContent=new Set(trips.map(t=>t.city)).size;
+  document.getElementById('kpiYears').textContent=years.length||'—';
+  document.getElementById('kpiCont').textContent=new Set(trips.map(t=>t.continent).filter(Boolean)).size;
+  const costsByC={};trips.forEach(t=>{if(t.cost){const cu=t.currency||'KRW';costsByC[cu]=(costsByC[cu]||0)+t.cost;}});
+  const ck=Object.keys(costsByC);
+  if(!ck.length){document.getElementById('kpiCost').textContent='—';}
+  else if(ck.length===1){const cu=ck[0],v=costsByC[cu];document.getElementById('kpiCost').textContent=cu==='KRW'?Math.round(v/10000)+'만':v.toLocaleString();document.getElementById('kpiCostSub').textContent=cu;}
+  else{document.getElementById('kpiCost').textContent=ck.length+'개 통화';}
+  // Heatmap
+  const svg=document.getElementById('hmapSvg');if(!svg)return;
+  const visitMap={};trips.forEach(t=>{const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];const en=c?c.en:(t.cntryEn||t.cntry);visitMap[en]=(visitMap[en]||0)+1;});
+  const maxV=Math.max(...Object.values(visitMap),1);
+  const worldPaths=document.querySelectorAll('#mw .country');
+  let pHTML='<rect width="1000" height="500" fill="#c8e0f4"/>';
+  pHTML+=`<g stroke="rgba(58,123,213,.05)" stroke-width=".4" fill="none"><line x1="0" y1="250" x2="1000" y2="250"/></g>`;
+  worldPaths.forEach(p=>{const n=p.dataset.name;const v=visitMap[n]||0;const col=v>0?heatColor(v,maxV):'#d4e8c2';pHTML+=`<path class="hm-country" data-name="${n}" d="${p.getAttribute('d')}" fill="${col}" stroke="${v>0?'rgba(0,0,0,.2)':'#b8d4a0'}" stroke-width="${v>0?'.5':'.25'}"/>`;});
+  Object.entries(visitMap).forEach(([en,v])=>{const ll=Object.entries(AP_LATLON).find(([k])=>BY_EN[en]&&k);if(!ll)return;const c=BY_EN[en];if(!c)return;const ap=Object.entries(AP_LATLON).find(([k])=>c.cities.includes(k));if(!ap)return;const x=projX(ap[1][1]),y=projY(ap[1][0]);pHTML+=`<circle cx="${x}" cy="${y}" r="7" fill="rgba(255,255,255,.85)" stroke="rgba(0,0,0,.2)" stroke-width=".5"/><text x="${x}" y="${y+3.5}" text-anchor="middle" font-size="8" font-weight="800" fill="#2c3e50" font-family="var(--f)">${v}</text>`;});
+  svg.innerHTML=pHTML;
+  // Continent
+  const contMap={};trips.forEach(t=>{const c=t.continent||'기타';contMap[c]=(contMap[c]||0)+1;});
+  const contTotal=trips.length||1;
+  document.getElementById('contList').innerHTML=Object.entries(contMap).sort((a,b)=>b[1]-a[1]).map(([c,n])=>`<div class="cont-row"><div class="cont-dot" style="background:${CONT_COLORS[c]||'#7f8c8d'}"></div><span class="cont-name">${c}</span><div class="cont-bar-track"><div class="cont-bar-fill" style="width:${n/contTotal*100}%;background:${CONT_COLORS[c]||'#7f8c8d'}"></div></div><span class="cont-pct">${n}회</span></div>`).join('');
+  // Top cities
+  const cityMap={};trips.forEach(t=>{const k=t.city||t.cntry;if(!cityMap[k])cityMap[k]={count:0,flag:t.flag};cityMap[k].count++;});
+  document.getElementById('cityList').innerHTML=Object.entries(cityMap).sort((a,b)=>b[1].count-a[1].count).slice(0,6).map(([city,d],i)=>`<div class="city-row"><span class="city-rank">${i+1}</span><span>${flagImg(d.flag||'🌍',16)}</span><span class="city-name">${city}</span><span class="city-cnt">${d.count}회</span></div>`).join('')||'<div style="font-size:11px;color:var(--text3)">데이터 없음</div>';
+  // Trend
+  const yearMap={};trips.forEach(t=>{const y=tripYear(t);if(y!=='날짜없음')yearMap[y]=(yearMap[y]||0)+1;});
+  const ys=Object.entries(yearMap).sort((a,b)=>a[0]-b[0]);const maxYC=Math.max(...Object.values(yearMap),1);
+  document.getElementById('trendWrap').innerHTML=ys.length?ys.map(([y,n])=>`<div class="trend-col"><span class="trend-val">${n}</span><div class="trend-bar" style="height:${Math.max(n/maxYC*68,4)}px"></div><span class="trend-lbl">${y.slice(2)}</span></div>`).join(''):'<div style="font-size:11px;color:var(--text3);margin:auto">날짜 있는 여행이 없어요</div>';
+  // Cont bar
+  const ccm={};trips.forEach(t=>{const co=t.continent||'기타',cn=t.cntry;if(!ccm[co])ccm[co]=new Set();ccm[co].add(cn);});
+  const maxC=Math.max(...Object.values(ccm).map(s=>s.size),1);
+  document.getElementById('contBar').innerHTML=Object.entries(ccm).sort((a,b)=>b[1].size-a[1].size).map(([c,s])=>`<div class="bar-row"><span class="bar-lbl">${c}</span><div class="bar-track"><div class="bar-fill" style="width:${s.size/maxC*100}%;background:${CONT_COLORS[c]||'#7f8c8d'}"></div></div><span class="bar-cnt">${s.size}</span></div>`).join('')||'<div style="font-size:11px;color:var(--text3)">데이터 없음</div>';
+}
+
+// ══════════════════════════════════════════
+// 🌍 GLOBE — amCharts 5 (완전 새로 작성)
+// ══════════════════════════════════════════
+let _globeRoot=null, _globeChart=null, _globeInited=false;
+let _globePlaying=false, _globeAutoIdx=0;
+let _globeDrawTimer=null, _globeStepTimer=null;
+let _globeFromLat=SEOUL_LAT, _globeFromLon=SEOUL_LON;
+
+// 공항 lat/lon (지구본용)
+const GLOBE_LL={"서울":[37.4602,126.4407],"도쿄":[35.7647,140.3864],"오사카":[34.4347,135.2440],"삿포로":[43.0642,141.3469],"후쿠오카":[33.5902,130.4017],"나고야":[35.2550,136.9239],"베이징":[40.0799,116.6031],"상하이":[31.1443,121.8083],"홍콩":[22.308,113.918],"타이베이":[25.0797,121.2342],"마카오":[22.1987,113.5439],"광저우":[23.3924,113.2988],"청두":[30.5785,103.9473],"시안":[34.4471,108.7516],"울란바토르":[47.8431,106.7666],"방콕":[13.681,100.747],"치앙마이":[18.7668,98.9626],"푸켓":[8.1132,98.3017],"하노이":[21.2212,105.8072],"다낭":[16.044,108.199],"호치민":[10.819,106.652],"나트랑":[12.2388,109.1922],"발리":[-8.748,115.167],"자카르타":[-6.128,106.654],"싱가포르":[1.365,103.994],"쿠알라룸푸르":[2.746,101.707],"마닐라":[14.509,121.019],"세부":[10.3157,123.9950],"앙코르와트":[13.4125,103.867],"프놈펜":[11.5625,104.916],"양곤":[16.7967,96.1951],"뉴델리":[28.556,77.100],"뭄바이":[19.090,72.866],"카트만두":[27.6966,85.3591],"콜롬보":[7.1808,79.8841],"파리":[49.010,2.548],"런던":[51.47,-0.454],"로마":[41.800,12.239],"밀라노":[45.6306,8.7281],"바르셀로나":[41.297,2.083],"마드리드":[40.4936,-3.5668],"베를린":[52.367,13.503],"뮌헨":[48.3537,11.775],"암스테르담":[52.311,4.768],"프라하":[50.1008,14.260],"비엔나":[48.110,16.570],"취리히":[47.465,8.549],"부다페스트":[47.430,19.261],"아테네":[37.936,23.945],"이스탄불":[41.275,28.752],"리스본":[38.7813,-9.1359],"두브로브니크":[42.5614,18.2682],"코펜하겐":[55.618,12.656],"오슬로":[60.1939,11.1004],"스톡홀름":[59.6519,17.9186],"헬싱키":[60.3183,24.963],"모스크바":[55.9726,37.4146],"두바이":[25.253,55.366],"아부다비":[24.433,54.651],"도하":[25.2609,51.6138],"텔아비브":[32.0055,34.8854],"암만":[31.7226,35.9932],"테헤란":[35.4161,51.1522],"카이로":[30.122,31.406],"마라케시":[31.6069,-8.0363],"케이프타운":[-33.972,18.602],"요하네스버그":[-26.1392,28.246],"나이로비":[-1.319,36.928],"잔지바르":[-6.222,39.2249],"아디스아바바":[8.9779,38.7993],"뉴욕":[40.641,-73.778],"로스앤젤레스":[33.943,-118.408],"샌프란시스코":[37.621,-122.379],"라스베이거스":[36.084,-115.154],"시카고":[41.974,-87.907],"마이애미":[25.796,-80.287],"시애틀":[47.450,-122.309],"밴쿠버":[49.197,-123.182],"토론토":[43.678,-79.625],"멕시코시티":[19.436,-99.072],"칸쿤":[21.037,-86.877],"리우데자네이루":[-22.810,-43.251],"상파울루":[-23.436,-46.473],"부에노스아이레스":[-34.822,-58.536],"마추픽추":[-13.532,-71.968],"리마":[-12.022,-77.114],"산티아고":[-33.393,-70.786],"보고타":[4.702,-74.147],"하와이":[21.325,-157.925],"시드니":[-33.940,151.175],"멜버른":[-37.669,144.841],"브리즈번":[-27.394,153.122],"케언즈":[-16.886,145.755],"퍼스":[-31.940,115.967],"오클랜드":[-37.008,174.785],"트빌리시":[41.669,44.955],"알마티":[43.352,77.041],"사마르칸트":[39.701,66.984]};
+
+function _getGlobeLL(t){
+  if(t.geoLat&&t.geoLon)return[parseFloat(t.geoLat),parseFloat(t.geoLon)];
+  return GLOBE_LL[t.city]||null;
+}
 
 function initGlobe(){
-  if(_globeInited) { renderGlobePins(); return; }
+  if(_globeInited){renderGlobePins();return;}
   _globeInited=true;
-
-  // Load amCharts 5
-  const scripts=[
-    'https://cdn.amcharts.com/lib/5/index.js',
-    'https://cdn.amcharts.com/lib/5/map.js',
-    'https://cdn.amcharts.com/lib/5/geodata/worldLow.js',
-    'https://cdn.amcharts.com/lib/5/themes/Animated.js'
-  ];
+  const scripts=['https://cdn.amcharts.com/lib/5/index.js','https://cdn.amcharts.com/lib/5/map.js','https://cdn.amcharts.com/lib/5/geodata/worldLow.js','https://cdn.amcharts.com/lib/5/themes/Animated.js'];
   let loaded=0;
-  scripts.forEach(src=>{
-    const s=document.createElement('script');
-    s.src=src;
-    s.onload=()=>{ loaded++; if(loaded===scripts.length) _buildGlobe(); };
-    document.head.appendChild(s);
-  });
+  scripts.forEach(src=>{const s=document.createElement('script');s.src=src;s.onload=()=>{loaded++;if(loaded===scripts.length)_buildGlobe();};document.head.appendChild(s);});
 }
 
 function _buildGlobe(){
-  const am5=window.am5, am5map=window.am5map, am5themes_Animated=window.am5themes_Animated;
-  if(!am5||!am5map) return;
-
-  if(_globeRoot){try{_globeRoot.dispose();}catch(e){}; _globeRoot=null;}
+  const am5=window.am5,am5map=window.am5map,am5themes_Animated=window.am5themes_Animated;
+  if(!am5||!am5map)return;
+  if(_globeRoot){try{_globeRoot.dispose();}catch(e){}_globeRoot=null;}
 
   _globeRoot=am5.Root.new('globeDiv');
   _globeRoot.setThemes([am5themes_Animated.new(_globeRoot)]);
-  _globeRoot.interfaceColors.set('text', am5.color(0x2c3e50));
 
-  _globeChart=_globeRoot.container.children.push(
-    am5map.MapChart.new(_globeRoot,{
-      panX:'rotateX', panY:'rotateY',
-      projection: am5map.geoOrthographic(),
-      rotateX:-SEOUL_LON, rotateY:-SEOUL_LAT
-    })
-  );
+  _globeChart=_globeRoot.container.children.push(am5map.MapChart.new(_globeRoot,{
+    panX:'rotateX',panY:'rotateY',
+    projection:am5map.geoOrthographic(),
+    rotateX:-SEOUL_LON,rotateY:-SEOUL_LAT*0.5
+  }));
 
-  // 바다 배경
-  const bgSeries=_globeChart.series.push(am5map.MapPolygonSeries.new(_globeRoot,{}));
-  bgSeries.mapPolygons.template.setAll({fill:am5.color(0x4db8e8),strokeWidth:0});
-  bgSeries.data.push({geometry:am5map.getGeoRectangle(90,180,-90,-180)});
+  // 바다
+  const bg=_globeChart.series.push(am5map.MapPolygonSeries.new(_globeRoot,{}));
+  bg.mapPolygons.template.setAll({fill:am5.color(0x4db8e8),strokeWidth:0});
+  bg.data.push({geometry:am5map.getGeoRectangle(90,180,-90,-180)});
 
   // 육지
-  const polySeries=_globeChart.series.push(
-    am5map.MapPolygonSeries.new(_globeRoot,{geoJSON:window.am5geodata_worldLow,exclude:['AQ']})
-  );
-  polySeries.mapPolygons.template.setAll({
-    fill:am5.color(0x3ab56e), stroke:am5.color(0x2d8a55), strokeWidth:0.5,
-    tooltipText:'{name}'
-  });
-  polySeries.mapPolygons.template.states.create('hover',{fill:am5.color(0x5ac87a)});
+  const poly=_globeChart.series.push(am5map.MapPolygonSeries.new(_globeRoot,{geoJSON:window.am5geodata_worldLow,exclude:['AQ']}));
+  poly.mapPolygons.template.setAll({fill:am5.color(0x3ab56e),stroke:am5.color(0x2d8a55),strokeWidth:0.5,tooltipText:'{name}'});
+  poly.mapPolygons.template.states.create('hover',{fill:am5.color(0x5ac87a)});
 
-  // 방문 나라 하이라이트 (노란색)
-  polySeries.events.on('datavalidated',()=>{
-    const visitedEN=new Set(trips.map(t=>{
-      const c=BY_KO[t.cntry]||BY_EN[t.cntryEn]; return c?c.en:'';
-    }).filter(Boolean));
-    polySeries.mapPolygons.each(p=>{
-      const id=p.dataItem?.get('id');
-      if(id&&visitedEN.has(_ISO2to3(id))){
-        p.set('fill',am5.color(0xf0c040));
-        p.set('stroke',am5.color(0xd4a820));
-        p.set('strokeWidth',1);
-      }
-    });
-    // 대한민국(KR) 항상 파란색으로 강조 (홈)
-    polySeries.mapPolygons.each(p=>{
-      if(p.dataItem?.get('id')==='KR'){
-        p.set('fill',am5.color(0x3a7bd5));
-        p.set('stroke',am5.color(0x2d6abf));
-        p.set('strokeWidth',1.5);
-      }
+  // 방문국 + 한국 강조
+  poly.events.on('datavalidated',()=>{
+    const visited=new Set(trips.map(t=>{const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];return c?_ISO[c.en]:'';}).filter(Boolean));
+    poly.mapPolygons.each(p=>{
+      const id=(p.dataItem?.get('id')||'').toLowerCase();
+      if(id==='kr'){p.set('fill',am5.color(0x3a7bd5));p.set('stroke',am5.color(0x2d6abf));p.set('strokeWidth',2);}
+      else if(visited.has(id)){p.set('fill',am5.color(0xf0c040));p.set('stroke',am5.color(0xd4a820));p.set('strokeWidth',1);}
     });
   });
 
-  // ── 완료된 경로선 (전체) ──
-  _globeLineSeries=_globeChart.series.push(am5map.MapLineSeries.new(_globeRoot,{}));
-  _globeLineSeries.mapLines.template.setAll({
-    stroke:am5.color(0xffffff), strokeWidth:1.5,
-    strokeOpacity:0.4, strokeDasharray:[3,5]
-  });
+  // 완료 경로선
+  window._gDoneLine=_globeChart.series.push(am5map.MapLineSeries.new(_globeRoot,{}));
+  window._gDoneLine.mapLines.template.setAll({stroke:am5.color(0xffffff),strokeWidth:1.5,strokeOpacity:0.5,strokeDasharray:[4,5]});
 
-  // ── 현재 비행 중인 경로 (그려지는 선) ──
-  window._globeActiveLine=_globeChart.series.push(am5map.MapLineSeries.new(_globeRoot,{}));
-  window._globeActiveLine.mapLines.template.setAll({
-    stroke:am5.color(0xffcc00), strokeWidth:2.5,
-    strokeOpacity:0.9, strokeDasharray:[5,4]
-  });
+  // 현재 비행선 (노란색)
+  window._gCurLine=_globeChart.series.push(am5map.MapLineSeries.new(_globeRoot,{}));
+  window._gCurLine.mapLines.template.setAll({stroke:am5.color(0xffcc00),strokeWidth:2.5,strokeOpacity:1,strokeDasharray:[5,4]});
 
-  // ── 도시 핀 시리즈 ──
-  const pinSeries=_globeChart.series.push(am5map.MapPointSeries.new(_globeRoot,{}));
-  pinSeries.bullets.push((r,s,di)=>{
+  // 핀
+  const pins=_globeChart.series.push(am5map.MapPointSeries.new(_globeRoot,{}));
+  pins.bullets.push((r,s,di)=>{
     const isHome=di.dataContext?.isHome;
-    const circle=am5.Circle.new(r,{
-      radius: isHome?9:6,
-      fill: am5.color(isHome?0x3a7bd5:0xff4060),
-      stroke: am5.color(isHome?0x60a5fa:0xff8096),
-      strokeWidth:2.5,
-      tooltipText:'{title}'
-    });
-    circle.states.create('hover',{scale:1.5});
-    return am5.Bullet.new(r,{sprite:circle});
+    const c=am5.Circle.new(r,{radius:isHome?9:5,fill:am5.color(isHome?0x3a7bd5:0xff4060),stroke:am5.color(isHome?0x60a5fa:0xff8096),strokeWidth:2.5,tooltipText:'{title}'});
+    c.states.create('hover',{scale:1.5});
+    return am5.Bullet.new(r,{sprite:c});
   });
-  window._globePinSeries=pinSeries;
+  window._gPins=pins;
 
-  // ── 비행기 시리즈 ──
-  const planeSeries=_globeChart.series.push(am5map.MapPointSeries.new(_globeRoot,{}));
-  planeSeries.bullets.push(()=>{
-    // 비행기 모양 컨테이너
-    const container=am5.Container.new(_globeRoot,{
-      centerX:am5.p50, centerY:am5.p50,
-      tooltipText:'{title}'
-    });
-    // 그림자 효과
-    const shadow=am5.Circle.new(_globeRoot,{
-      radius:14, fill:am5.color(0x000000), fillOpacity:0.2,
-      dy:3, dx:3
-    });
-    container.children.push(shadow);
-    // 비행기 아이콘
-    const plane=am5.Label.new(_globeRoot,{
-      text:'✈️', fontSize:22,
-      centerX:am5.p50, centerY:am5.p50
-    });
-    container.children.push(plane);
-    window._globePlaneLabel=plane;
-    return am5.Bullet.new(_globeRoot,{sprite:container});
+  // 비행기
+  const plane=_globeChart.series.push(am5map.MapPointSeries.new(_globeRoot,{}));
+  plane.bullets.push(()=>{
+    const lbl=am5.Label.new(_globeRoot,{text:'✈️',fontSize:24,centerX:am5.p50,centerY:am5.p50});
+    return am5.Bullet.new(_globeRoot,{sprite:lbl});
   });
-  window._globePlaneSeries=planeSeries;
+  window._gPlane=plane;
 
-  // 서울에 비행기 초기 위치
-  setTimeout(()=>{
-    try{planeSeries.data.setAll([{
-      geometry:{type:'Point',coordinates:[SEOUL_LON,SEOUL_LAT]},
-      title:'🇰🇷 서울 (인천)'
-    }]);}catch(e){}
-  },400);
+  // 서울에 비행기 초기 배치
+  setTimeout(()=>{try{plane.data.setAll([{geometry:{type:'Point',coordinates:[SEOUL_LON,SEOUL_LAT]},title:'🇰🇷 서울'}]);}catch(e){}},600);
 
-  // 초기 천천히 자동 회전
-  _startGlobeIdleRotation();
-  renderGlobePins();
+  // 천천히 자동 회전
+  _startIdleRot();
+  setTimeout(renderGlobePins,800);
 }
 
-function _startGlobeIdleRotation(){
-  try{
-    if(_globeChart) _globeChart.animate({
-      key:'rotateX', from:_globeChart.get('rotateX')||(-SEOUL_LON),
-      to:(_globeChart.get('rotateX')||(-SEOUL_LON))+360,
-      duration:80000, loops:Infinity
-    });
-  }catch(e){}
+function _startIdleRot(){
+  try{if(_globeChart)_globeChart.animate({key:'rotateX',from:_globeChart.get('rotateX')||(-SEOUL_LON),to:(_globeChart.get('rotateX')||(-SEOUL_LON))+360,duration:90000,loops:Infinity});}catch(e){}
 }
-function _stopGlobeIdleRotation(){
-  try{if(_globeChart) _globeChart.animate({key:'rotateX',to:_globeChart.get('rotateX'),duration:100});}catch(e){}
-}
-
-// ISO 2자리 → EN name 역매핑 (간소)
-function _ISO2to3(iso2){
-  const m=Object.entries(_ISO).find(([k,v])=>v===iso2.toLowerCase());
-  return m?m[0]:'';
+function _stopIdleRot(){
+  try{if(_globeChart)_globeChart.animate({key:'rotateX',to:_globeChart.get('rotateX')||0,duration:50});}catch(e){}
 }
 
 function renderGlobePins(){
-  const pinSeries=window._globePinSeries;
-  const lineSeries=_globeLineSeries;
-  if(!pinSeries||!lineSeries) return;
-
-  pinSeries.data.clear();
-  lineSeries.data.clear();
-
-  // 시간순 정렬
-  const ordered=chronoTrips().filter(t=>t.df||t.dt);
-  if(!ordered.length) return;
-
-  // 각 도시 좌표 (공항 lat/lon 우선, geocoded 차선)
-  const AP_LL={
-    "도쿄":[35.7647,140.3864],"오사카":[34.4347,135.2440],"서울":[37.4602,126.4407],
-    "베이징":[40.0799,116.6031],"상하이":[31.1443,121.8083],"홍콩":[22.308,113.918],
-    "타이베이":[25.0797,121.2342],"방콕":[13.681,100.747],"하노이":[21.221,105.807],
-    "다낭":[16.044,108.199],"호치민":[10.819,106.652],"발리":[-8.748,115.167],
-    "싱가포르":[1.365,103.994],"쿠알라룸푸르":[2.746,101.707],"마닐라":[14.509,121.019],
-    "자카르타":[-6.128,106.654],"뉴델리":[28.556,77.100],"뭄바이":[19.090,72.866],
-    "카트만두":[27.697,85.359],"파리":[49.010,2.548],"런던":[51.47,-0.454],
-    "로마":[41.800,12.239],"바르셀로나":[41.297,2.083],"베를린":[52.367,13.503],
-    "암스테르담":[52.311,4.768],"프라하":[50.101,14.260],"비엔나":[48.110,16.570],
-    "취리히":[47.465,8.549],"부다페스트":[47.430,19.261],"아테네":[37.936,23.945],
-    "이스탄불":[41.275,28.752],"두바이":[25.253,55.366],"텔아비브":[32.006,34.885],
-    "카이로":[30.122,31.406],"나이로비":[-1.319,36.928],"케이프타운":[-33.972,18.602],
-    "뉴욕":[40.641,-73.778],"로스앤젤레스":[33.943,-118.408],"시카고":[41.974,-87.907],
-    "마이애미":[25.796,-80.287],"시드니":[-33.940,151.175],"멜버른":[-37.669,144.841],
-    "오클랜드":[-37.008,174.785]
-  };
-
-  function getLL(t){
-    if(t.geoLat&&t.geoLon) return [parseFloat(t.geoLat),parseFloat(t.geoLon)];
-    if(AP_LL[t.city]) return AP_LL[t.city];
-    return null;
-  }
-
-  // 서울(인천) 홈 핀
-  pinSeries.data.push({
-    geometry:{type:'Point',coordinates:[SEOUL_LON,SEOUL_LAT]},
-    title:'🇰🇷 서울 (인천) — 홈',
-    isHome:true
+  if(!window._gPins||!window._gDoneLine)return;
+  try{window._gPins.data.clear();window._gDoneLine.data.clear();window._gCurLine&&window._gCurLine.data.clear();}catch(e){}
+  // 서울 홈핀
+  try{window._gPins.data.push({geometry:{type:'Point',coordinates:[SEOUL_LON,SEOUL_LAT]},title:'🇰🇷 서울 (인천) — 홈',isHome:true});}catch(e){}
+  // 방문 핀
+  const ordered=chronoTrips();
+  ordered.forEach(t=>{
+    const ll=_getGlobeLL(t);if(!ll)return;
+    try{window._gPins.data.push({geometry:{type:'Point',coordinates:[ll[1],ll[0]]},title:`${t.flag||'🌍'} ${t.city||t.cntry}${t.df?' ('+t.df+')':''}`});}catch(e){}
   });
-
-  // 방문 도시 핀
-  ordered.forEach((t,i)=>{
-    const ll=getLL(t);
-    if(!ll) return;
-    pinSeries.data.push({
-      geometry:{type:'Point',coordinates:[ll[1],ll[0]]},
-      title:`${t.flag||'🌍'} ${t.city||t.cntry}${t.df?' ('+t.df+')':''}`,
-      idx:t._i
-    });
-  });
-
-  // 경로 라인 (서울 → 첫 도시 → ... → 마지막 도시 → 서울)
-  const allPts=[[126.4407,37.4602],...ordered.map(t=>getLL(t)).filter(Boolean).map(ll=>[ll[1],ll[0]])];
-  // 마지막에 서울 복귀선 추가
-  if(allPts.length>1) allPts.push([126.4407,37.4602]);
-
-  for(let i=1;i<allPts.length;i++){
-    lineSeries.data.push({
-      geometry:{type:'LineString',coordinates:[allPts[i-1],allPts[i]]}
-    });
-  }
-
-  document.getElementById('globeStatus').textContent=
-    `🇰🇷 서울 출발 · ${ordered.length}개 도시 · ${ordered.length+1}개 경로`;
+  // 전체 경로선 (흰색)
+  const allLL=[[SEOUL_LON,SEOUL_LAT],...ordered.map(t=>_getGlobeLL(t)).filter(Boolean).map(ll=>[ll[1],ll[0]]),[SEOUL_LON,SEOUL_LAT]];
+  for(let i=1;i<allLL.length;i++){try{window._gDoneLine.data.push({geometry:{type:'LineString',coordinates:[allLL[i-1],allLL[i]]}});}catch(e){}}
+  document.getElementById('globeStatus').textContent=`🇰🇷 서울 출발 · ${ordered.length}개 도시`;
 }
 
-let _globeAutoIdx=0;
-function globeTogglePlay(){
-  _globePlaying=!_globePlaying;
-  const ico=document.getElementById('globePlayIco');
-  const txt=document.getElementById('globePlayTxt');
-  const btn=document.getElementById('globePlayBtn');
-  if(_globePlaying){
-    if(ico)ico.textContent='⏸'; if(txt)txt.textContent='정지';
-    btn.style.background='var(--pin)';
-    _stopGlobeIdleRotation();
-    // 경로 초기화 후 서울에서 출발
-    try{if(_globeLineSeries)_globeLineSeries.data.clear();}catch(e){}
-    try{if(window._globeActiveLine)window._globeActiveLine.data.clear();}catch(e){}
-    _globeAutoIdx=0;
-    _globeFromLat=SEOUL_LAT; _globeFromLon=SEOUL_LON;
-    // 서울로 먼저 이동
-    try{
-      _globeChart.animate({key:'rotateX',to:-SEOUL_LON,duration:400});
-      _globeChart.animate({key:'rotateY',to:-SEOUL_LAT*0.5,duration:400});
-    }catch(e){}
-    const el=document.getElementById('globeStatus');
-    if(el) el.textContent='🇰🇷 서울 (인천) — 출발 준비!';
-    setTimeout(_globeFlyNext,600);
-  } else {
-    if(ico)ico.textContent='▶'; if(txt)txt.textContent='자동 비행';
-    btn.style.background='var(--accent)';
-    if(_globeTimer) clearTimeout(_globeTimer);
-    // 자동 회전 재시작
-    if(_globeChart) _globeChart.animate({key:'rotateX',from:_globeChart.get('rotateX'),to:_globeChart.get('rotateX')+360,duration:60000,loops:Infinity});
-  }
+// ── 대권항로 보간 ──
+function _gcInterp(lat1,lon1,lat2,lon2,t){
+  const R=Math.PI/180,D=180/Math.PI;
+  const φ1=lat1*R,λ1=lon1*R,φ2=lat2*R,λ2=lon2*R;
+  const d=Math.acos(Math.max(-1,Math.min(1,Math.sin(φ1)*Math.sin(φ2)+Math.cos(φ1)*Math.cos(φ2)*Math.cos(λ2-λ1))));
+  if(d<0.0001)return{lat:lat2,lon:lon2};
+  const A=Math.sin((1-t)*d)/Math.sin(d),B=Math.sin(t*d)/Math.sin(d);
+  const x=A*Math.cos(φ1)*Math.cos(λ1)+B*Math.cos(φ2)*Math.cos(λ2);
+  const y=A*Math.cos(φ1)*Math.sin(λ1)+B*Math.cos(φ2)*Math.sin(λ2);
+  const z=A*Math.sin(φ1)+B*Math.sin(φ2);
+  return{lat:Math.atan2(z,Math.sqrt(x*x+y*y))*D,lon:Math.atan2(y,x)*D};
 }
 
-function _globeFlyNext(){
-  if(!_globePlaying) return;
-  const ordered=_globeGetOrdered();
-  if(!ordered.length) return;
-
-  // 모두 돌면 서울 복귀 후 재시작
-  if(_globeAutoIdx>=ordered.length){
-    _globeGoTo(SEOUL_LAT,SEOUL_LON,'🇰🇷 서울 (인천) 복귀 중...', ()=>{
-      if(!_globePlaying) return;
-      _globeAutoIdx=0;
-      _globeFromLat=SEOUL_LAT; _globeFromLon=SEOUL_LON;
-      // 전체 경로 초기화 후 재시작
-      try{if(_globeLineSeries)_globeLineSeries.data.clear();}catch(e){}
-      setTimeout(_globeFlyNext, 600);
-    });
-    return;
-  }
-
-  const t=ordered[_globeAutoIdx];
-  const ll=_getGlobeLL(t);
-  if(!ll){_globeAutoIdx++;setTimeout(_globeFlyNext,50);return;}
-
-  const label=`✈️ ${t.flag||''} ${t.city||t.cntry}${t.df?' — '+t.df:''}`;
-  _globeGoTo(ll[0],ll[1], label, ()=>{
-    if(!_globePlaying) return;
-    _globeAutoIdx++;
-    // 도착 후 잠깐 멈춤
-    setTimeout(_globeFlyNext, 300);
-  });
-}
-
-/* TravelBoast 스타일: 점선 그리면서 비행기가 날아감 */
-let _globeFromLat=SEOUL_LAT, _globeFromLon=SEOUL_LON;
-let _globeDrawTimer=null;
-
-function _globeGoTo(lat,lon,statusMsg,onDone){
-  if(!_globeChart) return;
-
-  const fromLat=_globeFromLat, fromLon=_globeFromLon;
-  const toLat=lat, toLon=lon;
-
-  // 지구본 회전 (목적지를 중앙으로)
+// ── TravelBoast 스타일 비행: 빠르고 스무스 ──
+function _globeFly(fromLat,fromLon,toLat,toLon,label,onDone){
+  if(!_globeChart)return;
+  if(_globeDrawTimer){clearInterval(_globeDrawTimer);_globeDrawTimer=null;}
+  // 지구본을 목적지로 빠르게 회전
   try{
-    _globeChart.animate({key:'rotateX',to:-toLon,duration:600});
-    _globeChart.animate({key:'rotateY',to:-toLat*0.5,duration:600});
-  }catch(e){
-    try{_globeChart.set('rotateX',-toLon);_globeChart.set('rotateY',-toLat*0.5);}catch(e2){}
-  }
+    _globeChart.animate({key:'rotateX',to:-toLon,duration:500});
+    _globeChart.animate({key:'rotateY',to:-toLat*0.4,duration:500});
+  }catch(e){}
+  // 현재 비행선 초기화
+  try{window._gCurLine&&window._gCurLine.data.clear();}catch(e){}
 
-  // 현재 경로선 초기화
-  try{if(window._globeActiveLine) window._globeActiveLine.data.clear();}catch(e){}
-
-  // 비행 진행 애니메이션 (점선이 그려지면서 비행기 이동)
-  const STEPS=40, DURATION=700;  // TravelBoast 스타일 — 빠른 비행
+  const STEPS=50, DURATION=700; // 700ms 빠른 비행
   let step=0;
-  if(_globeDrawTimer) clearInterval(_globeDrawTimer);
-
+  const pts=[];
   _globeDrawTimer=setInterval(()=>{
     step++;
     const t=step/STEPS;
-    // 대권항로(Great Circle) 보간
     const {lat:cLat,lon:cLon}=_gcInterp(fromLat,fromLon,toLat,toLon,t);
-
-    // 비행기 위치 업데이트
-    const ps=window._globePlaneSeries;
-    if(ps){
-      try{ps.data.setAll([{
-        geometry:{type:'Point',coordinates:[cLon,cLat]},
-        title:statusMsg||''
-      }]);}catch(e){}
-    }
-
-    // 지금까지 그려진 경로선 업데이트
-    const linePts=[];
-    for(let i=0;i<=step;i++){
-      const ti=i/STEPS;
-      const {lat:ll,lon:lo}=_gcInterp(fromLat,fromLon,toLat,toLon,ti);
-      linePts.push([lo,ll]);
-    }
-    try{
-      if(window._globeActiveLine && linePts.length>1){
-        window._globeActiveLine.data.setAll([{
-          geometry:{type:'LineString',coordinates:linePts}
-        }]);
-      }
-    }catch(e){}
-
+    // 비행기 이동
+    try{window._gPlane&&window._gPlane.data.setAll([{geometry:{type:'Point',coordinates:[cLon,cLat]},title:label||''}]);}catch(e){}
+    // 노란 경로선 그리기
+    pts.push([cLon,cLat]);
+    if(pts.length>1){try{window._gCurLine&&window._gCurLine.data.setAll([{geometry:{type:'LineString',coordinates:[...pts]}}]);}catch(e){}}
+    if(label){const el=document.getElementById('globeStatus');if(el)el.textContent=label;}
     if(step>=STEPS){
-      clearInterval(_globeDrawTimer);
-      _globeDrawTimer=null;
-      _globeFromLat=toLat; _globeFromLon=toLon;
-
-      // 완료된 경로를 전체 경로선으로 이동
-      try{
-        if(_globeLineSeries){
-          const existing=_globeLineSeries.data.length||0;
-          _globeLineSeries.data.push({
-            geometry:{type:'LineString',coordinates:linePts}
-          });
-        }
-        if(window._globeActiveLine) window._globeActiveLine.data.clear();
-      }catch(e){}
-
-      if(onDone) setTimeout(onDone,150);
+      clearInterval(_globeDrawTimer);_globeDrawTimer=null;
+      _globeFromLat=toLat;_globeFromLon=toLon;
+      // 노란선 → 흰선으로 전환 (완료)
+      try{window._gCurLine&&window._gCurLine.data.clear();}catch(e){}
+      if(onDone)setTimeout(onDone,200);
     }
-  }, DURATION/STEPS);
+  },DURATION/STEPS);
+}
 
-  if(statusMsg){
-    const el=document.getElementById('globeStatus');
-    if(el) el.textContent=statusMsg;
+function _getOrdered(){
+  const o=chronoTrips().filter(t=>t.df||t.dt);
+  return o.length?o:chronoTrips();
+}
+
+function _flyNext(){
+  if(!_globePlaying)return;
+  const ordered=_getOrdered();
+  if(!ordered.length)return;
+  if(_globeAutoIdx>=ordered.length){
+    // 모두 완료 → 서울 복귀 후 재시작
+    _globeFly(_globeFromLat,_globeFromLon,SEOUL_LAT,SEOUL_LON,'🇰🇷 서울(인천) 귀환!',()=>{
+      if(!_globePlaying)return;
+      _globeAutoIdx=0;_globeFromLat=SEOUL_LAT;_globeFromLon=SEOUL_LON;
+      try{window._gDoneLine&&window._gDoneLine.data.clear();}catch(e){}
+      setTimeout(_flyNext,600);
+    });
+    return;
   }
+  const t=ordered[_globeAutoIdx];
+  const ll=_getGlobeLL(t);
+  if(!ll){_globeAutoIdx++;setTimeout(_flyNext,50);return;}
+  _globeFly(_globeFromLat,_globeFromLon,ll[0],ll[1],`✈️ ${t.flag||''} ${t.city||t.cntry}${t.df?' — '+t.df:''}`,()=>{
+    if(!_globePlaying)return;
+    _globeAutoIdx++;
+    setTimeout(_flyNext,300); // 도착 후 300ms 대기
+  });
 }
 
-/* 대권항로 보간 (구면 삼각법) */
-function _gcInterp(lat1,lon1,lat2,lon2,t){
-  const toR=Math.PI/180, toD=180/Math.PI;
-  const φ1=lat1*toR, λ1=lon1*toR, φ2=lat2*toR, λ2=lon2*toR;
-  const dλ=λ2-λ1;
-  const cosφ1=Math.cos(φ1), cosφ2=Math.cos(φ2);
-  const sinφ1=Math.sin(φ1), sinφ2=Math.sin(φ2);
-  const a=Math.sin((1-t)*Math.acos(Math.max(-1,Math.min(1,
-    sinφ1*sinφ2+cosφ1*cosφ2*Math.cos(dλ)))));
-  const b=Math.sin(t*Math.acos(Math.max(-1,Math.min(1,
-    sinφ1*sinφ2+cosφ1*cosφ2*Math.cos(dλ)))));
-  const d=sinφ1*sinφ2+cosφ1*cosφ2*Math.cos(dλ);
-  const sinD=Math.sqrt(1-d*d)||0.0001;
-  const A=a/sinD, B=b/sinD;
-  const x=A*cosφ1*Math.cos(λ1)+B*cosφ2*Math.cos(λ2);
-  const y=A*cosφ1*Math.sin(λ1)+B*cosφ2*Math.sin(λ2);
-  const z=A*sinφ1+B*sinφ2;
-  return {lat:Math.atan2(z,Math.sqrt(x*x+y*y))*toD, lon:Math.atan2(y,x)*toD};
-}
-
-function _globeGetOrdered(){
-  const ordered=chronoTrips().filter(t=>t.df||t.dt);
-  return ordered.length?ordered:chronoTrips();
-}
-
-
-function _getGlobeLL(t){
-  const AP_LL2={
-    "도쿄":[35.7647,140.3864],"오사카":[34.4347,135.2440],"서울":[37.4602,126.4407],
-    "베이징":[40.0799,116.6031],"상하이":[31.1443,121.8083],"홍콩":[22.308,113.918],
-    "타이베이":[25.0797,121.2342],"방콕":[13.681,100.747],"하노이":[21.221,105.807],
-    "다낭":[16.044,108.199],"호치민":[10.819,106.652],"발리":[-8.748,115.167],
-    "싱가포르":[1.365,103.994],"쿠알라룸푸르":[2.746,101.707],"마닐라":[14.509,121.019],
-    "자카르타":[-6.128,106.654],"뉴델리":[28.556,77.100],"뭄바이":[19.090,72.866],
-    "카트만두":[27.697,85.359],"파리":[49.010,2.548],"런던":[51.47,-0.454],
-    "로마":[41.800,12.239],"바르셀로나":[41.297,2.083],"베를린":[52.367,13.503],
-    "암스테르담":[52.311,4.768],"프라하":[50.101,14.260],"비엔나":[48.110,16.570],
-    "취리히":[47.465,8.549],"부다페스트":[47.430,19.261],"아테네":[37.936,23.945],
-    "이스탄불":[41.275,28.752],"두바이":[25.253,55.366],"텔아비브":[32.006,34.885],
-    "카이로":[30.122,31.406],"나이로비":[-1.319,36.928],"케이프타운":[-33.972,18.602],
-    "뉴욕":[40.641,-73.778],"로스앤젤레스":[33.943,-118.408],"시카고":[41.974,-87.907],
-    "마이애미":[25.796,-80.287],"시드니":[-33.940,151.175],"멜버른":[-37.669,144.841],
-    "오클랜드":[-37.008,174.785]
-  };
-  if(t.geoLat&&t.geoLon) return [parseFloat(t.geoLat),parseFloat(t.geoLon)];
-  return AP_LL2[t.city]||null;
+function globeTogglePlay(){
+  _globePlaying=!_globePlaying;
+  const btn=document.getElementById('globePlayBtn');
+  const ico=document.getElementById('globePlayIco');
+  const txt=document.getElementById('globePlayTxt');
+  if(_globePlaying){
+    btn.classList.add('playing');
+    if(ico)ico.textContent='⏸';if(txt)txt.textContent='정지';
+    _stopIdleRot();
+    try{window._gDoneLine&&window._gDoneLine.data.clear();window._gCurLine&&window._gCurLine.data.clear();}catch(e){}
+    _globeAutoIdx=0;_globeFromLat=SEOUL_LAT;_globeFromLon=SEOUL_LON;
+    // 서울로 먼저 이동 후 출발
+    try{_globeChart.animate({key:'rotateX',to:-SEOUL_LON,duration:400});_globeChart.animate({key:'rotateY',to:-SEOUL_LAT*0.4,duration:400});}catch(e){}
+    try{window._gPlane&&window._gPlane.data.setAll([{geometry:{type:'Point',coordinates:[SEOUL_LON,SEOUL_LAT]},title:'🇰🇷 서울'}]);}catch(e){}
+    document.getElementById('globeStatus').textContent='🇰🇷 서울(인천) 출발!';
+    setTimeout(_flyNext,700);
+  }else{
+    btn.classList.remove('playing');
+    if(ico)ico.textContent='▶';if(txt)txt.textContent='자동 비행';
+    if(_globeDrawTimer){clearInterval(_globeDrawTimer);_globeDrawTimer=null;}
+    _startIdleRot();
+  }
 }
 
 function globeReset(){
   _globePlaying=false;
-  const _ico=document.getElementById('globePlayIco');const _txt=document.getElementById('globePlayTxt');
-  if(_ico)_ico.textContent='▶';if(_txt)_txt.textContent='자동 비행';
-  const _pb=document.getElementById('globePlayBtn');if(_pb)_pb.style.background='var(--accent)';
-  if(_globeTimer) clearTimeout(_globeTimer);
-  if(window._globePlaneSeries) window._globePlaneSeries.data.clear();
-  if(_globeChart){
-    _globeChart.goHome();
-    _globeChart.animate({key:'rotateX',from:0,to:360,duration:60000,loops:Infinity});
-  }
-  document.getElementById('globeStatus').textContent='지구본을 드래그해서 회전하세요 ✈️';
+  if(_globeDrawTimer){clearInterval(_globeDrawTimer);_globeDrawTimer=null;}
+  const btn=document.getElementById('globePlayBtn');const ico=document.getElementById('globePlayIco');const txt=document.getElementById('globePlayTxt');
+  if(btn)btn.classList.remove('playing');if(ico)ico.textContent='▶';if(txt)txt.textContent='자동 비행';
+  _globeFromLat=SEOUL_LAT;_globeFromLon=SEOUL_LON;
+  try{window._gCurLine&&window._gCurLine.data.clear();}catch(e){}
+  try{window._gPlane&&window._gPlane.data.setAll([{geometry:{type:'Point',coordinates:[SEOUL_LON,SEOUL_LAT]},title:'🇰🇷 서울'}]);}catch(e){}
+  try{if(_globeChart){_globeChart.animate({key:'rotateX',to:-SEOUL_LON,duration:600});_globeChart.animate({key:'rotateY',to:-SEOUL_LAT*0.4,duration:600});setTimeout(_startIdleRot,800);}}catch(e){}
+  document.getElementById('globeStatus').textContent='🇰🇷 서울(인천) 대기 — ▶ 자동 비행!';
+  setTimeout(renderGlobePins,400);
 }
 
+// ── 보호 ──
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('keydown',e=>{if(e.keyCode===123||(e.ctrlKey&&e.shiftKey&&[73,74,67].includes(e.keyCode))||(e.ctrlKey&&[85,83].includes(e.keyCode)))e.preventDefault();});
+
+// ── 부팅 ──
+const td=new Date().toISOString().split('T')[0];
+document.getElementById('df').value=td;document.getElementById('dt').value=td;
+
+setTimeout(()=>{if(!window._appReady)_doBootApp();},900);
+
+document.getElementById('cntryIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('cityIn').focus();});
+
+// 워터마크
+const wm=document.createElement('div');
+wm.style.cssText='position:fixed;right:16px;bottom:14px;font-size:10px;font-weight:300;color:#c8c8c8;opacity:.25;letter-spacing:1.5px;z-index:9999;pointer-events:none;user-select:none;font-family:sans-serif';
+wm.textContent='boss_min_';document.body.appendChild(wm);
 </script>
 </body>
 </html>
