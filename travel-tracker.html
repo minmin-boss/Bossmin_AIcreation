@@ -56,36 +56,6 @@ window._googleLogin=async function(){
 };
 window._logout=async function(){if(!confirm('로그아웃 하시겠어요?'))return;await signOut(_auth);};
 const _COL='travel_trips';
-const _PLAN_COL='travel_plans';
-
-window._fbSave=async function(t){
-  if(!window._user)return;
-  if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-  t.uid=window._user.uid;
-  await setDoc(doc(_db,_COL,t._fbId),t);
-};
-window._fbDel=async function(id){await deleteDoc(doc(_db,_COL,id));};
-window._fbClear=async function(arr){await Promise.all(arr.map(t=>deleteDoc(doc(_db,_COL,t._fbId))));};
-
-// ── 플랜 CRUD ──
-window._fbSavePlan=async function(plan){
-  if(!window._user)return;
-  if(!plan.id)plan.id='plan_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-  plan.uid=window._user.uid;
-  await setDoc(doc(_db,_PLAN_COL,plan.id),plan);
-};
-window._fbDelPlan=async function(id){await deleteDoc(doc(_db,_PLAN_COL,id));};
-
-// 플랜 실시간 구독 시작
-window._startPlanListen=function(uid){
-  if(window._planUnsub){window._planUnsub();window._planUnsub=null;}
-  const q=query(collection(_db,_PLAN_COL),where('uid','==',uid),orderBy('createdAt','asc'));
-  window._planUnsub=onSnapshot(q,snap=>{
-    window._plansData=[];
-    snap.forEach(d=>window._plansData.push({id:d.id,...d.data()}));
-    if(window._appReady&&typeof renderPlanTab==='function') renderPlanTab();
-  });
-};
 </script>
 
 <style>
@@ -378,9 +348,9 @@ input,textarea,select{-webkit-user-select:text;user-select:text}
 
 <!-- Tabs -->
 <div class="page-tabs">
-  <button class="page-tab on" id="tabMap" onclick="switchTab('map')">🗺️ 지도</button>
+  <button class="page-tab on" id="tabMap" onclick="switchTab('map')">🗺️ 평면 지도</button>
   <button class="page-tab" id="tabGlobe" onclick="switchTab('globe')">🌍 지구본</button>
-  <button class="page-tab" id="tabDash" onclick="switchTab('dash')">📊 통계</button>
+  <button class="page-tab" id="tabDash" onclick="switchTab('dash')">📊 여행 통계</button>
 </div>
 
 <!-- MAP PAGE -->
