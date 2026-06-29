@@ -1072,14 +1072,38 @@ async function addTrip(){
   const c=selCntry||COUNTRIES.find(x=>cntryTxt.includes(x.name)||cntryTxt.includes(x.en));
   const fmtD=d=>d?d.replace(/-/g,'.'):null;
   const entry={cntry:c?c.name:cntryTxt.replace(/^\S+\s/,''),cntryEn:c?c.en:'',flag:c?c.flag:'🌍',region:c?c.region:'',continent:c?c.continent:'',city,memo,cost:cost?Number(cost):null,currency,season,df:fmtD(df),dt:fmtD(dt),createdAt:Date.now(),geoLat:window._pickedLat||null,geoLon:window._pickedLon||null};
-  const btn=document.querySelector('.btn-add');if(btn){btn.disabled=true;btn.textContent='저장중...';}
-  const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
+
+  // 버튼 비활성화
+  const btn=document.querySelector('.btn-add');
+  if(btn){btn.disabled=true;btn.textContent='저장중...';}
+  const loader=document.getElementById('fbLoader');
+  if(loader)loader.style.display='block';
+
+  let ok=false;
   try{
-    if(window._fbSave){await window._fbSave(entry);if(!trips.find(t=>t._fbId===entry._fbId)){trips.push(entry);window.trips=trips;render();}}
-    else{trips.push(entry);window.trips=trips;render();}
-  }catch(e){toast('저장 실패: '+e.message);if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';return;}
-  if(btn){btn.disabled=false;btn.textContent='+ 추가하기';}if(loader)loader.style.display='none';
-  // 폼 전체 초기화 (나라 포함)
+    if(window._fbSave){
+      await window._fbSave(entry);
+      // 낙관적 업데이트 (onSnapshot 오기 전 즉시 반영)
+      if(!trips.find(t=>t._fbId===entry._fbId)){
+        trips.push(entry);window.trips=trips;render();
+      }
+    }else{
+      trips.push(entry);window.trips=trips;render();
+    }
+    ok=true;
+  }catch(e){
+    toast('저장 실패: '+e.message);
+  }finally{
+    // 반드시 버튼 복구 (성공/실패 무관)
+    if(loader)loader.style.display='none';
+    // btn이 render()로 DOM 재생성됐을 수 있으므로 다시 조회
+    const btnNow=document.querySelector('.btn-add');
+    if(btnNow){btnNow.disabled=false;btnNow.textContent='+ 추가하기';}
+  }
+
+  if(!ok)return;
+
+  // 폼 전체 초기화
   ['cntryIn','cityIn','memoIn'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
     const cl=document.getElementById(id.replace('In','Clear'));if(cl)cl.style.display='none';
@@ -1088,7 +1112,8 @@ async function addTrip(){
   document.getElementById('cityDrop').style.display='none';
   const costEl=document.getElementById('costIn');if(costEl)costEl.value='';
   const contEl=document.getElementById('contSel');if(contEl)contEl.value='';
-  selCntry=null; selCity=''; window._pickedLat=null; window._pickedLon=null;
+  selCntry=null;selCity='';window._pickedLat=null;window._pickedLon=null;
+
   setTimeout(()=>{const ni=trips.length-1;if(ni>=0)flyTo(ni);},500);
   setTimeout(()=>startAuto(),4500);
   toast(`${c?.flag||'✈️'} ${city} 추가 완료!`);
