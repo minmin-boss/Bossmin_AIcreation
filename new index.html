@@ -46,23 +46,50 @@
     /* 헤더 영역 */
     .portal-header {
         background: linear-gradient(135deg, #ffe5ec 0%, #ffc2d1 100%);
-        padding: 40px 24px 32px;
+        padding: 45px 24px 35px;
         text-align: center;
         position: relative;
+        overflow: hidden;
     }
 
-    /* 헬로키티 리본 아이콘 */
-    .kitty-ribbon {
-        width: 60px;
-        height: 60px;
+    /* 배경에 흩날리는 미니 리본들 */
+    .bg-ribbons {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+    }
+    .bg-ribbons svg {
+        position: absolute;
+        fill: #ff4d79;
+        opacity: 0.35;
+        animation: floatRibbon 4s ease-in-out infinite;
+    }
+    /* 미니 리본들 위치와 크기, 애니메이션 지연 세팅 */
+    .bg-ribbons svg:nth-child(1) { top: 15%; left: 8%; width: 22px; height: 22px; animation-delay: 0s; }
+    .bg-ribbons svg:nth-child(2) { top: 20%; right: 10%; width: 26px; height: 26px; animation-delay: 0.7s; }
+    .bg-ribbons svg:nth-child(3) { bottom: 15%; left: 12%; width: 24px; height: 24px; animation-delay: 1.3s; }
+    .bg-ribbons svg:nth-child(4) { bottom: 20%; right: 15%; width: 20px; height: 20px; animation-delay: 0.3s; }
+    .bg-ribbons svg:nth-child(5) { top: 50%; left: 45%; width: 18px; height: 18px; animation-delay: 1.8s; opacity: 0.2; }
+
+    @keyframes floatRibbon {
+        0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
+        50% { transform: translateY(-5px) rotate(15deg) scale(1.1); }
+    }
+
+    /* 메인 헬로키티 리본 아이콘 */
+    .kitty-ribbon-main {
+        width: 65px;
+        height: 65px;
         margin-bottom: 12px;
         display: inline-block;
-        animation: float 3s ease-in-out infinite;
+        position: relative;
+        z-index: 2;
+        animation: mainFloat 3s ease-in-out infinite;
     }
 
-    @keyframes float {
-        0%, 100% { transform: translateY(0) rotate(-3deg); }
-        50% { transform: translateY(-6px) rotate(3deg); }
+    @keyframes mainFloat {
+        0%, 100% { transform: translateY(0) rotate(-4deg); }
+        50% { transform: translateY(-6px) rotate(4deg); }
     }
 
     .portal-title {
@@ -70,6 +97,8 @@
         font-size: 34px;
         color: #ff6584;
         letter-spacing: 1px;
+        position: relative;
+        z-index: 2;
     }
 
     /* 메뉴 그리드 */
@@ -178,19 +207,26 @@
     }
 </style>
 </head>
-<!-- body 태그에 우클릭 및 드래그 방지 스크립트 직접 연결 -->
 <body oncontextmenu="return false" onselectstart="return false" ondragstart="return false">
 
 <div class="portal-container">
-    <!-- 헤더 (꽃과 멘트 제거, 헬로키티 리본 적용) -->
+    <!-- 헤더 (키티 리본 다채롭게 추가) -->
     <div class="portal-header">
-        <div class="kitty-ribbon">
+        <!-- 배경 미니 리본 레이어 -->
+        <div class="bg-ribbons">
+            <!-- 리본 아웃라인 SVG들을 곳곳에 배치 -->
+            <svg viewBox="0 0 100 100"><path d="M 50 50 Q 20 20 25 50 Q 20 80 50 50 Z M 50 50 Q 80 20 75 50 Q 80 80 50 50 Z" /><circle cx="50" cy="50" r="10" /></svg>
+            <svg viewBox="0 0 100 100"><path d="M 50 50 Q 20 20 25 50 Q 20 80 50 50 Z M 50 50 Q 80 20 75 50 Q 80 80 50 50 Z" /><circle cx="50" cy="50" r="10" /></svg>
+            <svg viewBox="0 0 100 100"><path d="M 50 50 Q 20 20 25 50 Q 20 80 50 50 Z M 50 50 Q 80 20 75 50 Q 80 80 50 50 Z" /><circle cx="50" cy="50" r="10" /></svg>
+            <svg viewBox="0 0 100 100"><path d="M 50 50 Q 20 20 25 50 Q 20 80 50 50 Z M 50 50 Q 80 20 75 50 Q 80 80 50 50 Z" /><circle cx="50" cy="50" r="10" /></svg>
+            <svg viewBox="0 0 100 100"><path d="M 50 50 Q 20 20 25 50 Q 20 80 50 50 Z M 50 50 Q 80 20 75 50 Q 80 80 50 50 Z" /><circle cx="50" cy="50" r="10" /></svg>
+        </div>
+
+        <!-- 메인 큰 리본 -->
+        <div class="kitty-ribbon-main">
             <svg viewBox="0 0 100 100" width="100%" height="100%">
-                <!-- 왼쪽 날개 -->
                 <path d="M 50 50 Q 20 20 25 50 Q 20 80 50 50 Z" fill="#ff2a55" />
-                <!-- 오른쪽 날개 -->
                 <path d="M 50 50 Q 80 20 75 50 Q 80 80 50 50 Z" fill="#ff2a55" />
-                <!-- 가운데 매듭 -->
                 <circle cx="50" cy="50" r="12" fill="#ff2a55" />
                 <circle cx="47" cy="47" r="4" fill="#ffffff" opacity="0.6" />
             </svg>
@@ -200,48 +236,47 @@
 
     <!-- 메뉴 리스트 -->
     <div class="menu-grid">
-        <!-- 1. 휴가신청서 (왼쪽 배치) -->
+        <!-- 1. 휴가신청서 (왼쪽) -->
         <a href="휴가신청서_연동.html" class="menu-card">
             <span class="card-icon">💌</span>
             <div class="card-title">휴가신청서</div>
             <div class="card-desc">스마트하게 신청하고<br>캘린더 자동 연동까지</div>
         </a>
 
-        <!-- 2. 휴가 / 워라밸 (우측 배치) -->
+        <!-- 2. 휴가 / 워라밸 (오른쪽) -->
         <a href="dayoff_work-life_balance.html" class="menu-card">
             <span class="card-icon">🌴</span>
             <div class="card-title">휴가 / 워라밸</div>
             <div class="card-desc">나의 연차 정보 조회 및<br>워크라이프 밸런스 관리</div>
         </a>
 
-        <!-- 3. 비품 소원함 -->
+        <!-- 3. 복구된 세무업무관리 -->
+        <a href="tax_work.html" class="menu-card" style="border-color: #ffb3c6; background: #fffafd;">
+            <span class="card-icon">📊</span>
+            <div class="card-title" style="color: #d946ef;">세무업무관리</div>
+            <div class="card-desc">법인세·부가세 조정 및<br>주요 거래처 스케줄 관리</div>
+        </a>
+
+        <!-- 4. 비품 소원함 -->
         <a href="office_supplies.html" class="menu-card">
             <span class="card-icon">✏️</span>
             <div class="card-title">비품 소원함</div>
             <div class="card-desc">필요한 사무 비품 신청 및<br>실시간 처리 현황 확인</div>
         </a>
 
-        <!-- 4. 세무비서 AI -->
+        <!-- 5. 세무비서 AI -->
         <a href="taxmanager_ai.html" class="menu-card" style="border-color: #ffe066;">
             <span class="card-icon">🐥</span>
             <div class="card-title" style="color: #f59f00;">세무비서 AI</div>
             <div class="card-desc">어려운 세무·노무 규정<br>무엇이든 물어보세요!</div>
         </a>
 
-        <!-- 5. 내 여행 지도 -->
+        <!-- 6. 내 여행 지도 -->
         <a href="travel-tracker.html" class="menu-card" style="border-color: #a5d8ff;">
             <span class="card-icon">✈️</span>
             <div class="card-title" style="color: #228be6;">내 여행 지도</div>
             <div class="card-desc">떠나고 싶은 설렘 가득<br>방문 도시 지도 기록</div>
         </a>
-
-        <!-- 6. 업무 현황 (준비중) -->
-        <div class="menu-card disabled">
-            <span class="card-icon">📊</span>
-            <div class="card-title">업무 현황</div>
-            <div class="card-desc">팀 전체 업무 프로세스<br>모니터링 대시보드</div>
-            <span class="badge-ready">준비중</span>
-        </div>
     </div>
 
     <!-- 푸터 -->
@@ -253,19 +288,18 @@
 <!-- 화면 우측 하단 고정 마크 -->
 <div class="fixed-watermark">boss_min_</div>
 
-<!-- 추가적인 우클릭 및 키보드 보안 방지 스크립트 -->
 <script>
     // 마우스 우클릭 차단
     document.addEventListener('contextmenu', function(e) {
         e.preventDefault();
     });
 
-    // F12 및 주요 개발자 도구 단축키 차단 (선택 사항)
+    // F12 및 개발자 도구 단축키 차단
     document.addEventListener('keydown', function(e) {
-        if (e.keyCode == 123 || // F12
-            (e.ctrlKey && e.shiftKey && e.keyCode == 73) || // Ctrl+Shift+I
-            (e.ctrlKey && e.shiftKey && e.keyCode == 67) || // Ctrl+Shift+C
-            (e.ctrlKey && e.keyCode == 85)) { // Ctrl+U (소스 보기)
+        if (e.keyCode == 123 || 
+            (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+            (e.ctrlKey && e.shiftKey && e.keyCode == 67) || 
+            (e.ctrlKey && e.keyCode == 85)) { 
             e.preventDefault();
         }
     });
