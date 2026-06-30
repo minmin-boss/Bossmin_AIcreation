@@ -8,12 +8,13 @@
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot,query,where,orderBy}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,setPersistence,browserLocalPersistence}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 const _fc={apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",authDomain:"travel-tracker-9f0f7.firebaseapp.com",projectId:"travel-tracker-9f0f7",storageBucket:"travel-tracker-9f0f7.firebasestorage.app",messagingSenderId:"157327971618",appId:"1:157327971618:web:b5eca73698db54034b817b"};
 const _app=initializeApp(_fc);
 const _db=getFirestore(_app);
 const _auth=getAuth(_app);
 const _gp=new GoogleAuthProvider();
+try{setPersistence(_auth,browserLocalPersistence);}catch(e){console.warn('Auth persistence 설정 실패 (브라우저 제약일 수 있음):',e);}
 let _unsub=null;
 onAuthStateChanged(_auth,user=>{
 if(user){
@@ -26,8 +27,10 @@ if(!window._appReady)window._bootApp&&window._bootApp();
 window._user=null;
 const ls=document.getElementById('lockScreen');if(ls)ls.style.display='flex';
 if(_unsub){_unsub();_unsub=null;}
-window._fbData=[];trips=[];window.trips=[];
-if(window._appReady&&window._render)window._render();
+// 주의: 여기서 trips를 강제로 비우지 않습니다.
+// (로그인 세션이 일시적으로 안 풀린 것일 수도 있는데, 그때마다 화면 데이터를 지워버리면
+//  "새로고침하면 데이터가 사라진다"는 문제가 생깁니다. 로컬 캐시는 그대로 유지하고
+//  명시적으로 로그아웃 버튼을 눌렀을 때만 _logout()에서 캐시를 지웁니다.)
 }
 });
 function _startListen(uid){
@@ -57,7 +60,7 @@ if(err)err.textContent=e.code==='auth/popup-closed-by-user'?'로그인 창이 �
 if(btn){btn.disabled=false;btn.textContent='Google로 로그인';}
 }
 };
-window._logout=async function(){if(!confirm('로그아웃 하시겠어요?'))return;await signOut(_auth);};
+window._logout=async function(){if(!confirm('로그아웃 하시겠어요?\n(저장된 여행 기록은 클라우드에 남아있고, 이 기기의 임시 캐시만 정리됩니다)'))return;try{localStorage.removeItem('travel_map_trips_cache_v1');}catch(e){}await signOut(_auth);};
 window._fbSave=async function(entry){
 const ref=doc(_db,'travel_trips',entry._fbId);
 await setDoc(ref,entry,{merge:true});
@@ -780,7 +783,20 @@ const _ISO={"Japan":"jp","South Korea":"kr","China":"cn","Hong Kong":"hk","Taiwa
 const BY_EN={}, BY_KO={};
 COUNTRIES.forEach(c=>{BY_EN[c.en]=c; BY_KO[c.name]=c;});
 // ── 상태 ──
-let trips=window._fbData||[];
+// ── 로컬 캐시 (Firebase 동기화 실패/지연 대비 안전망) ──
+const _LS_KEY='travel_map_trips_cache_v1';
+function _loadLocalCache(){
+try{const raw=localStorage.getItem(_LS_KEY);if(!raw)return null;const arr=JSON.parse(raw);return Array.isArray(arr)?arr:null;}
+catch(e){return null;}
+}
+function _saveLocalCache(){
+try{localStorage.setItem(_LS_KEY,JSON.stringify(trips));}
+catch(e){
+// 용량 초과 시 사진 빼고 재시도
+try{const lite=trips.map(t=>{const c={...t};delete c.photo;return c;});localStorage.setItem(_LS_KEY,JSON.stringify(lite));}catch(e2){console.warn('로컬 캐시 저장 실패:',e2);}
+}
+}
+let trips=window._fbData||_loadLocalCache()||[];
 let sortM='d', curIdx=-1, filterYear='all';
 let selCntry=null, selCity='', cntryFI=-1, cityFI=-1;
 let px, py, tx, ty, pang=0, tpts=[], mW, mH;
@@ -821,7 +837,7 @@ if(tab==='globe')initGlobe();
 }
 // ── Render ──
 function save(){}
-function render(){renderStats();renderPins();renderList();}
+function render(){renderStats();renderPins();renderList();_saveLocalCache();}
 window._render=render;
 function renderStats(){
 const cs=new Set(trips.map(t=>t.cntry));
@@ -1149,7 +1165,7 @@ window._updateUserUI=function(user){const ui=document.getElementById('userInfo')
 function _doBootApp(){
 if(window._appReady)return;
 window._appReady=true;window._render=render;
-trips=window._fbData||[];window.trips=trips;
+trips=window._fbData||trips||[];window.trips=trips;
 gms();render();anim();
 if(trips.length)setTimeout(startAuto,400);
 else{const s=s2xy(SEOUL_X,SEOUL_Y);px=s.x;py=s.y;tx=s.x;ty=s.y;}
