@@ -176,18 +176,22 @@ select option{background:white;font-family:var(--f)}
 input:focus,select:focus{border-color:var(--accent);background:white;box-shadow:0 0 0 3px rgba(58,123,213,.1)}
 textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5}
 .btn-add{height:36px;align-self:flex-end;padding:0 22px;background:var(--accent);color:white;border:none;border-radius:8px;font-family:var(--f);font-size:12px;font-weight:800;cursor:pointer;transition:all .18s;white-space:nowrap;box-shadow:0 3px 10px rgba(58,123,213,.35)}
-.date-range-input{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1.5px solid var(--brd);border-radius:8px;height:36px;padding:0 10px;font-size:12px;color:var(--text);cursor:pointer;transition:border-color .2s}
-.date-range-input:hover{border-color:var(--accent)}
-.date-range-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:250;background:var(--surf);border:1.5px solid var(--brd);border-radius:12px;box-shadow:0 10px 30px rgba(58,123,213,.22);padding:12px;width:260px;font-family:var(--f)}
-.drp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.date-range-input{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1.5px solid var(--brd);border-radius:8px;height:36px;padding:0 4px 0 10px;font-size:12px;color:var(--text);transition:border-color .2s}
+.date-range-input:focus-within{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(58,123,213,.1)}
+.dr-text-input{flex:1;border:none;background:none;outline:none;font-family:var(--f);font-size:12px;color:var(--text);height:100%;padding:0;min-width:0}
+.dr-text-input::placeholder{color:var(--text3)}
+.dr-icon{cursor:pointer;opacity:.55;padding:0 4px;flex-shrink:0}
+.dr-icon:hover{opacity:1}
+.date-range-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:250;background:var(--surf);border:1.5px solid var(--brd);border-radius:12px;box-shadow:0 10px 30px rgba(58,123,213,.22);padding:12px;width:260px;font-family:var(--f);display:block;height:auto}
+.drp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;height:26px}
 .drp-title{font-size:13px;font-weight:800;color:var(--text)}
 .drp-nav{background:var(--bg2);border:1px solid var(--brd);border-radius:6px;width:26px;height:26px;font-size:14px;color:var(--text2);cursor:pointer;font-family:var(--f)}
 .drp-nav:hover{color:var(--accent);border-color:var(--accent)}
-.drp-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:9px;color:var(--text3);font-weight:700;margin-bottom:4px}
-.drp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.drp-day{height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;border-radius:6px;cursor:pointer;color:var(--text);position:relative;font-weight:700}
+.drp-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:9px;color:var(--text3);font-weight:700;margin-bottom:4px;height:14px;line-height:14px}
+.drp-grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:28px;align-content:start;gap:2px;height:auto}
+.drp-day{height:28px;max-height:28px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;font-size:11px;border-radius:6px;cursor:pointer;color:var(--text);position:relative;font-weight:700}
 .drp-day:hover{background:var(--acl)}
-.drp-day.empty{cursor:default;visibility:hidden}
+.drp-day.drp-empty{cursor:default;visibility:hidden}
 .drp-day.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
 .drp-day.in-range{background:var(--acl);border-radius:0}
 .drp-day.start,.drp-day.end{background:var(--accent);color:#fff}
@@ -639,9 +643,9 @@ Google로 로그인
 <div class="row-btn" id="rowBtnDates">
 <div class="fg date-range-wrap" style="position:relative">
 <label class="fl">여행 기간 (출발일 ~ 귀국일)</label>
-<div class="date-range-input" id="dateRangeBtn" onclick="toggleDateRangePicker(event)">
-<span id="dateRangeText">날짜를 선택하세요</span>
-<span style="margin-left:auto;opacity:.5">📅</span>
+<div class="date-range-input" id="dateRangeBtn">
+<input type="text" id="dateRangeText" class="dr-text-input" placeholder="YYYY.MM.DD ~ YYYY.MM.DD" autocomplete="off" onfocus="onDateRangeFocus(event)" oninput="onDateRangeTextInput()" onkeydown="onDateRangeKey(event)" onblur="onDateRangeBlur()"/>
+<span class="dr-icon" onclick="toggleDateRangePicker(event)">📅</span>
 </div>
 <input type="date" id="df" style="display:none"/>
 <input type="date" id="dt" style="display:none"/>
@@ -1051,7 +1055,7 @@ document.addEventListener('click',e=>{
 if(!e.target.closest('.ac-wrap')){document.getElementById('cntryDrop').style.display='none';document.getElementById('cityDrop').style.display='none';}
 if(!e.target.closest('.date-range-wrap')){const pop=document.getElementById('dateRangePop');if(pop)pop.style.display='none';}
 },true);
-// ── 날짜 범위 선택 캘린더 ──
+// ── 날짜 범위 선택 캘린더 (달력 클릭 + 직접 입력 둘 다 지원) ──
 let _drYear,_drMonth,_drStart=null,_drEnd=null;
 function _drPad(n){return String(n).padStart(2,'0');}
 function _drISO(y,m,d){return `${y}-${_drPad(m+1)}-${_drPad(d)}`;}
@@ -1070,6 +1074,51 @@ else{const t=new Date();_drYear=t.getFullYear();_drMonth=t.getMonth();}
 renderDRCalendar();
 }
 }
+function onDateRangeFocus(e){
+const pop=document.getElementById('dateRangePop');
+if(pop.style.display!=='block')toggleDateRangePicker(e);
+}
+function onDateRangeKey(e){
+if(e.key==='Enter'){e.preventDefault();onDateRangeBlur();document.getElementById('dateRangePop').style.display='none';}
+else if(e.key==='Escape'){document.getElementById('dateRangePop').style.display='none';}
+}
+// 타이핑 중엔 가볍게 자동으로 '.' 구분자/물결(~) 보정만 살짝 도와주고, 최종 검증은 blur/Enter 때 수행
+function onDateRangeTextInput(){/* 자유 입력 — 포맷 강제 없음, blur 시 파싱 */}
+function _drParseOneDate(s){
+s=s.trim();
+const m=s.match(/^(\d{4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})$/);
+if(!m)return null;
+const y=+m[1],mo=+m[2]-1,d=+m[3];
+const dt=new Date(y,mo,d);
+if(dt.getFullYear()!==y||dt.getMonth()!==mo||dt.getDate()!==d)return null;
+return dt;
+}
+function _drParseRangeText(str){
+if(!str||!str.trim())return null;
+const segs=str.split('~').map(s=>s.trim()).filter(Boolean);
+if(!segs.length)return null;
+const a=_drParseOneDate(segs[0]);
+if(!a)return null;
+if(segs.length===1)return{start:a,end:a};
+const b=_drParseOneDate(segs[1]);
+if(!b)return null;
+return a<=b?{start:a,end:b}:{start:b,end:a};
+}
+function onDateRangeBlur(){
+const input=document.getElementById('dateRangeText');
+const raw=input.value;
+if(!raw.trim()){if(_drStart)_drSync();return;}
+const parsed=_drParseRangeText(raw);
+if(parsed){
+_drStart=parsed.start;_drEnd=parsed.end;
+_drYear=_drStart.getFullYear();_drMonth=_drStart.getMonth();
+_drSync();
+renderDRCalendar();
+}else{
+toast('⚠️ 날짜 형식을 확인해주세요 (예: 2026.06.10 ~ 2026.06.18)');
+_drSync(); // 기존 유효 값으로 되돌림
+}
+}
 function drNav(delta){_drMonth+=delta;if(_drMonth<0){_drMonth=11;_drYear--;}if(_drMonth>11){_drMonth=0;_drYear++;}renderDRCalendar();}
 function renderDRCalendar(){
 const title=document.getElementById('drpTitle');
@@ -1080,7 +1129,7 @@ const firstDow=new Date(_drYear,_drMonth,1).getDay();
 const daysInMonth=new Date(_drYear,_drMonth+1,0).getDate();
 const today=new Date();
 let html='';
-for(let i=0;i<firstDow;i++)html+='<span class="drp-day empty"></span>';
+for(let i=0;i<firstDow;i++)html+='<span class="drp-day drp-empty"></span>';
 for(let d=1;d<=daysInMonth;d++){
 const cur=new Date(_drYear,_drMonth,d);
 let cls='drp-day';
@@ -1108,7 +1157,7 @@ const txt=document.getElementById('dateRangeText');
 if(_drStart){
 dfEl.value=_drISO(_drStart.getFullYear(),_drStart.getMonth(),_drStart.getDate());
 dtEl.value=_drEnd?_drISO(_drEnd.getFullYear(),_drEnd.getMonth(),_drEnd.getDate()):dfEl.value;
-txt.textContent=_drEnd?`${_drFmt(dfEl.value)} ~ ${_drFmt(dtEl.value)}`:`${_drFmt(dfEl.value)} ~ (귀국일 선택)`;
+txt.value=_drEnd?`${_drFmt(dfEl.value)} ~ ${_drFmt(dtEl.value)}`:`${_drFmt(dfEl.value)} ~ `;
 }
 }
 function drToday(){const t=new Date();_drStart=t;_drEnd=t;_drYear=t.getFullYear();_drMonth=t.getMonth();_drSync();renderDRCalendar();}
@@ -1556,6 +1605,7 @@ const {lat,lon}=_gcInterp(_glFlightState.fromLat,_glFlightState.fromLon,_glFligh
 const altBoost=1+Math.sin(Math.PI*et)*0.22;
 const curPos=_latLonToVec3(lat,lon,GLOBE_RADIUS*altBoost);
 _glFlightState.curPos=curPos;
+_glFlightState.curT=et;
 // 카메라가 비행기를 계속 따라가도록 부드럽게 추적 (시네마틱 이즈) + 비행 중간엔 살짝 위에서 내려다보는 틸트
 const liftFactor=Math.sin(Math.PI*et); // 0(출발/도착) → 1(중간)
 const baseDir=curPos.clone().normalize();
@@ -1598,9 +1648,24 @@ const container=document.getElementById('globeDiv');
 const w=container.clientWidth,h=container.clientHeight;
 const v=_glFlightState.curPos.clone().project(_glCamera);
 if(v.z>1){_glPlaneEl.style.display='none';return;}
+const x=(v.x*0.5+0.5)*w, y=(-v.y*0.5+0.5)*h;
 _glPlaneEl.style.display='block';
-_glPlaneEl.style.left=((v.x*0.5+0.5)*w)+'px';
-_glPlaneEl.style.top=((-v.y*0.5+0.5)*h)+'px';
+_glPlaneEl.style.left=x+'px';
+_glPlaneEl.style.top=y+'px';
+// 진행 방향(살짝 앞선 지점)을 화면에 투영해 비행 방향 각도를 구하고, 비행기 머리가 그쪽을 향하도록 회전
+const fs=_glFlightState;
+const lookT=Math.min(fs.curT+0.02,1);
+const {lat:nLat,lon:nLon}=_gcInterp(fs.fromLat,fs.fromLon,fs.toLat,fs.toLon,lookT);
+const nAlt=1+Math.sin(Math.PI*lookT)*0.22;
+const nextPos=_latLonToVec3(nLat,nLon,GLOBE_RADIUS*nAlt);
+const nv=nextPos.project(_glCamera);
+const nx=(nv.x*0.5+0.5)*w, ny=(-nv.y*0.5+0.5)*h;
+const dx=nx-x, dy=ny-y;
+if(Math.hypot(dx,dy)>0.4){
+const angleDeg=Math.atan2(dy,dx)*180/Math.PI;
+// ✈️ 이모지는 기본적으로 오른쪽 위(약 45°)를 향하고 있어 그만큼 보정
+_glPlaneEl.style.transform=`translate(-50%,-50%) rotate(${angleDeg+45}deg)`;
+}
 }
 // ── 비행 한 구간 시작 ──
 function _globeFlyTo(fromLat,fromLon,toLat,toLon,label,onDone){
