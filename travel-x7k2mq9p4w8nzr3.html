@@ -39,6 +39,12 @@ snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
 if(window._appReady&&window._render&&!window._saving){
 trips=window._fbData;window.trips=trips;window._render();
 }
+window._fbReady=true;
+},err=>{
+console.error('Firestore 읽기 실패:',err);
+window._fbError=err;
+if(typeof window.toast==='function')window.toast('⚠️ 데이터 불러오기 실패: '+(err.code||err.message));
+setTimeout(()=>alert('⚠️ Firestore 데이터를 불러오지 못했습니다.\n오류: '+(err.code||err.message)+'\n\nFirebase 콘솔에서 보안 규칙(Rules) 또는 인덱스 설정을 확인해주세요.\n(콘솔에 인덱스 생성 링크가 떴다면 그 링크를 클릭하면 자동 생성됩니다)'),300);
 });
 }
 window._googleLogin=async function(){
@@ -130,6 +136,9 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .gl-pin-circle{width:26px;height:26px;border-radius:50%;background:#fff;border:2.5px solid var(--pin);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.4)}
 .gl-pin-home .gl-pin-circle{border-color:var(--accent);width:32px;height:32px}
 .gl-plane{position:absolute;transform:translate(-50%,-50%);font-size:22px;pointer-events:none;z-index:6;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}
+@keyframes glPinPulse{0%{transform:translate(-50%,-50%) scale(1)}30%{transform:translate(-50%,-50%) scale(1.7)}55%{transform:translate(-50%,-50%) scale(0.9)}75%{transform:translate(-50%,-50%) scale(1.25)}100%{transform:translate(-50%,-50%) scale(1)}}
+.gl-pin-pulse{animation:glPinPulse .7s cubic-bezier(.34,1.56,.64,1) both;z-index:8}
+.gl-pin-pulse .gl-pin-circle{box-shadow:0 0 0 6px rgba(255,204,51,.45),0 2px 8px rgba(0,0,0,.4)}
 .globe-ctrl{display:flex;align-items:center;gap:10px;padding:0 4px;flex-wrap:wrap;margin-bottom:1.1rem}
 #globeStatus{font-size:12px;color:var(--text2);font-weight:700}
 .globe-play-btn{display:flex;align-items:center;gap:6px;background:var(--accent);color:white;border:none;border-radius:20px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s;box-shadow:0 3px 10px rgba(58,123,213,.35)}
@@ -269,15 +278,37 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .hmap-lbl{font-size:9px;color:var(--text2)}
 #toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(120px);background:var(--accent);color:white;font-family:var(--f);font-size:12px;font-weight:800;padding:10px 20px;border-radius:9px;z-index:300;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;box-shadow:0 4px 16px rgba(58,123,213,.4)}
 #toast.show{transform:translateX(-50%) translateY(0)}
-body{-webkit-user-select:none;user-select:none}
+body{-webkit-user-select:none;user-select:none;overflow-x:hidden}
+html{overflow-x:hidden}
 input,textarea,select{-webkit-user-select:text;user-select:text}
 @media(max-width:680px){
+.wrap{padding:.8rem .7rem}
+header{flex-wrap:wrap;gap:.6rem}
 .row3{grid-template-columns:1fr 1fr}
 .row-btn{grid-template-columns:1fr 1fr}
 .btn-add{grid-column:1/-1}
-.stats{gap:.6rem}
-h1{font-size:18px}
-.stat{padding:6px 12px}
+.stats{gap:.5rem;flex-wrap:wrap}
+.hl h1{font-size:17px}
+.hl span{font-size:22px!important}
+.stat{padding:5px 10px}
+.sv{font-size:18px}
+.page-tab{font-size:11px;padding:6px 2px}
+#globeDiv{height:340px}
+.globe-ctrl{gap:6px}
+#globeStatus{font-size:11px}
+.globe-play-btn,.globe-reset-btn{padding:7px 12px;font-size:11px}
+.dash-row{grid-template-columns:1fr}
+.kpi-grid{grid-template-columns:repeat(2,1fr)}
+.kpi-val{font-size:20px}
+.tg{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.modal-box{padding:1.1rem;max-height:85vh}
+.gl-pin-circle{width:22px;height:22px}
+.gl-pin-home .gl-pin-circle{width:28px;height:28px}
+}
+@media(max-width:420px){
+#globeDiv{height:300px}
+.kpi-grid{grid-template-columns:1fr 1fr}
+.tg{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
@@ -881,57 +912,15 @@ html+=`</div></div>`;
 });
 tl.innerHTML=html;
 }
-// ── 평면지도 비행기 ──
+// ── 평면지도: 비행 애니메이션 없이 핀만 표시 ──
 function flyTo(i){
 if(!trips[i])return;
-curIdx=i;const t=trips[i];
-const ap=AIRPORTS[t.city];
-let mx=SEOUL_X,my=SEOUL_Y;
-if(ap){mx=ap.x;my=ap.y;}
-else if(t.geoLat&&t.geoLon){mx=projX(t.geoLon);my=projY(t.geoLat);}
-const {x,y}=s2xy(mx,my);
-pang=Math.atan2(y-py,x-px)*180/Math.PI;
-tx=x;ty=y;tpts=[{x:px,y:py}];
+curIdx=i;
 render();
 }
-function drawTrail(){
-ctx2.clearRect(0,0,mW,mH);
-if(tpts.length<2)return;
-ctx2.beginPath();ctx2.moveTo(tpts[0].x,tpts[0].y);
-for(let i=1;i<tpts.length;i++)ctx2.lineTo(tpts[i].x,tpts[i].y);
-ctx2.strokeStyle='rgba(58,123,213,0.35)';ctx2.lineWidth=1.5;
-ctx2.setLineDash([4,8]);ctx2.stroke();ctx2.setLineDash([]);
-if(tpts.length>120)tpts.shift();
-}
-function anim(){
-gms();
-const dx=tx-px,dy=ty-py,dist=Math.sqrt(dx*dx+dy*dy);
-if(dist>2){const sp=Math.min(dist*.05,6);px+=dx/dist*sp;py+=dy/dist*sp;tpts.push({x:px,y:py});}
-else{px=tx;py=ty;const t=Date.now()/2200;px+=Math.sin(t*1.1)*.5;py+=Math.cos(t*.85)*.4;}
-plnEl.style.display='block';
-plnEl.style.left=(px/mW*100)+'%';plnEl.style.top=(py/mH*100)+'%';
-plnEl.style.transform=`translate(-50%,-50%) rotate(${pang}deg)`;
-drawTrail();requestAnimationFrame(anim);
-}
-function startAuto(){
-if(autoT)clearInterval(autoT);
-let ordered=chronoTrips().filter(t=>t.df||t.dt);
-if(filterYear!=='all')ordered=ordered.filter(t=>tripYear(t)===filterYear);
-if(!ordered.length)ordered=chronoTrips();
-if(!ordered.length)return;
-// 서울에서 시작
-const ic=s2xy(SEOUL_X,SEOUL_Y);
-px=ic.x;py=ic.y;tpts=[];
-autoI=0;
-const nx=()=>{
-if(autoI>0&&autoI%ordered.length===0){
-const ic2=s2xy(SEOUL_X,SEOUL_Y);px=ic2.x;py=ic2.y;tpts=[];
-setTimeout(()=>{flyTo(ordered[0]._i);autoI=1;},600);return;
-}
-flyTo(ordered[autoI%ordered.length]._i);autoI++;
-};
-nx();autoT=setInterval(nx,3000);
-}
+function drawTrail(){}
+function anim(){}
+function startAuto(){}
 // ── 나라 자동완성 ──
 function onContChange(){selCntry=null;document.getElementById('cntryIn').value='';document.getElementById('cntryClear').style.display='none';document.getElementById('cntryDrop').style.display='none';clearCity();}
 function filtC(){const cont=document.getElementById('contSel').value;const q=document.getElementById('cntryIn').value.trim().toLowerCase();return COUNTRIES.filter(c=>{if(cont&&c.continent!==cont)return false;if(!q)return true;return c.name.includes(q)||c.en.toLowerCase().includes(q);});}
@@ -1037,20 +1026,21 @@ const costEl=document.getElementById('costIn');if(costEl)costEl.value='';
 const contEl=document.getElementById('contSel');if(contEl)contEl.value='';
 selCntry=null;selCity='';window._pickedLat=null;window._pickedLon=null;
 toast(`${c?.flag||'✈️'} ${city} 추가 완료!`);
-setTimeout(()=>{const ni=trips.length-1;if(ni>=0)flyTo(ni);},300);
-setTimeout(()=>startAuto(),4000);
 // ④ Firebase 백그라운드 저장
 if(window._fbSave&&window._user){
 entry.uid=window._user.uid;
 window._fbSave(entry)
 .then(()=>{window._saving=false;})
 .catch(e=>{
-console.warn('Firebase 저장 실패:', e.message);
+console.error('Firebase 저장 실패:', e);
 window._saving=false;
+toast('⚠️ 클라우드 저장 실패! 새로고침하면 사라질 수 있어요');
+setTimeout(()=>alert('Firestore 저장 실패: '+(e.code||e.message)+'\n\nFirebase 콘솔 > Firestore Database > 규칙(Rules)을 확인해주세요.\n(테스트 모드는 30일 후 자동 만료되어 차단됩니다)'),300);
 });
 } else {
 // Firebase 없을 땐 바로 플래그 해제
 window._saving=false;
+if(!window._user)toast('ℹ️ 로그인 안 된 상태 — 새로고침하면 사라져요. Google 로그인을 권장해요');
 }
 }
 async function del(i){
@@ -1098,7 +1088,36 @@ document.getElementById('modalBg').classList.add('show');
 function closeModal(){document.getElementById('modalBg').classList.remove('show');_editIdx=null;window._tmpStars=undefined;window._tmpPhoto=undefined;}
 function setStar(n){[1,2,3,4,5].forEach(i=>document.getElementById('star'+i).textContent=i<=n?'⭐':'☆');window._tmpStars=n;}
 function removePhoto(){window._tmpPhoto='';document.querySelector('.modal-img-wrap')?.remove();}
-function uploadPhoto(inp){if(!inp.files[0])return;const r=new FileReader();r.onload=e=>{window._tmpPhoto=e.target.result;let wrap=document.querySelector('.modal-img-wrap');const label=document.querySelector('.photo-upload-btn');if(!wrap){wrap=document.createElement('div');wrap.className='modal-img-wrap';label.before(wrap);}wrap.innerHTML=`<img src="${e.target.result}" alt=""><button class="modal-img-del" onclick="removePhoto()">✕</button>`;};r.readAsDataURL(inp.files[0]);}
+function uploadPhoto(inp){
+if(!inp.files[0])return;
+const file=inp.files[0];
+const r=new FileReader();
+r.onload=e=>{
+const img=new Image();
+img.onload=()=>{
+// 긴 변 기준 1024px로 리사이즈 + JPEG 압축으로 Firestore 문서 용량(1MB) 제한 대응
+const MAX=1024;
+let{width:w,height:h}=img;
+if(w>h&&w>MAX){h=Math.round(h*MAX/w);w=MAX;}
+else if(h>=w&&h>MAX){w=Math.round(w*MAX/h);h=MAX;}
+const canvas=document.createElement('canvas');
+canvas.width=w;canvas.height=h;
+canvas.getContext('2d').drawImage(img,0,0,w,h);
+let quality=0.82;
+let dataUrl=canvas.toDataURL('image/jpeg',quality);
+// 그래도 크면 품질을 더 낮춰가며 재압축 (최대 ~700KB 목표)
+while(dataUrl.length>700000&&quality>0.35){quality-=0.1;dataUrl=canvas.toDataURL('image/jpeg',quality);}
+if(dataUrl.length>900000){toast('⚠️ 사진이 너무 커서 저장이 안 될 수 있어요. 더 작은 사진을 권장합니다');}
+window._tmpPhoto=dataUrl;
+let wrap=document.querySelector('.modal-img-wrap');
+const label=document.querySelector('.photo-upload-btn');
+if(!wrap){wrap=document.createElement('div');wrap.className='modal-img-wrap';label.before(wrap);}
+wrap.innerHTML=`<img src="${dataUrl}" alt=""><button class="modal-img-del" onclick="removePhoto()">✕</button>`;
+};
+img.src=e.target.result;
+};
+r.readAsDataURL(file);
+}
 async function saveModal(){
 if(_editIdx===null)return;const t=trips[_editIdx];if(!t)return;
 t.city=document.getElementById('me_city').value.trim()||t.city;
@@ -1250,7 +1269,8 @@ _glCamera.position.copy(homeStart);
 _glCamera.lookAt(0,0,0);
 _glRenderer=new THREE.WebGLRenderer({antialias:true});
 _glRenderer.setSize(w,h);
-_glRenderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+const _isMobileGL=window.innerWidth<700||/Mobi|Android/i.test(navigator.userAgent);
+_glRenderer.setPixelRatio(Math.min(window.devicePixelRatio||1,_isMobileGL?1.5:2));
 container.appendChild(_glRenderer.domElement);
 _glRenderer.domElement.style.position='absolute';
 _glRenderer.domElement.style.inset='0';
@@ -1265,13 +1285,13 @@ _addStarfield();
 const TEX_BASE='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/';
 const loader=new THREE.TextureLoader();
 const earthTex=loader.load(TEX_BASE+'earth_atmos_2048.jpg');
-const earthGeo=new THREE.SphereGeometry(GLOBE_RADIUS,64,64);
+const earthGeo=new THREE.SphereGeometry(GLOBE_RADIUS,_isMobileGL?40:64,_isMobileGL?40:64);
 const earthMat=new THREE.MeshPhongMaterial({map:earthTex,shininess:6});
 _glEarth=new THREE.Mesh(earthGeo,earthMat);
 _glScene.add(_glEarth);
 // 구름
 const cloudTex=loader.load(TEX_BASE+'earth_clouds_1024.png');
-const cloudGeo=new THREE.SphereGeometry(GLOBE_RADIUS*1.012,64,64);
+const cloudGeo=new THREE.SphereGeometry(GLOBE_RADIUS*1.012,_isMobileGL?32:64,_isMobileGL?32:64);
 const cloudMat=new THREE.MeshPhongMaterial({map:cloudTex,transparent:true,opacity:0.35,depthWrite:false});
 _glClouds=new THREE.Mesh(cloudGeo,cloudMat);
 _glScene.add(_glClouds);
@@ -1329,6 +1349,18 @@ el.title=title;
 el.innerHTML=`<div class="gl-pin-circle">${flagImg(flag,isHome?18:14)}</div>`;
 container.appendChild(el);
 _glPins.push({el,pos});
+}
+// ── 도착 펄스 이펙트 ──
+function _pulsePinAt(lat,lon){
+const target=_latLonToVec3(lat,lon,GLOBE_RADIUS*1.012);
+let best=null,bestD=Infinity;
+_glPins.forEach(p=>{const d=p.pos.distanceTo(target);if(d<bestD){bestD=d;best=p;}});
+if(best&&bestD<8){
+best.el.classList.remove('gl-pin-pulse');
+void best.el.offsetWidth; // 리플로우 강제 → 애니메이션 재시작
+best.el.classList.add('gl-pin-pulse');
+setTimeout(()=>best.el.classList.remove('gl-pin-pulse'),700);
+}
 }
 function renderGlobePins(){
 if(!_glScene)return;
@@ -1392,8 +1424,12 @@ const {lat,lon}=_gcInterp(_glFlightState.fromLat,_glFlightState.fromLon,_glFligh
 const altBoost=1+Math.sin(Math.PI*et)*0.22;
 const curPos=_latLonToVec3(lat,lon,GLOBE_RADIUS*altBoost);
 _glFlightState.curPos=curPos;
-// 카메라가 비행기를 계속 따라가도록 부드럽게 추적 (시네마틱 이즈)
-const desired=curPos.clone().normalize().multiplyScalar(GLOBE_CAM_DIST);
+// 카메라가 비행기를 계속 따라가도록 부드럽게 추적 (시네마틱 이즈) + 비행 중간엔 살짝 위에서 내려다보는 틸트
+const liftFactor=Math.sin(Math.PI*et); // 0(출발/도착) → 1(중간)
+const baseDir=curPos.clone().normalize();
+const tiltDir=baseDir.clone().add(new THREE.Vector3(0,0.32*liftFactor,0)).normalize();
+const camDist=GLOBE_CAM_DIST+liftFactor*38;
+const desired=tiltDir.multiplyScalar(camDist);
 _glCamera.position.lerp(desired,0.045);
 _glCamera.up.set(0,1,0);
 _glCamera.lookAt(0,0,0);
@@ -1403,6 +1439,7 @@ if(pts.length>1){_glCurArcLine.geometry.dispose();_glCurArcLine.geometry=new THR
 if(t>=1){
 _addCompletedArc(_glFlightState.fromLat,_glFlightState.fromLon,_glFlightState.toLat,_glFlightState.toLon);
 _glCurArcLine.geometry.dispose();_glCurArcLine.geometry=new THREE.BufferGeometry();
+_pulsePinAt(_glFlightState.toLat,_glFlightState.toLon);
 const cb=_glFlightState.onDone;
 _glFlightState=null;
 if(cb)setTimeout(cb,260);
