@@ -1429,11 +1429,14 @@ function initGlobe(){
 if(_glInited){renderGlobePins();return;}
 _glInited=true;
 if(window.THREE){_buildGlobeScene();return;}
-const s=document.createElement('script');
-s.src='https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js';
-s.onload=_buildGlobeScene;
-s.onerror=()=>{const el=document.getElementById('globeStatus');if(el)el.textContent='지구본 로드 실패 (네트워크 확인)';};
-document.head.appendChild(s);
+// r150+에서 UMD 빌드(three.min.js)는 deprecated → ES 모듈을 동적 import로 로드
+import('https://cdn.jsdelivr.net/npm/three@0.160.1/build/three.module.js')
+.then(mod=>{window.THREE=mod;_buildGlobeScene();})
+.catch(err=>{
+console.error('Three.js 로드 실패:',err);
+const el=document.getElementById('globeStatus');
+if(el)el.textContent='지구본 로드 실패 (네트워크 확인)';
+});
 }
 function _buildGlobeScene(){
 const container=document.getElementById('globeDiv');
@@ -1466,12 +1469,14 @@ _addStarfield();
 const TEX_BASE='https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/';
 const loader=new THREE.TextureLoader();
 const earthTex=loader.load(TEX_BASE+'earth_atmos_2048.jpg');
+earthTex.colorSpace=THREE.SRGBColorSpace;
 const earthGeo=new THREE.SphereGeometry(GLOBE_RADIUS,_isMobileGL?40:64,_isMobileGL?40:64);
 const earthMat=new THREE.MeshPhongMaterial({map:earthTex,shininess:6});
 _glEarth=new THREE.Mesh(earthGeo,earthMat);
 _glScene.add(_glEarth);
 // 구름
 const cloudTex=loader.load(TEX_BASE+'earth_clouds_1024.png');
+cloudTex.colorSpace=THREE.SRGBColorSpace;
 const cloudGeo=new THREE.SphereGeometry(GLOBE_RADIUS*1.012,_isMobileGL?32:64,_isMobileGL?32:64);
 const cloudMat=new THREE.MeshPhongMaterial({map:cloudTex,transparent:true,opacity:0.35,depthWrite:false});
 _glClouds=new THREE.Mesh(cloudGeo,cloudMat);
