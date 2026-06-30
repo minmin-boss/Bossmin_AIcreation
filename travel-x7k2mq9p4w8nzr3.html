@@ -176,6 +176,30 @@ select option{background:white;font-family:var(--f)}
 input:focus,select:focus{border-color:var(--accent);background:white;box-shadow:0 0 0 3px rgba(58,123,213,.1)}
 textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5}
 .btn-add{height:36px;align-self:flex-end;padding:0 22px;background:var(--accent);color:white;border:none;border-radius:8px;font-family:var(--f);font-size:12px;font-weight:800;cursor:pointer;transition:all .18s;white-space:nowrap;box-shadow:0 3px 10px rgba(58,123,213,.35)}
+.date-range-input{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1.5px solid var(--brd);border-radius:8px;height:36px;padding:0 10px;font-size:12px;color:var(--text);cursor:pointer;transition:border-color .2s}
+.date-range-input:hover{border-color:var(--accent)}
+.date-range-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:250;background:var(--surf);border:1.5px solid var(--brd);border-radius:12px;box-shadow:0 10px 30px rgba(58,123,213,.22);padding:12px;width:260px;font-family:var(--f)}
+.drp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.drp-title{font-size:13px;font-weight:800;color:var(--text)}
+.drp-nav{background:var(--bg2);border:1px solid var(--brd);border-radius:6px;width:26px;height:26px;font-size:14px;color:var(--text2);cursor:pointer;font-family:var(--f)}
+.drp-nav:hover{color:var(--accent);border-color:var(--accent)}
+.drp-weekdays{display:grid;grid-template-columns:repeat(7,1fr);text-align:center;font-size:9px;color:var(--text3);font-weight:700;margin-bottom:4px}
+.drp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.drp-day{height:28px;display:flex;align-items:center;justify-content:center;font-size:11px;border-radius:6px;cursor:pointer;color:var(--text);position:relative;font-weight:700}
+.drp-day:hover{background:var(--acl)}
+.drp-day.empty{cursor:default;visibility:hidden}
+.drp-day.today{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.drp-day.in-range{background:var(--acl);border-radius:0}
+.drp-day.start,.drp-day.end{background:var(--accent);color:#fff}
+.drp-day.start{border-radius:6px 0 0 6px}
+.drp-day.end{border-radius:0 6px 6px 0}
+.drp-day.start.end{border-radius:6px}
+.drp-footer{display:flex;justify-content:space-between;margin-top:8px}
+.drp-today,.drp-ok{font-size:11px;font-weight:700;border-radius:6px;padding:5px 12px;cursor:pointer;font-family:var(--f)}
+.drp-today{background:none;border:1px solid var(--brd);color:var(--text2)}
+.drp-today:hover{border-color:var(--accent);color:var(--accent)}
+.drp-ok{background:var(--accent);border:none;color:#fff}
+.drp-ok:hover{background:var(--accent2)}
 .btn-add:hover{background:var(--accent2)}
 .btn-add:active{transform:scale(.97)}
 .list-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
@@ -307,6 +331,7 @@ header{flex-wrap:wrap;gap:.6rem}
 .modal-box{padding:1.1rem;max-height:85vh}
 .gl-pin-circle{width:22px;height:22px}
 .gl-pin-home .gl-pin-circle{width:28px;height:28px}
+.date-range-pop{width:min(260px,calc(100vw - 56px))}
 }
 @media(max-width:420px){
 #globeDiv{height:300px}
@@ -611,9 +636,31 @@ Google로 로그인
 </div>
 </div>
 </div>
-<div class="row-btn">
-<div class="fg"><label class="fl">출발일</label><input type="date" id="df"/></div>
-<div class="fg"><label class="fl">귀국일</label><input type="date" id="dt"/></div>
+<div class="row-btn" id="rowBtnDates">
+<div class="fg date-range-wrap" style="position:relative">
+<label class="fl">여행 기간 (출발일 ~ 귀국일)</label>
+<div class="date-range-input" id="dateRangeBtn" onclick="toggleDateRangePicker(event)">
+<span id="dateRangeText">날짜를 선택하세요</span>
+<span style="margin-left:auto;opacity:.5">📅</span>
+</div>
+<input type="date" id="df" style="display:none"/>
+<input type="date" id="dt" style="display:none"/>
+<div class="date-range-pop" id="dateRangePop" style="display:none">
+<div class="drp-header">
+<button type="button" class="drp-nav" onclick="drNav(-1)">‹</button>
+<span id="drpTitle" class="drp-title"></span>
+<button type="button" class="drp-nav" onclick="drNav(1)">›</button>
+</div>
+<div class="drp-weekdays">
+<span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+</div>
+<div class="drp-grid" id="drpGrid"></div>
+<div class="drp-footer">
+<button type="button" class="drp-today" onclick="drToday()">오늘</button>
+<button type="button" class="drp-ok" onclick="drConfirm()">확인</button>
+</div>
+</div>
+</div>
 <button class="btn-add" onclick="addTrip()">+ 추가하기</button>
 </div>
 </div>
@@ -1000,7 +1047,76 @@ else if(e.key==='ArrowUp'){e.preventDefault();cityFI=Math.max(cityFI-1,0);items.
 else if(e.key==='Enter'){if(cityFI>=0)items[cityFI].onmousedown();else if(document.getElementById('cityIn').value)addTrip();}
 else if(e.key==='Escape')drop.style.display='none';
 }
-document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap')){document.getElementById('cntryDrop').style.display='none';document.getElementById('cityDrop').style.display='none';}});
+document.addEventListener('click',e=>{
+if(!e.target.closest('.ac-wrap')){document.getElementById('cntryDrop').style.display='none';document.getElementById('cityDrop').style.display='none';}
+if(!e.target.closest('.date-range-wrap')){const pop=document.getElementById('dateRangePop');if(pop)pop.style.display='none';}
+},true);
+// ── 날짜 범위 선택 캘린더 ──
+let _drYear,_drMonth,_drStart=null,_drEnd=null;
+function _drPad(n){return String(n).padStart(2,'0');}
+function _drISO(y,m,d){return `${y}-${_drPad(m+1)}-${_drPad(d)}`;}
+function _drFmt(iso){if(!iso)return '';const p=iso.split('-');return `${p[0]}.${p[1]}.${p[2]}`;}
+function _drSameDay(a,b){return a&&b&&a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();}
+function toggleDateRangePicker(e){
+e&&e.stopPropagation();
+const pop=document.getElementById('dateRangePop');
+const willOpen=pop.style.display!=='block';
+document.getElementById('cntryDrop').style.display='none';
+document.getElementById('cityDrop').style.display='none';
+pop.style.display=willOpen?'block':'none';
+if(willOpen){
+if(_drStart){_drYear=_drStart.getFullYear();_drMonth=_drStart.getMonth();}
+else{const t=new Date();_drYear=t.getFullYear();_drMonth=t.getMonth();}
+renderDRCalendar();
+}
+}
+function drNav(delta){_drMonth+=delta;if(_drMonth<0){_drMonth=11;_drYear--;}if(_drMonth>11){_drMonth=0;_drYear++;}renderDRCalendar();}
+function renderDRCalendar(){
+const title=document.getElementById('drpTitle');
+if(title)title.textContent=`${_drYear}년 ${_drMonth+1}월`;
+const grid=document.getElementById('drpGrid');
+if(!grid)return;
+const firstDow=new Date(_drYear,_drMonth,1).getDay();
+const daysInMonth=new Date(_drYear,_drMonth+1,0).getDate();
+const today=new Date();
+let html='';
+for(let i=0;i<firstDow;i++)html+='<span class="drp-day empty"></span>';
+for(let d=1;d<=daysInMonth;d++){
+const cur=new Date(_drYear,_drMonth,d);
+let cls='drp-day';
+if(_drSameDay(cur,today))cls+=' today';
+const isStart=_drStart&&_drSameDay(cur,_drStart);
+const isEnd=_drEnd&&_drSameDay(cur,_drEnd);
+if(isStart)cls+=' start';
+if(isEnd)cls+=' end';
+if(_drStart&&_drEnd&&cur>_drStart&&cur<_drEnd)cls+=' in-range';
+html+=`<span class="${cls}" onclick="drPickDay(${_drYear},${_drMonth},${d})">${d}</span>`;
+}
+grid.innerHTML=html;
+}
+function drPickDay(y,m,d){
+const clicked=new Date(y,m,d);
+if(!_drStart||(_drStart&&_drEnd)){_drStart=clicked;_drEnd=null;}
+else if(clicked<_drStart){_drEnd=_drStart;_drStart=clicked;}
+else{_drEnd=clicked;}
+_drSync();
+renderDRCalendar();
+}
+function _drSync(){
+const dfEl=document.getElementById('df'),dtEl=document.getElementById('dt');
+const txt=document.getElementById('dateRangeText');
+if(_drStart){
+dfEl.value=_drISO(_drStart.getFullYear(),_drStart.getMonth(),_drStart.getDate());
+dtEl.value=_drEnd?_drISO(_drEnd.getFullYear(),_drEnd.getMonth(),_drEnd.getDate()):dfEl.value;
+txt.textContent=_drEnd?`${_drFmt(dfEl.value)} ~ ${_drFmt(dtEl.value)}`:`${_drFmt(dfEl.value)} ~ (귀국일 선택)`;
+}
+}
+function drToday(){const t=new Date();_drStart=t;_drEnd=t;_drYear=t.getFullYear();_drMonth=t.getMonth();_drSync();renderDRCalendar();}
+function drConfirm(){
+if(_drStart&&!_drEnd){_drEnd=_drStart;_drSync();}
+document.getElementById('dateRangePop').style.display='none';
+}
+function _drResetToToday(){const t=new Date();_drStart=t;_drEnd=t;_drYear=t.getFullYear();_drMonth=t.getMonth();_drSync();}
 // ── Add / Edit / Delete ──
 function addTrip(){
 const cntryTxt=document.getElementById('cntryIn').value.trim();
@@ -1560,6 +1676,7 @@ document.addEventListener('keydown',e=>{if(e.keyCode===123||(e.ctrlKey&&e.shiftK
 // ── 부팅 ──
 const td=new Date().toISOString().split('T')[0];
 document.getElementById('df').value=td;document.getElementById('dt').value=td;
+_drResetToToday();
 setTimeout(()=>{if(!window._appReady)_doBootApp();},900);
 document.getElementById('cntryIn').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('cityIn').focus();});
 // 워터마크
