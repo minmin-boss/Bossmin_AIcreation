@@ -25,6 +25,7 @@ _startListen(user.uid);
 if(!window._appReady)window._bootApp&&window._bootApp();
 }else{
 window._user=null;
+window._migratedFor=null;
 const ls=document.getElementById('lockScreen');if(ls)ls.style.display='flex';
 if(_unsub){_unsub();_unsub=null;}
 // 주의: 여기서 trips를 강제로 비우지 않습니다.
@@ -39,6 +40,18 @@ const q=query(collection(_db,'travel_trips'),where('uid','==',uid),orderBy('crea
 _unsub=onSnapshot(q,snap=>{
 window._fbData=[];
 snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
+// ⚠️ 중요: 클라우드 결과가 0개인데 로컬(이 기기)엔 이미 데이터가 있는 경우,
+// 그건 "데이터가 없는 것"이 아니라 "아직 이 계정에 업로드 안 된 로컬 전용 데이터"일 가능성이 높습니다.
+// 이걸 그대로 믿고 화면을 비우면 "로그인했더니 데이터가 사라졌다" 버그가 생기므로,
+// 비우는 대신 로컬 데이터를 이 계정으로 한 번 자동 업로드(마이그레이션)합니다.
+const localTrips=window.trips&&window.trips.length?window.trips:(typeof _loadLocalCache==='function'?_loadLocalCache():null);
+if(window._fbData.length===0&&localTrips&&localTrips.length&&!window._migratedFor){
+window._migratedFor=uid;
+if(typeof window._migrateLocalTrips==='function'){
+window._migrateLocalTrips(uid,localTrips);
+}
+return; // 이번 스냅샷에서는 화면/로컬 데이터를 비우지 않고 그대로 둠
+}
 if(window._appReady&&window._render&&!window._saving){
 trips=window._fbData;window.trips=trips;window._render();
 }
@@ -153,7 +166,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .sec-ttl{font-size:13px;font-weight:800;color:var(--text);margin-bottom:1rem;display:flex;align-items:center;gap:8px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-.row-btn{display:grid;grid-template-columns:1fr 1fr auto;gap:10px}
+.row-btn{display:grid;grid-template-columns:1fr auto;gap:10px}
 .fg{display:flex;flex-direction:column;gap:4px}
 .fl{font-size:10px;color:var(--text2);letter-spacing:.07em;text-transform:uppercase;font-weight:700}
 .ac-wrap{position:relative}
@@ -265,6 +278,10 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .photo-upload-btn{display:inline-block;background:var(--bg2);border:1.5px dashed var(--brd2);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--accent);cursor:pointer;font-weight:700;margin-top:4px}
 .modal-save-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--f);margin-top:.6rem}
 .modal-save-btn:hover{background:var(--accent2)}
+.modal-save-status{font-size:12px;font-weight:800;padding:9px 12px;border-radius:8px;margin-bottom:.9rem;text-align:center}
+.modal-save-status.saving{background:var(--bg2);color:var(--text2)}
+.modal-save-status.ok{background:rgba(48,184,122,.12);color:#1f9d63}
+.modal-save-status.fail{background:rgba(232,67,90,.1);color:var(--pin)}
 .dash-section{margin-bottom:1.4rem}
 .dash-ttl{font-size:13px;font-weight:800;color:var(--text);margin-bottom:.9rem;display:flex;align-items:center;gap:8px}
 .dash-ttl::before{content:'';width:4px;height:16px;background:var(--accent);border-radius:2px;display:inline-block}
@@ -1226,16 +1243,40 @@ if(!window._user)toast('ℹ️ 로그인 안 된 상태 — 새로고침하면 �
 }
 async function del(i){
 const t=trips[i];if(!t)return;
+// 항상 먼저 로컬에서 즉시 제거(낙관적 업데이트) — 로그인 여부/클라우드 연결 상태와 무관하게 화면엔 바로 반영
+window._saving=true;
+trips.splice(i,1);window.trips=trips;
+if(curIdx>=trips.length)curIdx=trips.length-1;
+render();
+if(window._fbDel&&window._user&&t._fbId){
 const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
-try{if(window._fbDel&&t._fbId)await window._fbDel(t._fbId);else{trips.splice(i,1);window.trips=trips;if(curIdx>=trips.length)curIdx=trips.length-1;render();if(trips.length)startAuto();}}
-catch(e){toast('삭제 실패: '+e.message);}
-finally{if(loader)loader.style.display='none';}
+try{await window._fbDel(t._fbId);}
+catch(e){
+console.error('클라우드 삭제 실패:',e);
+toast('⚠️ 클라우드 삭제 실패 (이 기기에서는 삭제됨): '+(e.code||e.message));
+}
+finally{if(loader)loader.style.display='none';window._saving=false;}
+}else{
+window._saving=false;
+}
 }
 async function clearAll(){
 if(!trips.length)return;if(!confirm('모든 여행 기록을 삭제하시겠어요?'))return;
+const removedTrips=[...trips];
+window._saving=true;
+trips=[];window.trips=[];curIdx=-1;
+render();
+if(window._fbClear&&window._user){
 const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
-try{if(window._fbClear)await window._fbClear(trips);else{trips=[];window.trips=[];curIdx=-1;render();}}
-catch(e){toast('삭제 실패: '+e.message);}finally{if(loader)loader.style.display='none';}
+try{await window._fbClear(removedTrips);}
+catch(e){
+console.error('클라우드 전체 삭제 실패:',e);
+toast('⚠️ 클라우드 삭제 중 오류 (이 기기에서는 모두 삭제됨): '+(e.code||e.message));
+}
+finally{if(loader)loader.style.display='none';window._saving=false;}
+}else{
+window._saving=false;
+}
 }
 function setSort(m){sortM=m;document.getElementById('sdBtn').classList.toggle('on',m==='d');document.getElementById('srBtn').classList.toggle('on',m==='r');renderList();}
 function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2400);}
@@ -1248,6 +1289,7 @@ const stars=t.stars||0;
 const starHtml=[1,2,3,4,5].map(n=>`<span class="star" onclick="setStar(${n})" id="star${n}">${n<=stars?'⭐':'☆'}</span>`).join('');
 document.getElementById('modalTitle').innerHTML=flag+' '+(t.city||t.cntry);
 document.getElementById('modalContent').innerHTML=`
+<div id="modalSaveStatus" class="modal-save-status" style="display:none"></div>
 <div class="modal-row"><div class="modal-lbl">나라</div><div style="font-size:13px;font-weight:700">${t.cntry||'—'}</div></div>
 <div class="modal-row"><div class="modal-lbl">도시</div><input class="modal-inp" id="me_city" value="${t.city||''}"/></div>
 <div class="modal-row"><div class="modal-lbl">출발일</div><input class="modal-inp" id="me_df" value="${t.df||''}"/></div>
@@ -1309,10 +1351,28 @@ t.currency=document.getElementById('me_curr')?.value||'KRW';
 if(window._tmpStars!==undefined)t.stars=window._tmpStars;
 if(window._tmpPhoto!==undefined)t.photo=window._tmpPhoto;
 window._tmpStars=undefined;window._tmpPhoto=undefined;
+const statusEl=document.getElementById('modalSaveStatus');
+const setStatus=(cls,msg)=>{if(statusEl){statusEl.style.display='block';statusEl.className='modal-save-status '+cls;statusEl.textContent=msg;}};
+setStatus('saving','⏳ 저장 중...');
 const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
-try{if(window._fbSave)await window._fbSave(t);}catch(e){toast('저장 실패: '+e.message);}
+let saveOk=true,saveErrMsg='';
+try{
+if(window._fbSave&&window._user)await window._fbSave(t);
+}catch(e){
+saveOk=false;saveErrMsg=e.code||e.message||'알 수 없는 오류';
+console.error('수정 저장 실패:',e);
+}
 finally{if(loader)loader.style.display='none';}
-closeModal();render();toast('✅ 수정 저장 완료!');
+render(); // 로컬/화면 반영 + 로컬 캐시 저장은 성공/실패 여부와 무관하게 항상 최신 상태 유지
+if(saveOk){
+setStatus('ok','✅ 저장 완료!'+(window._user?' (클라우드에 동기화됨)':' (이 기기에만 저장됨 — 로그인하면 클라우드에도 저장돼요)'));
+toast('✅ 수정 저장 완료!');
+setTimeout(closeModal,650);
+}else{
+setStatus('fail','❌ 클라우드 저장 실패: '+saveErrMsg+' (이 기기에는 반영됨)');
+toast('⚠️ 클라우드 저장 실패! 이 기기에는 반영됐어요');
+// 실패 시에는 사용자가 메시지를 확인할 수 있도록 모달을 자동으로 닫지 않음
+}
 }
 // ── Map tooltip ──
 document.querySelectorAll('.country').forEach(p=>{
@@ -1327,6 +1387,26 @@ const _PW='1234';
 function checkPw(){const v=document.getElementById('lockPw').value;if(v===_PW){document.getElementById('lockScreen').style.display='none';_doBootApp();}else{document.getElementById('lockErr').textContent='비밀번호가 틀렸습니다 🔒';document.getElementById('lockPw').value='';document.getElementById('lockPw').focus();}}
 window._bootApp=function(){_doBootApp();};
 window._updateUserUI=function(user){const ui=document.getElementById('userInfo');const av=document.getElementById('userAvatar');const un=document.getElementById('userName');if(ui&&user){if(av)av.src=user.photoURL||'';if(un)un.textContent=user.displayName||user.email||'사용자';ui.style.display='flex';}};
+// ── 로컬 전용 데이터를 로그인 계정으로 자동 업로드(마이그레이션) ──
+window._migrateLocalTrips=async function(uid,localTrips){
+if(!window._fbSave||!localTrips||!localTrips.length)return;
+window._saving=true;
+let okCount=0,failCount=0;
+for(const t of localTrips){
+try{
+if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+t.uid=uid;
+await window._fbSave(t);
+okCount++;
+}catch(e){
+console.error('마이그레이션 실패 항목:',t,e);
+failCount++;
+}
+}
+window._saving=false;
+if(okCount>0)toast(`☁️ 로컬에 있던 여행 기록 ${okCount}개를 계정에 동기화했어요!`);
+if(failCount>0)toast(`⚠️ ${failCount}개 항목은 동기화에 실패했어요`);
+};
 function _doBootApp(){
 if(window._appReady)return;
 window._appReady=true;window._render=render;
