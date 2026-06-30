@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bossmin Office</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Nanum+Gothic:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: "Nanum Gothic", -apple-system, sans-serif;
+  background: #fff0f5;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* ── 배경 파티클 ── */
+.bg-particles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+.bg-particles span {
+  position: absolute;
+  border-radius: 50%;
+  animation: rise linear infinite;
+  opacity: 0;
+}
+.bg-particles span:nth-child(1)  { width:14px;height:14px;left:6%;  background:rgba(255,134,185,.3);animation-duration:11s;animation-delay:0s; }
+.bg-particles span:nth-child(2)  { width:9px; height:9px; left:18%; background:rgba(255,77,121,.2); animation-duration:9s; animation-delay:2s; }
+.bg-particles span:nth-child(3)  { width:18px;height:18px;left:33%; background:rgba(255,194,219,.3);animation-duration:13s;animation-delay:1s; }
+.bg-particles span:nth-child(4)  { width:11px;height:11px;left:52%; background:rgba(255,101,132,.2);animation-duration:10s;animation-delay:3.5s;}
+.bg-particles span:nth-child(5)  { width:16px;height:16px;left:68%; background:rgba(255,134,185,.3);animation-duration:12s;animation-delay:1.8s;}
+.bg-particles span:nth-child(6)  { width:8px; height:8px; left:82%; background:rgba(255,77,121,.2); animation-duration:8s; animation-delay:0.5s;}
+.bg-particles span:nth-child(7)  { width:20px;height:20px;left:90%; background:rgba(255,194,219,.25);animation-duration:14s;animation-delay:4s; }
+.bg-particles span:nth-child(8)  { width:12px;height:12px;left:44%; background:rgba(255,101,132,.2); animation-duration:10s;animation-delay:2.2s;}
+@keyframes rise {
+  0%   { opacity:0; transform:translateY(100vh) scale(0.5); }
+  8%   { opacity:1; }
+  92%  { opacity:.5; }
+  100% { opacity:0; transform:translateY(-80px) scale(1.1); }
+}
+
+/* ── 카드 컨테이너 ── */
+.portal-container {
+  background: #ffffff;
+  width: 100%;
+  max-width: 620px;
+  border-radius: 32px;
+  box-shadow: 0 12px 40px rgba(255,100,160,.18);
+  overflow: hidden;
+  border: 4px solid #ffe4e1;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── 헤더 ── */
+.portal-header {
+  background: linear-gradient(135deg, #ffe5ec 0%, #ffc2d1 100%);
+  padding: 52px 28px 44px;
+  text-align: center;
+  position: relative;
+  overflow: visible;
+}
+
+
+/* 배경 미니 리본 */
+.bg-ribbons {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.bg-ribbons svg {
+  position: absolute;
+  fill: #ff4d79;
+  opacity: 0.28;
+  animation: floatRibbon 4s ease-in-out infinite;
+}
+.bg-ribbons svg:nth-child(1) { top:12%; left:7%;  width:22px;height:22px;animation-delay:0s; }
+.bg-ribbons svg:nth-child(2) { top:18%; right:9%; width:26px;height:26px;animation-delay:.7s;}
+.bg-ribbons svg:nth-child(3) { bottom:22%;left:11%;width:24px;height:24px;animation-delay:1.3s;}
+.bg-ribbons svg:nth-child(4) { bottom:18%;right:13%;width:20px;height:20px;animation-delay:.3s;}
+.bg-ribbons svg:nth-child(5) { top:48%; left:44%;width:18px;height:18px;animation-delay:1.8s;opacity:.14;}
+@keyframes floatRibbon {
+  0%,100% { transform: translateY(0) rotate(0deg) scale(1); }
+  50%      { transform: translateY(-5px) rotate(15deg) scale(1.12); }
+}
+
+/* 메인 리본 아이콘 */
+.kitty-ribbon-main {
+  width: 88px; height: 88px;
+  margin-bottom: 16px;
+  display: inline-block;
+  position: relative; z-index: 2;
+  animation: mainFloat 3s ease-in-out infinite;
+  filter: drop-shadow(0 4px 12px rgba(255,42,85,.25));
+}
+@keyframes mainFloat {
+  0%,100% { transform: translateY(0) rotate(-5deg); }
+  50%      { transform: translateY(-8px) rotate(5deg); }
+}
+
+.portal-title {
+  font-family: "Gaegu", sans-serif;
+  font-size: 42px;
+  color: #ff6584;
+  letter-spacing: 1px;
+  position: relative; z-index: 2;
+  text-shadow: 0 2px 0 rgba(255,101,132,.15);
+}
+
+/* ── 그리드 ── */
+.menu-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 32px 26px 28px;
+}
+
+/* ── 카드 ── */
+.menu-card {
+  background: #ffffff;
+  border: 2px solid #ffe5ec;
+  border-radius: 20px;
+  padding: 28px 16px 22px;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s, border-color .22s, background .22s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(255,229,236,.35);
+  position: relative;
+  overflow: hidden;
+}
+/* 카드 코너 글로우 */
+.menu-card::before {
+  content: "";
+  position: absolute;
+  top: -28px; right: -28px;
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ffe5ec, transparent 70%);
+  pointer-events: none;
+}
+.menu-card:hover {
+  transform: translateY(-6px) scale(1.025);
+  background: #fff8fa;
+  border-color: #ffb3c6;
+  box-shadow: 0 14px 32px rgba(255,100,160,.2);
+}
+
+/* 준비중 */
+.menu-card.disabled {
+  opacity: .55;
+  background: #fafafa;
+  border-color: #e8e8e8;
+  cursor: not-allowed;
+}
+.menu-card.disabled:hover {
+  transform: none;
+  box-shadow: none;
+  background: #fafafa;
+  border-color: #e8e8e8;
+}
+
+.card-icon  { font-size: 40px; margin-bottom: 12px; line-height: 1; }
+.card-title {
+  font-size: 16px; font-weight: 800;
+  color: #ff6584; margin-bottom: 6px;
+}
+.menu-card.disabled .card-title { color: #aaa; }
+
+.card-desc {
+  font-size: 12px; color: #7c6a70;
+  line-height: 1.6; word-break: keep-all;
+}
+
+.badge-ready {
+  display: inline-block;
+  margin-top: 8px; font-size: 10px;
+  padding: 3px 10px; border-radius: 12px;
+  background: #f0f0f0; color: #999; font-weight: 700;
+}
+
+/* ── 카드 컬러 변형 ── */
+/* 세무업무관리 */
+.menu-card.purple { border-color: #f3d6ff; }
+.menu-card.purple:hover { border-color: #d946ef; box-shadow: 0 14px 32px rgba(217,70,239,.14); }
+.menu-card.purple .card-title { color: #d946ef; }
+
+/* 세무비서 AI */
+.menu-card.yellow { border-color: #ffe58f; }
+.menu-card.yellow:hover { border-color: #ffd43b; box-shadow: 0 14px 32px rgba(255,190,0,.18); }
+.menu-card.yellow .card-title { color: #e67700; }
+
+/* 내 여행 지도 */
+.menu-card.blue { border-color: #a5d8ff; }
+.menu-card.blue:hover { border-color: #4dabf7; box-shadow: 0 14px 32px rgba(34,139,230,.14); }
+.menu-card.blue .card-title { color: #1971c2; }
+
+/* ── 푸터 ── */
+.portal-footer {
+  text-align: center;
+  padding: 15px;
+  font-size: 11px; color: #c0a0aa;
+  background: #fff8f9;
+  border-top: 1.5px solid #ffe5ec;
+  font-weight: 700; letter-spacing: .5px;
+}
+
+/* ── 워터마크 ── */
+.fixed-watermark {
+  position: fixed;
+  right: 16px; bottom: 14px;
+  font-family: "Gaegu", -apple-system, sans-serif;
+  font-size: 13px; font-weight: 700;
+  color: #ff85a1; opacity: .5;
+  letter-spacing: 1.5px;
+  z-index: 9999;
+  pointer-events: none;
+}
+</style>
+</head>
+<body oncontextmenu="return false" onselectstart="return false" ondragstart="return false">
+
+<!-- 배경 파티클 -->
+<div class="bg-particles">
+  <span></span><span></span><span></span><span></span>
+  <span></span><span></span><span></span><span></span>
+</div>
+
+<div class="portal-container">
+
+  <!-- 헤더 -->
+  <div class="portal-header">
+    <div class="bg-ribbons">
+      <svg viewBox="0 0 100 100"><path d="M50 50 Q20 20 25 50 Q20 80 50 50Z M50 50 Q80 20 75 50 Q80 80 50 50Z"/><circle cx="50" cy="50" r="10"/></svg>
+      <svg viewBox="0 0 100 100"><path d="M50 50 Q20 20 25 50 Q20 80 50 50Z M50 50 Q80 20 75 50 Q80 80 50 50Z"/><circle cx="50" cy="50" r="10"/></svg>
+      <svg viewBox="0 0 100 100"><path d="M50 50 Q20 20 25 50 Q20 80 50 50Z M50 50 Q80 20 75 50 Q80 80 50 50Z"/><circle cx="50" cy="50" r="10"/></svg>
+      <svg viewBox="0 0 100 100"><path d="M50 50 Q20 20 25 50 Q20 80 50 50Z M50 50 Q80 20 75 50 Q80 80 50 50Z"/><circle cx="50" cy="50" r="10"/></svg>
+      <svg viewBox="0 0 100 100"><path d="M50 50 Q20 20 25 50 Q20 80 50 50Z M50 50 Q80 20 75 50 Q80 80 50 50Z"/><circle cx="50" cy="50" r="10"/></svg>
+    </div>
+
+    <!-- 메인 리본 -->
+    <div class="kitty-ribbon-main">
+      <svg viewBox="0 0 100 100" width="100%" height="100%">
+        <!-- 왼날개 -->
+        <path d="M50 50 Q12 14 18 50 Q12 86 50 50Z" fill="#ff2a55"/>
+        <!-- 오른날개 -->
+        <path d="M50 50 Q88 14 82 50 Q88 86 50 50Z" fill="#e8003d"/>
+        <!-- 매듭 -->
+        <ellipse cx="50" cy="50" rx="13" ry="14" fill="#e8003d"/>
+        <ellipse cx="50" cy="50" rx="8"  ry="9"  fill="#ff2a55"/>
+      </svg>
+    </div>
+
+    <h1 class="portal-title">Bossmin Office</h1>
+  </div>
+
+  <!-- 메뉴 그리드 -->
+  <div class="menu-grid">
+
+    <!-- 1. 휴가신청서 -->
+    <a href="휴가신청서_연동.html" class="menu-card">
+      <span class="card-icon">💌</span>
+      <div class="card-title">휴가신청서</div>
+      <div class="card-desc">스마트하게 신청하고<br>캘린더 자동 연동까지</div>
+    </a>
+
+    <!-- 2. 휴가 / 워라밸 -->
+    <a href="dayoff_work-life_balance.html" class="menu-card">
+      <span class="card-icon">🌴</span>
+      <div class="card-title">휴가 / 워라밸</div>
+      <div class="card-desc">나의 연차 정보 조회 및<br>워크라이프 밸런스 관리</div>
+    </a>
+
+    <!-- 3. 세무업무관리 -->
+    <a href="tax_office_manager.html" class="menu-card purple">
+      <span class="card-icon">📊</span>
+      <div class="card-title">세무업무관리</div>
+      <div class="card-desc">법인세·부가세 조정 및<br>주요 거래처 스케줄 관리</div>
+    </a>
+
+    <!-- 4. 세무비서 AI -->
+    <a href="tax-j5fdh2hkshevfjq1bj7g.html" class="menu-card yellow">
+      <span class="card-icon">🐥</span>
+      <div class="card-title">세무비서 AI</div>
+      <div class="card-desc">어려운 세무·노무 규정<br>무엇이든 물어보세요!</div>
+    </a>
+
+    <!-- 5. 비품 소원함 -->
+    <a href="office-xbt1g6ekjjzij6r5tx3s.html" class="menu-card">
+      <span class="card-icon">✏️</span>
+      <div class="card-title">비품 소원함</div>
+      <div class="card-desc">필요한 사무 비품 신청 및<br>실시간 처리 현황 확인</div>
+    </a>
+
+    <!-- 6. 내 여행 지도 -->
+    <a href="travel-x7k2mq9p4w8nzr3.html" class="menu-card blue">
+      <span class="card-icon">✈️</span>
+      <div class="card-title">내 여행 지도</div>
+      <div class="card-desc">떠나고 싶은 설렘 가득<br>방문 도시 지도 기록</div>
+    </a>
+
+  </div>
+
+  <!-- 푸터 -->
+  <div class="portal-footer">
+    © Bossmin_office_AI creation. all rights reserved.
+  </div>
+
+</div>
+
+<div class="fixed-watermark">boss_min_</div>
+
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+  document.addEventListener('keydown', e => {
+    if (e.keyCode === 123 ||
+        (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 67)) ||
+        (e.ctrlKey && e.keyCode === 85)) {
+      e.preventDefault();
+    }
+  });
+</script>
+</body>
+</html>
