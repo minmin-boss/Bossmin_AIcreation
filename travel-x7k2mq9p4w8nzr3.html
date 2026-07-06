@@ -1485,13 +1485,19 @@ entry.uid=window._user.uid;
 window._fbSave(entry)
 .then(()=>{window._saving=false;})
 .catch(e=>{
-console.error('Firebase 저장 실패:', e);
 window._saving=false;
-toast('⚠️ 클라우드 저장 실패! 새로고침하면 사라질 수 있어요');
-setTimeout(()=>alert('Firestore 저장 실패: '+(e.code||e.message)+'\n\nFirebase 콘솔 > Firestore Database > 규칙(Rules)을 확인해주세요.\n(테스트 모드는 30일 후 자동 만료되어 차단됩니다)'),300);
+const code=e.code||e.message||'알 수 없는 오류';
+console.error('Firebase 저장 실패:', code, e);
+if(code.includes('permission-denied')||code.includes('PERMISSION_DENIED')){
+toast('⚠️ 저장 실패: 보안 규칙 차단 (Rules 확인 필요)');
+setTimeout(()=>alert('🔒 Firestore 보안 규칙이 저장을 차단했습니다.\n\nFirebase 콘솔 > Firestore Database > Rules 탭에서 규칙을 확인해주세요.\n\n※ 테스트 모드로 만들었다면 30일 후 자동 만료되어 모든 쓰기가 차단됩니다.'),300);
+}else if(code.includes('failed-precondition')||code.includes('index')){
+toast('⚠️ 저장 실패: 인덱스 없음 (F12 콘솔 링크 클릭)');
+}else{
+toast('⚠️ 클라우드 저장 실패: '+code);
+}
 });
 } else {
-// Firebase 없을 땐 바로 플래그 해제
 window._saving=false;
 if(!window._user)toast('⚠️ Google 로그인이 필요해요 — 지금은 이 기기에만 저장됩니다');
 }
@@ -1596,7 +1602,7 @@ document.getElementById('cmapBg').classList.remove('show');
 document.getElementById('cmapFrame').src=''; // 닫을 때 iframe 로딩 중지
 }
 function setStar(n){[1,2,3,4,5].forEach(i=>document.getElementById('star'+i).textContent=i<=n?'⭐':'☆');window._tmpStars=n;}
-async function saveModal(){
+function saveModal(){
 if(_editIdx===null)return;const t=trips[_editIdx];if(!t)return;
 t.city=document.getElementById('me_city').value.trim()||t.city;
 t.df=document.getElementById('me_df').value.trim();t.dt=document.getElementById('me_dt').value.trim();
@@ -1605,52 +1611,43 @@ const _c=(document.getElementById('me_cost')?.value||'').replace(/,/g,'');t.cost
 t.currency=document.getElementById('me_curr')?.value||'KRW';
 if(window._tmpStars!==undefined)t.stars=window._tmpStars;
 window._tmpStars=undefined;
+if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+// 로컬 즉시 반영
+try{render();}catch(e){console.error('화면 갱신 오류:',e);}
+_saveLocalCache();
+// 저장 버튼 비활성화 + "저장 중..." 표시 (모달은 유지)
+const saveBtn=document.querySelector('.modal-save-btn');
 const statusEl=document.getElementById('modalSaveStatus');
 const setStatus=(cls,msg)=>{if(statusEl){statusEl.style.display='block';statusEl.className='modal-save-status '+cls;statusEl.textContent=msg;}};
-// ① _fbId 방어
-if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
-// ② 로컬 즉시 반영 (화면 블로킹 없이 먼저 보여줌)
-try{render();}catch(e){console.error('저장 후 화면 갱신 오류:',e);}
-// ③ 저장 버튼 비활성화 + "저장 중..." 표시 (모달 유지)
-const saveBtn=document.querySelector('.modal-save-btn');
 if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ 저장 중...';}
 setStatus('saving','⏳ Firebase에 저장 중...');
-const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
-// ④ Firebase 저장 → 확인 후에만 "저장 완료!" 표시
-// 사진 없는 일반 수정은 3초, 사진 포함은 15초 타임아웃
-const timeoutMs=3000;
-const cloudPayload=Object.fromEntries(Object.entries(t).filter(([k])=>k!=='photo'));
-const doSave=async()=>{
 if(window._fbSave&&window._user){
-await Promise.race([
-window._fbSave(cloudPayload),
-new Promise((_,rej)=>setTimeout(()=>rej(new Error('응답 시간 초과')),timeoutMs))
-]);
-}
-};
-doSave()
+const cloudPayload=Object.fromEntries(Object.entries(t).filter(([k])=>k!=='photo'));
+window._fbSave(cloudPayload)
 .then(()=>{
-if(loader)loader.style.display='none';
-if(window._user){
-// 로그인 O → 클라우드 저장 완료
-setStatus('ok','✅ 저장 완료! (내 계정 클라우드에 저장됨)');
-toast('✅ 수정 저장 완료!');
-setTimeout(closeModal,700);
+// Firebase 확인 완료 → "✅ 저장 완료!" 잠깐 보여주고 닫기
+setStatus('ok','✅ 저장 완료!');
+toast('✅ 저장 완료!');
+setTimeout(closeModal,600);
+})
+.catch(e=>{
+const code=e.code||e.message||'알 수 없는 오류';
+console.error('클라우드 저장 실패:',code,e);
+setStatus('fail','❌ 저장 실패: '+code);
+if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='💾 다시 시도';}
+toast('⚠️ 저장 실패: '+code);
+if(code.includes('permission-denied')||code.includes('PERMISSION_DENIED')){
+setTimeout(()=>alert('🔒 Firestore 보안 규칙이 저장을 차단했습니다.\n\nFirebase 콘솔 > Firestore Database > Rules 탭에서 규칙을 확인해주세요.\n(테스트 모드는 30일 후 자동 만료됩니다)'),300);
+}else if(code.includes('failed-precondition')||code.includes('index')){
+setTimeout(()=>alert('📋 Firestore 복합 인덱스가 없습니다.\n\nFirebase 콘솔 > Firestore > Indexes 탭에서\nuid(ASC) + createdAt(ASC) 인덱스를 만들어 주세요.'),300);
+}
+});
 }else{
-// 로그인 X → 이 기기에만 저장, 경고 표시
-setStatus('saving','⚠️ 이 기기에만 저장됐어요. Google 로그인을 하면 어디서든 볼 수 있어요.');
+// 로그인 안 된 경우
+setStatus('saving','⚠️ 로그인 필요 — 이 기기에만 저장됩니다');
 if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='✕ 닫기';saveBtn.onclick=closeModal;}
 toast('⚠️ 로그인하면 클라우드에 저장됩니다');
 }
-})
-.catch(e=>{
-if(loader)loader.style.display='none';
-console.error('수정 저장 실패:',e);
-const msg=e.code||e.message||'알 수 없는 오류';
-setStatus('fail','❌ 저장 실패: '+msg+' — 이 기기에는 반영됨');
-if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='💾 다시 시도';}
-toast('⚠️ 클라우드 저장 실패');
-});
 }
 // ── Map tooltip ──
 document.querySelectorAll('.country').forEach(p=>{
