@@ -25,7 +25,7 @@ _startListen(user.uid);
 if(!window._appReady)window._bootApp&&window._bootApp();
 }else{
 window._user=null;
-window._migratedFor=null;
+window._migrating=false;
 const ls=document.getElementById('lockScreen');if(ls)ls.style.display='flex';
 if(_unsub){_unsub();_unsub=null;}
 // 주의: 여기서 trips를 강제로 비우지 않습니다.
@@ -40,17 +40,32 @@ const q=query(collection(_db,'travel_trips'),where('uid','==',uid),orderBy('crea
 _unsub=onSnapshot(q,snap=>{
 window._fbData=[];
 snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
-// ⚠️ 중요: 클라우드 결과가 0개인데 로컬(이 기기)엔 이미 데이터가 있는 경우,
-// 그건 "데이터가 없는 것"이 아니라 "아직 이 계정에 업로드 안 된 로컬 전용 데이터"일 가능성이 높습니다.
-// 이걸 그대로 믿고 화면을 비우면 "로그인했더니 데이터가 사라졌다" 버그가 생기므로,
-// 비우는 대신 로컬 데이터를 이 계정으로 한 번 자동 업로드(마이그레이션)합니다.
+// ⚠️ 버그 수정: 예전에는 "클라우드가 완전히 비어있을 때 딱 한 번만" 로컬 데이터를
+// 업로드했습니다. 그래서 일부 여행 기록만 클라우드에 저장되고 나머지는 로컬에만
+// 남아있는 상태에서(예: 예전에 마이그레이션이 한 번 실행된 뒤 추가된 기록, 또는
+// 실패한 항목), 이후 아무 스냅샷이나 한 번 더 오면 그 "로컬에만 있던" 기록들이
+// 화면과 캐시에서 통째로 사라지는 문제가 있었습니다.
+// 이제는 스냅샷을 받을 때마다 "로컬에는 있는데 클라우드엔 아직 없는 기록"이 있는지
+// 매번 확인해서, 있으면 그 부분만 자동으로 클라우드에 채워 넣습니다.
 const localTrips=window.trips&&window.trips.length?window.trips:(typeof _loadLocalCache==='function'?_loadLocalCache():null);
-if(window._fbData.length===0&&localTrips&&localTrips.length&&!window._migratedFor){
-window._migratedFor=uid;
+if(localTrips&&localTrips.length){
+const cloudIds=new Set(window._fbData.map(d=>d._fbId));
+const missing=localTrips.filter(t=>!t._fbId||!cloudIds.has(t._fbId));
+if(missing.length&&!window._migrating){
+window._migrating=true;
 if(typeof window._migrateLocalTrips==='function'){
-window._migrateLocalTrips(uid,localTrips);
+window._migrateLocalTrips(uid,missing).finally(()=>{
+window._migrating=false;
+// 마이그레이션이 끝난 뒤 추가 스냅샷이 바로 오지 않는 경우에도
+// 화면이 예전 상태로 멈춰있지 않도록, 끝나자마자 한 번 더 최신 상태를 직접 반영합니다.
+if(window._appReady&&window._render&&!window._saving&&window._fbData){
+trips=window._fbData;window.trips=trips;window._render();
 }
-return; // 이번 스냅샷에서는 화면/로컬 데이터를 비우지 않고 그대로 둠
+});
+}
+return; // 누락분을 다 올리기 전까지는 이번 스냅샷으로 화면을 덮어쓰지 않음
+}
+if(window._migrating)return; // 업로드 진행 중에는 중간 상태로 덮어쓰지 않음
 }
 if(window._appReady&&window._render&&!window._saving){
 trips=window._fbData;window.trips=trips;window._render();
@@ -75,6 +90,13 @@ if(btn){btn.disabled=false;btn.textContent='Google로 로그인';}
 };
 window._logout=async function(){if(!confirm('로그아웃 하시겠어요?\n(저장된 여행 기록은 클라우드에 남아있고, 이 기기의 임시 캐시만 정리됩니다)'))return;try{localStorage.removeItem('travel_map_trips_cache_v1');}catch(e){}await signOut(_auth);};
 window._fbSave=async function(entry){
+if(!entry._fbId){
+// 방어 코드: _fbId가 없는 채로 저장하면 doc(_db,'travel_trips',undefined)가
+// 되어 실제로는 이름이 "undefined"인 문서 하나에 여러 여행 기록이 겹쳐
+// 저장되는 심각한 데이터 유실 버그로 이어집니다. 여기서 미리 막습니다.
+console.error('_fbSave 호출 실패: _fbId가 없는 entry는 저장할 수 없습니다.', entry);
+throw new Error('_fbId 없음 - 저장 취소됨');
+}
 const ref=doc(_db,'travel_trips',entry._fbId);
 await setDoc(ref,entry,{merge:true});
 };
@@ -149,7 +171,9 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .globe-wrap{background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;overflow:hidden;box-shadow:0 4px 20px var(--shadow);margin-bottom:.8rem}
 #globeDiv{width:100%;height:520px;position:relative;background:#000}
 .gl-pin{position:absolute;transform:translate(-50%,-50%);pointer-events:none;z-index:5;transition:opacity .15s}
-.gl-pin-circle{width:26px;height:26px;border-radius:50%;background:#fff;border:2.5px solid var(--pin);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.gl-pin.clickable{pointer-events:auto;cursor:pointer}
+.gl-pin.clickable:hover .gl-pin-circle{transform:scale(1.15);box-shadow:0 4px 14px rgba(0,0,0,.55)}
+.gl-pin-circle{width:26px;height:26px;border-radius:50%;background:#fff;border:2.5px solid var(--pin);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,.4);transition:transform .15s,box-shadow .15s}
 .gl-pin-home .gl-pin-circle{border-color:var(--accent);width:32px;height:32px}
 .gl-plane{position:absolute;transform:translate(-50%,-50%);font-size:22px;pointer-events:none;z-index:6;filter:drop-shadow(0 2px 5px rgba(0,0,0,.5))}
 @keyframes glPinPulse{0%{transform:translate(-50%,-50%) scale(1)}30%{transform:translate(-50%,-50%) scale(1.7)}55%{transform:translate(-50%,-50%) scale(0.9)}75%{transform:translate(-50%,-50%) scale(1.25)}100%{transform:translate(-50%,-50%) scale(1)}}
@@ -268,6 +292,12 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .modal-lbl{font-size:10px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
 .modal-inp{width:100%;border:1.5px solid var(--brd);border-radius:8px;padding:8px 10px;font-size:12px;font-family:var(--f);outline:none;color:var(--text);background:var(--bg2);height:36px}
 .modal-inp:focus{border-color:var(--accent)}
+#cmapBg{position:fixed;inset:0;background:rgba(44,62,80,.6);backdrop-filter:blur(3px);z-index:600;display:none;align-items:center;justify-content:center;padding:1rem}
+#cmapBg.show{display:flex}
+.cmap-box{background:#fff;border-radius:16px;padding:1rem;width:100%;max-width:820px;box-shadow:0 20px 50px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:.6rem}
+.cmap-frame{width:100%;height:min(70vh,560px);border:0;border-radius:10px;background:var(--bg2)}
+.pinner{cursor:pointer}
+.pinner:hover{filter:brightness(1.1)}
 .modal-ta{height:72px;resize:none}
 .star-row{display:flex;gap:4px}
 .star{font-size:22px;cursor:pointer;transition:transform .1s;user-select:none}
@@ -387,6 +417,15 @@ Google로 로그인
 <div id="modalContent"></div>
 </div>
 </div>
+<div id="cmapBg" onclick="if(event.target===this)closeCountryMap()">
+<div class="cmap-box">
+<div class="modal-hdr">
+<div class="modal-ttl" id="cmapTitle">국가 지도</div>
+<button class="modal-close" onclick="closeCountryMap()">✕</button>
+</div>
+<iframe id="cmapFrame" class="cmap-frame" src="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+</div>
+</div>
 <div class="wrap">
 <header>
 <div class="hl">
@@ -403,6 +442,9 @@ Google로 로그인
 <img class="user-avatar" id="userAvatar" src="" alt=""/>
 <span id="userName"></span>
 <span style="font-size:10px;opacity:.6">로그아웃</span>
+</div>
+<div class="user-info" id="notLoginInfo" style="display:flex;align-items:center;gap:6px;padding:4px 10px;background:#fff3cd;border:1.5px solid #ffc107;border-radius:20px;cursor:pointer;font-size:11px;font-weight:800;color:#856404" onclick="document.getElementById('lockScreen').style.display='flex'">
+<span>⚠️ 로그인 필요</span>
 </div>
 </div>
 </header>
@@ -650,7 +692,7 @@ Google로 로그인
 <input type="text" id="memoIn" placeholder="예: 가족여행, 친구와, 혼자"/></div>
 <div class="fg"><label class="fl">💰 여행 경비</label>
 <div style="position:relative">
-<input type="number" id="costIn" placeholder="0" min="0" style="padding-right:54px"/>
+<input type="text" inputmode="numeric" id="costIn" placeholder="0" style="padding-right:54px" oninput="formatCostInput(this)" onkeydown="handleCostPlusKey(event,this)"/>
 <select id="currIn" style="position:absolute;right:0;top:0;width:58px;height:36px;border-left:none;border-radius:0 7px 7px 0;font-size:11px;padding:0 2px">
 <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
 </select>
@@ -883,6 +925,20 @@ function s2p(x,y){return{left:(x/1000*100).toFixed(2)+'%',top:(y/500*100).toFixe
 function s2xy(x,y){gms();return{x:x/1000*mW,y:y/500*mH}}
 function projX(lon){const sh=lon-155;return((sh<-180?sh+360:sh>180?sh-360:sh)+180)/360*1000;}
 function projY(lat){lat=Math.max(Math.min(lat,85),-85);const r=lat*Math.PI/180,m=Math.log(Math.tan(Math.PI/4+r/2)),t=Math.log(Math.tan(Math.PI/4+85*Math.PI/360));return(1-(m+t)/(2*t))*500;}
+// projX/projY의 역변환 — 평면 지도의 x,y 좌표를 위경도로 되돌립니다.
+// 지구본에서 좌표를 찾을 때, 지구본 전용 좌표 목록(GLOBE_LL)에 없는 도시라도
+// 평면 지도가 이미 갖고 있는 AIRPORTS 좌표를 그대로 재활용할 수 있게 해줍니다.
+function unprojLL(x,y){
+const sh=x/1000*360-180;
+let lon=sh+155;
+if(lon>180)lon-=360;
+if(lon<-180)lon+=360;
+const R=Math.PI/180,D=180/Math.PI;
+const tConst=Math.log(Math.tan(Math.PI/4+85*R/2));
+const m=tConst*(1-y/250);
+const latRad=2*(Math.atan(Math.exp(m))-Math.PI/4);
+return{lat:latRad*D,lon};
+}
 // ── Twemoji ──
 function flagImg(emoji,size){
 if(!emoji||emoji==='🌍')return`<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/1f30d.svg" width="${size}" height="${size}" style="vertical-align:middle;border-radius:50%">`;
@@ -905,7 +961,13 @@ if(tab==='globe')initGlobe();
 }
 // ── Render ──
 function save(){}
-function render(){renderStats();renderPins();renderList();_saveLocalCache();}
+function render(){
+renderStats();renderPins();renderList();_saveLocalCache();
+// ⚠️ 평면 지도에서 저장/수정/삭제가 일어나면 지구본도 항상 같이 최신 상태를 유지하도록,
+// 지구본이 이미 한 번이라도 초기화된 상태라면 핀도 즉시 다시 그립니다.
+// (예전에는 지구본 탭으로 다시 이동해야만 갱신됐습니다.)
+if(_glInited)renderGlobePins();
+}
 window._render=render;
 function renderStats(){
 const cs=new Set(trips.map(t=>t.cntry));
@@ -954,7 +1016,7 @@ const pin=document.createElement('div');
 pin.className='pin'+(i===curIdx?' active':'');
 pin.style.left=pos.left;pin.style.top=pos.top;
 pin.style.animationDelay=(i*.03)+'s';
-pin.innerHTML=`<div class="pt">${flagImg(t.flag||'🌍',14)} ${t.city||t.cntry}</div><div class="pinner">${flagImg(t.flag||'🌍',24)}</div><div class="ps"></div>`;
+pin.innerHTML=`<div class="pt">${flagImg(t.flag||'🌍',14)} ${t.city||t.cntry}</div><div class="pinner" title="🔍 ${t.cntry||''} 지도 크게 보기" onclick="event.stopPropagation();openCountryMap('${((c&&c.en)||'').replace(/'/g,"\\'")}','${(t.cntry||'').replace(/'/g,"\\'")}','${t.flag||'🌍'}')">${flagImg(t.flag||'🌍',24)}</div><div class="ps"></div>`;
 pin.addEventListener('click',()=>openModal(i));
 plEl.appendChild(pin);
 });
@@ -1071,6 +1133,7 @@ else if(e.key==='Escape')drop.style.display='none';
 document.addEventListener('click',e=>{
 if(!e.target.closest('.ac-wrap')){document.getElementById('cntryDrop').style.display='none';document.getElementById('cityDrop').style.display='none';}
 if(!e.target.closest('.date-range-wrap')){const pop=document.getElementById('dateRangePop');if(pop)pop.style.display='none';}
+if(!e.target.closest('.me-date-range-wrap')){const mpop=document.getElementById('meDateRangePop');if(mpop)mpop.style.display='none';}
 },true);
 // ── 날짜 범위 선택 캘린더 (달력 클릭 + 직접 입력 둘 다 지원) ──
 let _drYear,_drMonth,_drStart=null,_drEnd=null;
@@ -1100,7 +1163,19 @@ if(e.key==='Enter'){e.preventDefault();onDateRangeBlur();document.getElementById
 else if(e.key==='Escape'){document.getElementById('dateRangePop').style.display='none';}
 }
 // 타이핑 중엔 가볍게 자동으로 '.' 구분자/물결(~) 보정만 살짝 도와주고, 최종 검증은 blur/Enter 때 수행
-function onDateRangeTextInput(){/* 자유 입력 — 포맷 강제 없음, blur 시 파싱 */}
+function onDateRangeTextInput(){
+const inp=document.getElementById('dateRangeText');
+if(!inp)return;
+const raw=inp.value;
+const tildeIdx=raw.indexOf('~');
+if(tildeIdx>=0){
+const left=_autoInsertDots(raw.slice(0,tildeIdx));
+const right=_autoInsertDots(raw.slice(tildeIdx+1).trim());
+inp.value=left.trimEnd()+' ~ '+right;
+}else{
+inp.value=_autoInsertDots(raw);
+}
+}
 function _drParseOneDate(s){
 s=s.trim();
 const m=s.match(/^(\d{4})\s*[.\-\/]\s*(\d{1,2})\s*[.\-\/]\s*(\d{1,2})$/);
@@ -1183,12 +1258,195 @@ if(_drStart&&!_drEnd){_drEnd=_drStart;_drSync();}
 document.getElementById('dateRangePop').style.display='none';
 }
 function _drResetToToday(){const t=new Date();_drStart=t;_drEnd=t;_drYear=t.getFullYear();_drMonth=t.getMonth();_drSync();}
+// ── 수정 모달 전용 여행기간 달력 (추가폼 달력과 완전히 분리된 상태로 동작) ──
+let _meDrYear,_meDrMonth,_meDrStart=null,_meDrEnd=null;
+function meToggleDRP(e){
+e&&e.stopPropagation();
+const pop=document.getElementById('meDateRangePop');
+if(!pop)return;
+const willOpen=pop.style.display!=='block';
+pop.style.display=willOpen?'block':'none';
+if(willOpen){
+if(_meDrStart){_meDrYear=_meDrStart.getFullYear();_meDrMonth=_meDrStart.getMonth();}
+else{const t=new Date();_meDrYear=t.getFullYear();_meDrMonth=t.getMonth();}
+meRenderDRCal();
+}
+}
+function meDRFocus(e){
+const pop=document.getElementById('meDateRangePop');
+if(pop&&pop.style.display!=='block')meToggleDRP(e);
+}
+// 숫자만 쳐도 자동으로 YYYY.MM.DD ~ YYYY.MM.DD 포맷으로 점(.) 삽입
+function meDRAutoFormat(e){
+const inp=e.target;
+const sel=inp.selectionStart;
+const raw=inp.value;
+// ~ 기준으로 좌/우 분리
+const tildeIdx=raw.indexOf('~');
+if(tildeIdx>=0){
+const left=_autoInsertDots(raw.slice(0,tildeIdx));
+const right=_autoInsertDots(raw.slice(tildeIdx+1).trim());
+inp.value=left.trimEnd()+' ~ '+right;
+}else{
+inp.value=_autoInsertDots(raw);
+}
+}
+function meDRKey(e){
+if(e.key==='Enter'){e.preventDefault();meDRBlur();const pop=document.getElementById('meDateRangePop');if(pop)pop.style.display='none';}
+else if(e.key==='Escape'){const pop=document.getElementById('meDateRangePop');if(pop)pop.style.display='none';}
+}
+function meDRBlur(){
+const input=document.getElementById('me_dateRangeText');
+if(!input)return;
+const raw=input.value;
+if(!raw.trim()){if(_meDrStart)meDrSync();return;}
+const parsed=_drParseRangeText(raw);
+if(parsed){
+_meDrStart=parsed.start;_meDrEnd=parsed.end;
+_meDrYear=_meDrStart.getFullYear();_meDrMonth=_meDrStart.getMonth();
+meDrSync();
+meRenderDRCal();
+}else{
+toast('⚠️ 날짜 형식을 확인해주세요 (예: 2026.06.10 ~ 2026.06.18)');
+meDrSync();
+}
+}
+function meDrNav(delta){_meDrMonth+=delta;if(_meDrMonth<0){_meDrMonth=11;_meDrYear--;}if(_meDrMonth>11){_meDrMonth=0;_meDrYear++;}meRenderDRCal();}
+function meRenderDRCal(){
+const title=document.getElementById('meDrpTitle');
+if(title)title.textContent=`${_meDrYear}년 ${_meDrMonth+1}월`;
+const grid=document.getElementById('meDrpGrid');
+if(!grid)return;
+const firstDow=new Date(_meDrYear,_meDrMonth,1).getDay();
+const daysInMonth=new Date(_meDrYear,_meDrMonth+1,0).getDate();
+const today=new Date();
+let html='';
+for(let i=0;i<firstDow;i++)html+='<span class="drp-day drp-empty"></span>';
+for(let d=1;d<=daysInMonth;d++){
+const cur=new Date(_meDrYear,_meDrMonth,d);
+let cls='drp-day';
+if(_drSameDay(cur,today))cls+=' today';
+const isStart=_meDrStart&&_drSameDay(cur,_meDrStart);
+const isEnd=_meDrEnd&&_drSameDay(cur,_meDrEnd);
+if(isStart)cls+=' start';
+if(isEnd)cls+=' end';
+if(_meDrStart&&_meDrEnd&&cur>_meDrStart&&cur<_meDrEnd)cls+=' in-range';
+html+=`<span class="${cls}" onclick="meDrPickDay(${_meDrYear},${_meDrMonth},${d})">${d}</span>`;
+}
+grid.innerHTML=html;
+}
+function meDrPickDay(y,m,d){
+const clicked=new Date(y,m,d);
+if(!_meDrStart||(_meDrStart&&_meDrEnd)){_meDrStart=clicked;_meDrEnd=null;}
+else if(clicked<_meDrStart){_meDrEnd=_meDrStart;_meDrStart=clicked;}
+else{_meDrEnd=clicked;}
+meDrSync();
+meRenderDRCal();
+}
+function meDrSync(){
+const dfEl=document.getElementById('me_df'),dtEl=document.getElementById('me_dt');
+const txt=document.getElementById('me_dateRangeText');
+if(!dfEl||!dtEl||!txt)return;
+if(_meDrStart){
+const isoStart=_drISO(_meDrStart.getFullYear(),_meDrStart.getMonth(),_meDrStart.getDate());
+const isoEnd=_meDrEnd?_drISO(_meDrEnd.getFullYear(),_meDrEnd.getMonth(),_meDrEnd.getDate()):isoStart;
+dfEl.value=_drFmt(isoStart);
+dtEl.value=_drFmt(isoEnd);
+txt.value=_meDrEnd?`${_drFmt(isoStart)} ~ ${_drFmt(isoEnd)}`:`${_drFmt(isoStart)} ~ `;
+}
+}
+function meDrToday(){const t=new Date();_meDrStart=t;_meDrEnd=t;_meDrYear=t.getFullYear();_meDrMonth=t.getMonth();meDrSync();meRenderDRCal();}
+function meDrConfirm(){
+if(_meDrStart&&!_meDrEnd){_meDrEnd=_meDrStart;meDrSync();}
+const pop=document.getElementById('meDateRangePop');if(pop)pop.style.display='none';
+}
+// ── 날짜 자동 점 삽입 헬퍼 (숫자 8자리 → YYYY.MM.DD) ──
+function _autoInsertDots(str){
+const raw=str.replace(/\D/g,'').slice(0,8);
+let out='';
+for(let i=0;i<raw.length;i++){
+out+=raw[i];
+if(i===3||i===5)out+='.';
+}
+return out;
+}
+// 모달을 열 때 기존 저장된 출발일/귀국일(t.df, t.dt — "YYYY.MM.DD" 형식)로 달력 초기값을 채움
+function _meDrInit(dfStr,dtStr){
+const start=dfStr?_drParseOneDate(dfStr):null;
+const end=dtStr?_drParseOneDate(dtStr):null;
+_meDrStart=start;_meDrEnd=end||start;
+if(_meDrStart){_meDrYear=_meDrStart.getFullYear();_meDrMonth=_meDrStart.getMonth();}
+else{const t=new Date();_meDrYear=t.getFullYear();_meDrMonth=t.getMonth();}
+meDrSync();
+}
 // ── Add / Edit / Delete ──
+// ── 경비 입력 1000단위 콤마 자동 포맷 ──
+function formatCostInput(el){
+const raw=el.value.replace(/[^0-9]/g,''); // 숫자만 남김
+if(!raw){el.value='';return;}
+const prevLen=el.value.length;
+const prevPos=el.selectionStart||prevLen;
+const digitsBeforeCursor=el.value.slice(0,prevPos).replace(/[^0-9]/g,'').length;
+const formatted=Number(raw).toLocaleString('ko-KR');
+el.value=formatted;
+// 커서 위치를 콤마 삽입 이후에도 자연스럽게 유지
+let count=0,pos=formatted.length;
+for(let i=0;i<formatted.length;i++){
+if(/[0-9]/.test(formatted[i]))count++;
+if(count===digitsBeforeCursor){pos=i+1;break;}
+}
+el.setSelectionRange(pos,pos);
+}
+// + 키를 누르면 현재 숫자 뒤에 0을 3개 자동으로 붙여줌 (예: 100 + "+" → 100000)
+function handleCostPlusKey(e,el){
+if(e.key!=='+')return;
+e.preventDefault(); // '+' 문자가 그대로 입력되지 않도록 막음
+const raw=el.value.replace(/[^0-9]/g,'');
+const next=(raw?raw:'')+'000'; // 비어있으면 '000'부터 시작
+el.value=Number(next).toLocaleString('ko-KR');
+el.setSelectionRange(el.value.length,el.value.length);
+}
+// ── 국가 이름 오타 보정 매칭 ──
+// ⚠️ 버그 수정: 예전에는 입력한 텍스트에 국가명이 "정확히 그대로" 포함되어 있어야만
+// 매칭이 되어서, 자동완성 목록에서 고르지 않고 직접 타이핑하다가 오타가 하나라도
+// 나면(예: "나미비아"를 "나마비아"로) 조용히 매칭에 실패하고 국기 없이 🌍로 저장됐어요.
+// 사용자 입장에서는 왜 국기가 안 생기는지 알 방법이 전혀 없었습니다.
+// 이제는 약간의 오타가 있어도 편집거리(Levenshtein distance)로 가장 가까운 나라를
+// 찾아 자동으로 매칭하고, 그래도 못 찾으면 이유를 알 수 있도록 경고를 띄웁니다.
+function _levenshtein(a,b){
+const m=a.length,n=b.length;
+const dp=Array.from({length:m+1},()=>new Array(n+1).fill(0));
+for(let i=0;i<=m;i++)dp[i][0]=i;
+for(let j=0;j<=n;j++)dp[0][j]=j;
+for(let i=1;i<=m;i++){
+for(let j=1;j<=n;j++){
+dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+}
+}
+return dp[m][n];
+}
+function _findCountryFuzzy(txt){
+if(!txt)return null;
+// 1) 기존처럼 정확히 포함되는 경우를 우선 매칭
+let c=COUNTRIES.find(x=>txt.includes(x.name)||txt.includes(x.en));
+if(c)return c;
+// 2) 국기 이모지 등 앞부분을 뗀 순수 국가명으로 유사도 매칭
+// ⚠️ 국기 생성은 항상 되어야 하므로(요청사항), 임계값을 두지 않고
+// 무조건 가장 편집거리가 가까운 나라를 선택합니다 — 목록에 있는 나라라면
+// 오타가 아무리 심해도 결국 가장 비슷한 나라의 국기로 저장돼요.
+const cleaned=txt.replace(/^\S+\s/,'').trim()||txt;
+let best=null,bestD=Infinity;
+COUNTRIES.forEach(x=>{
+const d=Math.min(_levenshtein(cleaned,x.name),_levenshtein(cleaned.toLowerCase(),x.en.toLowerCase()));
+if(d<bestD){bestD=d;best=x;}
+});
+return best;
+}
 function addTrip(){
 const cntryTxt=document.getElementById('cntryIn').value.trim();
 const city=document.getElementById('cityIn').value.trim()||selCity;
 const memo=document.getElementById('memoIn').value.trim();
-const cost=document.getElementById('costIn')?.value.trim()||'';
+const cost=(document.getElementById('costIn')?.value.trim()||'').replace(/,/g,'');
 const currency=document.getElementById('currIn')?.value||'KRW';
 const _df=document.getElementById('df').value;
 const dt=document.getElementById('dt').value;
@@ -1197,7 +1455,10 @@ const mon=_df?new Date(_df).getMonth()+1:0;
 const season=mon?(mon>=3&&mon<=5?'🌸봄':mon>=6&&mon<=8?'☀️여름':mon>=9&&mon<=11?'🍂가을':'❄️겨울'):'';
 if(!cntryTxt){document.getElementById('cntryIn').focus();toast('🌍 나라를 입력해주세요');return;}
 if(!city){document.getElementById('cityIn').focus();toast('🏙️ 도시를 입력해주세요');return;}
-const c=selCntry||COUNTRIES.find(x=>cntryTxt.includes(x.name)||cntryTxt.includes(x.en));
+const c=selCntry||_findCountryFuzzy(cntryTxt);
+if(!c){
+toast(`⚠️ "${cntryTxt}" 국가를 목록에서 찾지 못해 국기 없이 저장돼요. 자동완성 목록에서 골라보세요!`);
+}
 const fmtD=d=>d?d.replace(/-/g,'.'):null;
 const fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
 const entry={
@@ -1238,7 +1499,7 @@ setTimeout(()=>alert('Firestore 저장 실패: '+(e.code||e.message)+'\n\nFireba
 } else {
 // Firebase 없을 땐 바로 플래그 해제
 window._saving=false;
-if(!window._user)toast('ℹ️ 로그인 안 된 상태 — 새로고침하면 사라져요. Google 로그인을 권장해요');
+if(!window._user)toast('⚠️ Google 로그인이 필요해요 — 지금은 이 기기에만 저장됩니다');
 }
 }
 async function del(i){
@@ -1292,11 +1553,33 @@ document.getElementById('modalContent').innerHTML=`
 <div id="modalSaveStatus" class="modal-save-status" style="display:none"></div>
 <div class="modal-row"><div class="modal-lbl">나라</div><div style="font-size:13px;font-weight:700">${t.cntry||'—'}</div></div>
 <div class="modal-row"><div class="modal-lbl">도시</div><input class="modal-inp" id="me_city" value="${t.city||''}"/></div>
-<div class="modal-row"><div class="modal-lbl">출발일</div><input class="modal-inp" id="me_df" value="${t.df||''}"/></div>
-<div class="modal-row"><div class="modal-lbl">귀국일</div><input class="modal-inp" id="me_dt" value="${t.dt||''}"/></div>
+<div class="modal-row me-date-range-wrap" style="position:relative">
+<div class="modal-lbl">여행 기간</div>
+<div class="date-range-input">
+<input type="text" id="me_dateRangeText" class="dr-text-input" placeholder="YYYY.MM.DD ~ YYYY.MM.DD" autocomplete="off" onfocus="meDRFocus(event)" oninput="meDRAutoFormat(event)" onkeydown="meDRKey(event)" onblur="meDRBlur()"/>
+<span class="dr-icon" onclick="meToggleDRP(event)">📅</span>
+</div>
+<input type="hidden" id="me_df" value="${t.df||''}"/>
+<input type="hidden" id="me_dt" value="${t.dt||''}"/>
+<div class="date-range-pop" id="meDateRangePop" style="display:none">
+<div class="drp-header">
+<button type="button" class="drp-nav" onclick="meDrNav(-1)">‹</button>
+<span id="meDrpTitle" class="drp-title"></span>
+<button type="button" class="drp-nav" onclick="meDrNav(1)">›</button>
+</div>
+<div class="drp-weekdays">
+<span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+</div>
+<div class="drp-grid" id="meDrpGrid"></div>
+<div class="drp-footer">
+<button type="button" class="drp-today" onclick="meDrToday()">오늘</button>
+<button type="button" class="drp-ok" onclick="meDrConfirm()">확인</button>
+</div>
+</div>
+</div>
 <div class="modal-row"><div class="modal-lbl">👥 누구와 함께</div><input class="modal-inp" id="me_memo" value="${t.memo||''}" placeholder="가족여행, 친구와, 혼자"/></div>
 <div class="modal-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-<div><div class="modal-lbl">💰 경비</div><input class="modal-inp" type="number" id="me_cost" value="${t.cost||''}" placeholder="0"/></div>
+<div><div class="modal-lbl">💰 경비</div><input class="modal-inp" type="text" inputmode="numeric" id="me_cost" value="${t.cost?Number(t.cost).toLocaleString('ko-KR'):''}" placeholder="0" oninput="formatCostInput(this)" onkeydown="handleCostPlusKey(event,this)"/></div>
 <div><div class="modal-lbl">통화</div><select class="modal-inp" id="me_curr" style="height:36px">${['KRW','USD','JPY','EUR','CNY','THB'].map(cu=>`<option${t.currency===cu?' selected':''}>${cu}</option>`).join('')}</select></div>
 </div>
 <div class="modal-row"><div class="modal-lbl">만족도</div><div class="star-row">${starHtml}</div></div>
@@ -1306,9 +1589,21 @@ ${t.photo?`<div class="modal-img-wrap"><img src="${t.photo}" alt=""><button clas
 <label class="photo-upload-btn">📷 사진 추가<input type="file" accept="image/*" style="display:none" onchange="uploadPhoto(this)"></label>
 </div>
 <button class="modal-save-btn" onclick="saveModal()">💾 저장하기</button>`;
+_meDrInit(t.df,t.dt);
 document.getElementById('modalBg').classList.add('show');
 }
 function closeModal(){document.getElementById('modalBg').classList.remove('show');_editIdx=null;window._tmpStars=undefined;window._tmpPhoto=undefined;}
+function openCountryMap(countryEn,countryKo,flag){
+const q=countryEn||countryKo;
+if(!q){toast('⚠️ 나라 정보를 찾을 수 없어요');return;}
+document.getElementById('cmapTitle').innerHTML=`${flagImg(flag||'🌍',20)} ${countryKo||countryEn} 지도`;
+document.getElementById('cmapFrame').src='https://www.google.com/maps?q='+encodeURIComponent(q)+'&output=embed';
+document.getElementById('cmapBg').classList.add('show');
+}
+function closeCountryMap(){
+document.getElementById('cmapBg').classList.remove('show');
+document.getElementById('cmapFrame').src=''; // 닫을 때 iframe 로딩 중지
+}
 function setStar(n){[1,2,3,4,5].forEach(i=>document.getElementById('star'+i).textContent=i<=n?'⭐':'☆');window._tmpStars=n;}
 function removePhoto(){window._tmpPhoto='';document.querySelector('.modal-img-wrap')?.remove();}
 function uploadPhoto(inp){
@@ -1346,33 +1641,64 @@ if(_editIdx===null)return;const t=trips[_editIdx];if(!t)return;
 t.city=document.getElementById('me_city').value.trim()||t.city;
 t.df=document.getElementById('me_df').value.trim();t.dt=document.getElementById('me_dt').value.trim();
 t.memo=document.getElementById('me_memo').value.trim();
-const _c=document.getElementById('me_cost')?.value;t.cost=_c?Number(_c):null;
+const _c=(document.getElementById('me_cost')?.value||'').replace(/,/g,'');t.cost=_c?Number(_c):null;
 t.currency=document.getElementById('me_curr')?.value||'KRW';
 if(window._tmpStars!==undefined)t.stars=window._tmpStars;
-if(window._tmpPhoto!==undefined)t.photo=window._tmpPhoto;
+// ⚠️ 성능 버그 수정: 사진을 이번에 새로 바꾼 게 아니라면(_tmpPhoto가 그대로 undefined),
+// 클라우드로 보내는 데이터에서 사진 필드는 아예 빼고 보냅니다.
+// 예전에는 도시명·메모 같은 작은 값 하나만 고쳐도 이미 저장돼 있던 사진(수백 KB짜리
+// base64 데이터)을 매번 통째로 다시 업로드하고 있어서, 사진이 첨부된 여행일수록
+// 저장이 심하게 느려지고 12초 타임아웃까지 걸리는 원인이 되고 있었습니다.
+// (Firestore는 merge:true 저장이라 사진 필드를 안 보내면 기존 사진이 그대로 유지돼요.)
+const photoChangedThisSession=window._tmpPhoto!==undefined;
+if(photoChangedThisSession)t.photo=window._tmpPhoto;
 window._tmpStars=undefined;window._tmpPhoto=undefined;
 const statusEl=document.getElementById('modalSaveStatus');
 const setStatus=(cls,msg)=>{if(statusEl){statusEl.style.display='block';statusEl.className='modal-save-status '+cls;statusEl.textContent=msg;}};
-setStatus('saving','⏳ 저장 중...');
+// ① _fbId 방어
+if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+// ② 로컬 즉시 반영 (화면 블로킹 없이 먼저 보여줌)
+try{render();}catch(e){console.error('저장 후 화면 갱신 오류:',e);}
+// ③ 저장 버튼 비활성화 + "저장 중..." 표시 (모달 유지)
+const saveBtn=document.querySelector('.modal-save-btn');
+if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='⏳ 저장 중...';}
+setStatus('saving','⏳ Firebase에 저장 중...');
 const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
-let saveOk=true,saveErrMsg='';
-try{
-if(window._fbSave&&window._user)await window._fbSave(t);
-}catch(e){
-saveOk=false;saveErrMsg=e.code||e.message||'알 수 없는 오류';
-console.error('수정 저장 실패:',e);
+// ④ Firebase 저장 → 확인 후에만 "저장 완료!" 표시
+// 사진 없는 일반 수정은 3초, 사진 포함은 15초 타임아웃
+const timeoutMs=photoChangedThisSession?15000:3000;
+const cloudPayload=photoChangedThisSession?t:Object.fromEntries(Object.entries(t).filter(([k])=>k!=='photo'));
+const doSave=async()=>{
+if(window._fbSave&&window._user){
+await Promise.race([
+window._fbSave(cloudPayload),
+new Promise((_,rej)=>setTimeout(()=>rej(new Error('응답 시간 초과')),timeoutMs))
+]);
 }
-finally{if(loader)loader.style.display='none';}
-render(); // 로컬/화면 반영 + 로컬 캐시 저장은 성공/실패 여부와 무관하게 항상 최신 상태 유지
-if(saveOk){
-setStatus('ok','✅ 저장 완료!'+(window._user?' (클라우드에 동기화됨)':' (이 기기에만 저장됨 — 로그인하면 클라우드에도 저장돼요)'));
+};
+doSave()
+.then(()=>{
+if(loader)loader.style.display='none';
+if(window._user){
+// 로그인 O → 클라우드 저장 완료
+setStatus('ok','✅ 저장 완료! (내 계정 클라우드에 저장됨)');
 toast('✅ 수정 저장 완료!');
-setTimeout(closeModal,650);
+setTimeout(closeModal,700);
 }else{
-setStatus('fail','❌ 클라우드 저장 실패: '+saveErrMsg+' (이 기기에는 반영됨)');
-toast('⚠️ 클라우드 저장 실패! 이 기기에는 반영됐어요');
-// 실패 시에는 사용자가 메시지를 확인할 수 있도록 모달을 자동으로 닫지 않음
+// 로그인 X → 이 기기에만 저장, 경고 표시
+setStatus('saving','⚠️ 이 기기에만 저장됐어요. Google 로그인을 하면 어디서든 볼 수 있어요.');
+if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='✕ 닫기';saveBtn.onclick=closeModal;}
+toast('⚠️ 로그인하면 클라우드에 저장됩니다');
 }
+})
+.catch(e=>{
+if(loader)loader.style.display='none';
+console.error('수정 저장 실패:',e);
+const msg=e.code||e.message||'알 수 없는 오류';
+setStatus('fail','❌ 저장 실패: '+msg+' — 이 기기에는 반영됨');
+if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='💾 다시 시도';}
+toast('⚠️ 클라우드 저장 실패');
+});
 }
 // ── Map tooltip ──
 document.querySelectorAll('.country').forEach(p=>{
@@ -1384,9 +1710,46 @@ p.addEventListener('click',()=>{const c=BY_EN[p.dataset.name];if(c){selCntry=c;d
 window.addEventListener('resize',()=>{gms();if(curIdx>=0&&trips[curIdx]){const ap=AIRPORTS[trips[curIdx].city];if(ap){const{x,y}=s2xy(ap.x,ap.y);px=x;py=y;tx=x;ty=y;}}});
 // ── Auth UI ──
 const _PW='1234';
-function checkPw(){const v=document.getElementById('lockPw').value;if(v===_PW){document.getElementById('lockScreen').style.display='none';_doBootApp();}else{document.getElementById('lockErr').textContent='비밀번호가 틀렸습니다 🔒';document.getElementById('lockPw').value='';document.getElementById('lockPw').focus();}}
+function checkPw(){
+const v=document.getElementById('lockPw').value;
+if(v===_PW){
+document.getElementById('lockScreen').style.display='none';
+_doBootApp();
+// 비번으로 들어왔을 때 로그인 배지 상태 갱신
+if(typeof window._updateUserUI==='function')window._updateUserUI(window._user||null);
+}else{
+document.getElementById('lockErr').textContent='비밀번호가 틀렸습니다 🔒';
+document.getElementById('lockPw').value='';
+document.getElementById('lockPw').focus();
+}
+}
 window._bootApp=function(){_doBootApp();};
-window._updateUserUI=function(user){const ui=document.getElementById('userInfo');const av=document.getElementById('userAvatar');const un=document.getElementById('userName');if(ui&&user){if(av)av.src=user.photoURL||'';if(un)un.textContent=user.displayName||user.email||'사용자';ui.style.display='flex';}};
+window._updateUserUI=function(user){
+const ui=document.getElementById('userInfo');
+const av=document.getElementById('userAvatar');
+const un=document.getElementById('userName');
+const notLogin=document.getElementById('notLoginInfo');
+if(user){
+if(av)av.src=user.photoURL||'';
+if(un)un.textContent=user.displayName||user.email||'사용자';
+if(ui)ui.style.display='flex';
+if(notLogin)notLogin.style.display='none';
+}else{
+if(ui)ui.style.display='none';
+if(notLogin)notLogin.style.display='flex';
+}
+};
+// file:// 프로토콜로 열면 Firebase 구글 로그인이 안 됨 → 안내
+if(location.protocol==='file:'){
+setTimeout(()=>{
+if(!window._user){
+const warn=document.createElement('div');
+warn.style.cssText='position:fixed;top:0;left:0;right:0;background:#fff3cd;border-bottom:2px solid #ffc107;padding:10px 16px;font-size:12px;font-weight:700;color:#664d03;z-index:10000;text-align:center';
+warn.innerHTML='⚠️ 파일을 직접 더블클릭해서 여셨네요. 구글 로그인은 <b>로컬 서버 또는 웹서버</b>에서 열어야 작동합니다. 지금은 이 기기에만 저장됩니다. &nbsp;<a href="https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer" target="_blank" style="color:#0d6efd">Live Server 설치 방법</a>';
+document.body.prepend(warn);
+}
+},2000);
+}
 // ── 로컬 전용 데이터를 로그인 계정으로 자동 업로드(마이그레이션) ──
 window._migrateLocalTrips=async function(uid,localTrips){
 if(!window._fbSave||!localTrips||!localTrips.length)return;
@@ -1470,6 +1833,8 @@ let _glInited=false,_glRafId=null;
 let _glPins=[];
 let _glPlaneEl=null;
 let _glCurArcLine=null,_glCompletedLines=[];
+const ARC_MAX_SEG=60;
+let _arcPositions=null;
 let _glIdleAngle=0;
 let _glPlaying=false,_glAutoIdx=0;
 let _glFromLat=SEOUL_LAT,_glFromLon=SEOUL_LON;
@@ -1478,9 +1843,45 @@ let _glResizeBound=false;
 
 // 공항 lat/lon (지구본용) — countrycode.org / 실제 공항 좌표 기준
 const GLOBE_LL={"서울":[37.4602,126.4407],"도쿄":[35.7647,140.3864],"오사카":[34.4347,135.2440],"삿포로":[43.0642,141.3469],"후쿠오카":[33.5902,130.4017],"나고야":[35.2550,136.9239],"베이징":[40.0799,116.6031],"상하이":[31.1443,121.8083],"홍콩":[22.308,113.918],"타이베이":[25.0797,121.2342],"마카오":[22.1987,113.5439],"광저우":[23.3924,113.2988],"청두":[30.5785,103.9473],"시안":[34.4471,108.7516],"울란바토르":[47.8431,106.7666],"방콕":[13.681,100.747],"치앙마이":[18.7668,98.9626],"푸켓":[8.1132,98.3017],"하노이":[21.2212,105.8072],"다낭":[16.044,108.199],"호치민":[10.819,106.652],"나트랑":[12.2388,109.1922],"발리":[-8.748,115.167],"자카르타":[-6.128,106.654],"싱가포르":[1.365,103.994],"쿠알라룸푸르":[2.746,101.707],"마닐라":[14.509,121.019],"세부":[10.3157,123.9950],"앙코르와트":[13.4125,103.867],"프놈펜":[11.5625,104.916],"양곤":[16.7967,96.1951],"뉴델리":[28.556,77.100],"뭄바이":[19.090,72.866],"카트만두":[27.6966,85.3591],"콜롬보":[7.1808,79.8841],"파리":[49.010,2.548],"런던":[51.47,-0.454],"로마":[41.800,12.239],"밀라노":[45.6306,8.7281],"바르셀로나":[41.297,2.083],"마드리드":[40.4936,-3.5668],"베를린":[52.367,13.503],"뮌헨":[48.3537,11.775],"암스테르담":[52.311,4.768],"프라하":[50.1008,14.260],"비엔나":[48.110,16.570],"취리히":[47.465,8.549],"부다페스트":[47.430,19.261],"아테네":[37.936,23.945],"이스탄불":[41.275,28.752],"리스본":[38.7813,-9.1359],"두브로브니크":[42.5614,18.2682],"코펜하겐":[55.618,12.656],"오슬로":[60.1939,11.1004],"스톡홀름":[59.6519,17.9186],"헬싱키":[60.3183,24.963],"모스크바":[55.9726,37.4146],"두바이":[25.253,55.366],"아부다비":[24.433,54.651],"도하":[25.2609,51.6138],"텔아비브":[32.0055,34.8854],"암만":[31.7226,35.9932],"테헤란":[35.4161,51.1522],"카이로":[30.122,31.406],"마라케시":[31.6069,-8.0363],"케이프타운":[-33.972,18.602],"요하네스버그":[-26.1392,28.246],"나이로비":[-1.319,36.928],"잔지바르":[-6.222,39.2249],"아디스아바바":[8.9779,38.7993],"뉴욕":[40.641,-73.778],"로스앤젤레스":[33.943,-118.408],"샌프란시스코":[37.621,-122.379],"라스베이거스":[36.084,-115.154],"시카고":[41.974,-87.907],"마이애미":[25.796,-80.287],"시애틀":[47.450,-122.309],"밴쿠버":[49.197,-123.182],"토론토":[43.678,-79.625],"멕시코시티":[19.436,-99.072],"칸쿤":[21.037,-86.877],"리우데자네이루":[-22.810,-43.251],"상파울루":[-23.436,-46.473],"부에노스아이레스":[-34.822,-58.536],"마추픽추":[-13.532,-71.968],"리마":[-12.022,-77.114],"산티아고":[-33.393,-70.786],"보고타":[4.702,-74.147],"하와이":[21.325,-157.925],"시드니":[-33.940,151.175],"멜버른":[-37.669,144.841],"브리즈번":[-27.394,153.122],"케언즈":[-16.886,145.755],"퍼스":[-31.940,115.967],"오클랜드":[-37.008,174.785],"트빌리시":[41.669,44.955],"알마티":[43.352,77.041],"사마르칸트":[39.701,66.984]};
+// ⚠️ GLOBE_LL과 AIRPORTS 둘 다에 좌표가 없던 나라들의 도시 좌표를 직접 보강 (아래 참고 국가:
+// 북한/브루나이/방글라데시/몰디브/키르기스스탄/아제르바이잔/쿠웨이트/오만/벨기에/
+// 루마니아/볼리비아/튀니지/나미비아/가나/마다가스카르/피지/파푸아뉴기니)
+const GLOBE_LL_EXTRA={
+"평양":[39.0392,125.7625],
+"반다르스리브가완":[4.9031,114.9398],
+"다카":[23.8103,90.4125],"콕스바자르":[21.4272,92.0058],
+"말레":[4.1755,73.5093],"마아푸시":[3.9408,73.4903],"아리환초":[3.75,72.85],
+"비슈케크":[42.8746,74.5698],"오쉬":[40.5283,72.7985],"이식쿨호수":[42.4,77.2],
+"바쿠":[40.4093,49.8671],"셰키":[41.1919,47.1706],
+"쿠웨이트시티":[29.3759,47.9774],
+"무스카트":[23.5880,58.3829],"살랄라":[17.0151,54.0924],
+"브뤼셀":[50.8503,4.3517],"브뤼헤":[51.2093,3.2247],"겐트":[51.0543,3.7174],"앤트워프":[51.2194,4.4025],
+"부쿠레슈티":[44.4268,26.1025],"브라쇼프":[45.6427,25.5887],"시기쇼아라":[46.2197,24.7925],
+"수크레":[-19.0333,-65.2627],"우유니소금사막":[-20.1338,-67.4891],"라파스":[-16.5,-68.15],
+"튀니스":[36.8065,10.1815],"카르타고":[36.8531,10.3236],
+"빈트후크":[-22.5609,17.0658],"나미브사막":[-24.7,15.3],"에토샤":[-18.85,16.3333],
+"아크라":[5.6037,-0.1870],"케이프코스트":[5.1053,-1.2466],
+"안타나나리보":[-18.8792,47.5079],
+"수바":[-18.1416,178.4419],"난디":[-17.7765,177.4356],
+"포트모르즈비":[-9.4438,147.1803]
+};
+// 최종 안전망 — 위 어떤 목록에도 없는 도시라도 최소한 대륙 근처에는 표시되도록 함
+const CONTINENT_CENTER={"아시아":[34,100],"유럽":[50,15],"북미":[40,-100],"남미":[-15,-60],"아프리카":[2,20],"오세아니아":[-25,140],"기타":[20,0]};
 function _getGlobeLL(t){
 if(t.geoLat&&t.geoLon)return[parseFloat(t.geoLat),parseFloat(t.geoLon)];
-return GLOBE_LL[t.city]||null;
+if(GLOBE_LL[t.city])return GLOBE_LL[t.city];
+// ⚠️ 버그 수정: 지구본 전용 좌표 목록(GLOBE_LL)이 평면 지도가 알고 있는 도시보다
+// 훨씬 적어서(예: 나미비아의 '빈트후크' 등), 평면 지도에는 나라/도시가 잘 저장되고
+// 보이는데 지구본에는 좌표를 못 찾아 핀이 아예 안 뜨는 경우가 있었습니다.
+// 아래 폴백들을 순서대로 시도해서, 저장만 되면 지구본에도 반드시 반영되게 합니다.
+// 1) 추가로 직접 채워넣은 좌표 목록
+if(GLOBE_LL_EXTRA[t.city])return GLOBE_LL_EXTRA[t.city];
+// 2) 평면 지도가 이미 갖고 있는 좌표(AIRPORTS)를 위경도로 역변환해서 재사용
+const ap=AIRPORTS[t.city];
+if(ap){const ll=unprojLL(ap.x,ap.y);return[ll.lat,ll.lon];}
+// 3) 그래도 못 찾으면 최소한 대륙 중심 근처에라도 표시해서 완전히 누락되지 않게 함
+const cc=CONTINENT_CENTER[t.continent]||CONTINENT_CENTER['기타'];
+return cc?[cc[0],cc[1]]:null;
 }
 // ── 대권항로 보간 (great-circle slerp) ──
 function _gcInterp(lat1,lon1,lat2,lon2,t){
@@ -1566,7 +1967,15 @@ const glowGeo=new THREE.SphereGeometry(GLOBE_RADIUS*1.07,48,48);
 const glowMat=new THREE.MeshBasicMaterial({color:0x3a8bd8,transparent:true,opacity:0.14,side:THREE.BackSide});
 _glScene.add(new THREE.Mesh(glowGeo,glowMat));
 // 현재 비행 경로선 (노란색, 매 프레임 갱신)
-_glCurArcLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xffcc33,linewidth:2,transparent:true,opacity:0.95}));
+// ⚡ 성능 개선: 예전에는 매 프레임마다 geometry를 dispose()하고 새로 만들어서
+// (약 60fps로 계속 메모리 할당/해제가 일어나 버벅임의 원인이 되었습니다)
+// 이제는 최대 크기의 버퍼를 한 번만 만들어두고, 매 프레임에는 그 안의 좌표값만
+// 갱신(setDrawRange)하는 방식으로 바꿔 훨씬 가볍게 동작합니다.
+_arcPositions=new Float32Array((ARC_MAX_SEG+1)*3);
+const _arcGeo=new THREE.BufferGeometry();
+_arcGeo.setAttribute('position',new THREE.BufferAttribute(_arcPositions,3).setUsage(THREE.DynamicDrawUsage));
+_arcGeo.setDrawRange(0,0);
+_glCurArcLine=new THREE.Line(_arcGeo,new THREE.LineBasicMaterial({color:0xffcc33,linewidth:2,transparent:true,opacity:0.95}));
 _glScene.add(_glCurArcLine);
 // 비행기 DOM 오버레이
 _glPlaneEl=document.createElement('div');
@@ -1605,7 +2014,7 @@ function _clearGlobePins(){
 _glPins.forEach(p=>p.el.remove());
 _glPins=[];
 }
-function _addGlobePin(lat,lon,flag,title,isHome){
+function _addGlobePin(lat,lon,flag,title,isHome,countryEn,countryKo){
 const container=document.getElementById('globeDiv');
 if(!container)return;
 const pos=_latLonToVec3(lat,lon,GLOBE_RADIUS*1.012);
@@ -1613,6 +2022,14 @@ const el=document.createElement('div');
 el.className='gl-pin'+(isHome?' gl-pin-home':'');
 el.title=title;
 el.innerHTML=`<div class="gl-pin-circle">${flagImg(flag,isHome?18:14)}</div>`;
+// ⚠️ 반영 누락 수정: 평면 지도에서는 핀의 국기를 클릭하면 그 나라 지도를 크게
+// 볼 수 있는데(openCountryMap), 지구본 쪽 핀에는 이 기능이 빠져 있었습니다.
+// (지구본 핀은 기본적으로 pointer-events:none이라 아예 클릭이 안 먹었어요.)
+// 홈(서울) 핀을 제외한 여행지 핀에는 동일하게 클릭 시 국가 지도가 뜨도록 맞췄습니다.
+if(!isHome){
+el.classList.add('clickable');
+el.addEventListener('click',()=>openCountryMap(countryEn||'',countryKo||title||'',flag));
+}
 container.appendChild(el);
 _glPins.push({el,pos});
 }
@@ -1637,7 +2054,8 @@ _addGlobePin(SEOUL_LAT,SEOUL_LON,'🇰🇷','🇰🇷 서울 (인천) — 홈',t
 const ordered=chronoTrips();
 ordered.forEach(t=>{
 const ll=_getGlobeLL(t);if(!ll)return;
-_addGlobePin(ll[0],ll[1],t.flag||'🌍',`${t.flag||'🌍'} ${t.city||t.cntry}${t.df?' ('+t.df+')':''}`,false);
+const c=BY_KO[t.cntry]||BY_EN[t.cntryEn];
+_addGlobePin(ll[0],ll[1],t.flag||'🌍',`${t.flag||'🌍'} ${t.city||t.cntry}${t.df?' ('+t.df+')':''}`,false,c?c.en:'',t.cntry||'');
 });
 const el=document.getElementById('globeStatus');
 if(el)el.textContent=`🇰🇷 서울 출발 · ${ordered.length}개 도시`;
@@ -1677,6 +2095,20 @@ const line=new THREE.Line(geo,mat);
 _glScene.add(line);
 _glCompletedLines.push(line);
 }
+// 현재 비행 경로선(_glCurArcLine) 갱신 — geometry를 새로 만들지 않고 버퍼만 갱신
+function _updateArcLine(pts){
+const arr=_arcPositions;
+const n=Math.min(pts.length,ARC_MAX_SEG+1);
+for(let i=0;i<n;i++){
+arr[i*3]=pts[i].x;arr[i*3+1]=pts[i].y;arr[i*3+2]=pts[i].z;
+}
+const posAttr=_glCurArcLine.geometry.getAttribute('position');
+posAttr.needsUpdate=true;
+_glCurArcLine.geometry.setDrawRange(0,n);
+}
+function _clearArcLine(){
+_glCurArcLine.geometry.setDrawRange(0,0);
+}
 // ── 메인 애니메이션 루프 ──
 function _animateGlobe(){
 _glRafId=requestAnimationFrame(_animateGlobe);
@@ -1702,25 +2134,20 @@ _glCamera.up.set(0,1,0);
 _glCamera.lookAt(0,0,0);
 // 노란 경로선 갱신
 const pts=_buildArcPoints(_glFlightState.fromLat,_glFlightState.fromLon,_glFlightState.toLat,_glFlightState.toLon,60,et);
-if(pts.length>1){_glCurArcLine.geometry.dispose();_glCurArcLine.geometry=new THREE.BufferGeometry().setFromPoints(pts);}
+if(pts.length>1)_updateArcLine(pts);
 if(t>=1){
 _addCompletedArc(_glFlightState.fromLat,_glFlightState.fromLon,_glFlightState.toLat,_glFlightState.toLon);
-_glCurArcLine.geometry.dispose();_glCurArcLine.geometry=new THREE.BufferGeometry();
+_clearArcLine();
 _pulsePinAt(_glFlightState.toLat,_glFlightState.toLon);
 const cb=_glFlightState.onDone;
 _glFlightState=null;
 if(cb)setTimeout(cb,260);
 }
 }else{
-_glIdleAngle+=0.0012;
-const homeNorm=_latLonToVec3(SEOUL_LAT,SEOUL_LON,1);
-const idlePos=new THREE.Vector3(
-homeNorm.x*Math.cos(_glIdleAngle)-homeNorm.z*Math.sin(_glIdleAngle),
-homeNorm.y,
-homeNorm.x*Math.sin(_glIdleAngle)+homeNorm.z*Math.cos(_glIdleAngle)
-).normalize().multiplyScalar(GLOBE_CAM_DIST);
-_glCamera.position.lerp(idlePos,0.02);
-_glCamera.lookAt(0,0,0);
+// ⚠️ 요청 반영: 비행 중이 아닐 때(대기 상태) 카메라가 계속 서울 주변을 천천히
+// 자동으로 맴도는 움직임이 있었는데, 이게 "딱히 필요 없는데 계속 지구본이
+// 움직이는" 느낌을 주고 있었습니다. 이제 비행 중이 아니면 카메라를 그대로
+// 가만히 두어서, 불필요한 이동 없이 안정적으로 보이게 했습니다.
 }
 _glRenderer.render(_glScene,_glCamera);
 _updatePinPositions();
@@ -1761,18 +2188,21 @@ function _getOrdered(){
 const o=chronoTrips().filter(t=>t.df||t.dt);
 return o.length?o:chronoTrips();
 }
-// ── 순서대로 비행 (날짜순) ──
+// ── 순서대로 비행 (날짜순) — 서울 출발, 방문지를 순서대로 모두 들른 뒤 마지막에 서울로 귀환 ──
+// (도시마다 서울을 거쳐 왕복하지 않고, 다녀온 곳을 연월순으로 쭉 이어서 비행한 뒤
+// 맨 마지막에 한 번만 인천으로 돌아옵니다.)
 function _flyNext(){
 if(!_glPlaying)return;
 const ordered=_getOrdered();
 if(!ordered.length)return;
 if(_glAutoIdx>=ordered.length){
-_globeFlyTo(_glFromLat,_glFromLon,SEOUL_LAT,SEOUL_LON,'🇰🇷 서울(인천) 귀환!',()=>{
+// 모든 여행지를 순서대로 다 돌았으면 마지막에 서울(인천)로 귀환
+_globeFlyTo(_glFromLat,_glFromLon,SEOUL_LAT,SEOUL_LON,'🇰🇷 서울(인천)으로 귀환 중...',()=>{
 if(!_glPlaying)return;
-_glAutoIdx=0;_glFromLat=SEOUL_LAT;_glFromLon=SEOUL_LON;
-_glCompletedLines.forEach(l=>{_glScene.remove(l);l.geometry.dispose();});
-_glCompletedLines=[];
-setTimeout(_flyNext,700);
+_glPlaying=false;
+const btn=document.getElementById('globePlayBtn');const ico=document.getElementById('globePlayIco');const txt=document.getElementById('globePlayTxt');
+if(btn)btn.classList.remove('playing');if(ico)ico.textContent='▶';if(txt)txt.textContent='자동 비행';
+document.getElementById('globeStatus').textContent='🇰🇷 서울(인천) 도착 — 모든 여행 완료! ✅';
 });
 return;
 }
@@ -1811,11 +2241,11 @@ _glPlaying=false;
 const btn=document.getElementById('globePlayBtn');const ico=document.getElementById('globePlayIco');const txt=document.getElementById('globePlayTxt');
 if(btn)btn.classList.remove('playing');if(ico)ico.textContent='▶';if(txt)txt.textContent='자동 비행';
 _glFlightState=null;
-_glFromLat=SEOUL_LAT;_glFromLon=SEOUL_LON;_glAutoIdx=0;
+_glAutoIdx=0;_glFromLat=SEOUL_LAT;_glFromLon=SEOUL_LON;
 if(_glScene){
 _glCompletedLines.forEach(l=>{_glScene.remove(l);l.geometry.dispose();});
 _glCompletedLines=[];
-if(_glCurArcLine){_glCurArcLine.geometry.dispose();_glCurArcLine.geometry=new THREE.BufferGeometry();}
+if(_glCurArcLine)_clearArcLine();
 }
 document.getElementById('globeStatus').textContent='🇰🇷 서울(인천) 대기 — ▶ 자동 비행!';
 setTimeout(renderGlobePins,200);
