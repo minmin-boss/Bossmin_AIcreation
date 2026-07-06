@@ -267,7 +267,6 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .cd{font-size:10px;color:var(--accent);margin-top:4px;font-weight:700}
 .cm{font-size:10px;color:var(--text2);margin-top:3px;line-height:1.5;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card-stars{font-size:11px;margin-top:3px}
-.card-thumb{width:100%;height:70px;object-fit:cover;border-radius:8px;margin-top:6px}
 .cdel{position:absolute;top:7px;right:7px;width:18px;height:18px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--text3);cursor:pointer;font-size:12px;border-radius:5px;opacity:0;transition:opacity .18s}
 .tc:hover .cdel{opacity:1}
 .cdel:hover{color:white;background:var(--pin)}
@@ -302,10 +301,6 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .star-row{display:flex;gap:4px}
 .star{font-size:22px;cursor:pointer;transition:transform .1s;user-select:none}
 .star:hover{transform:scale(1.2)}
-.modal-img-wrap{position:relative;display:inline-block;margin-top:8px}
-.modal-img-wrap img{max-width:100%;border-radius:10px}
-.modal-img-del{position:absolute;top:4px;right:4px;background:rgba(232,67,90,.9);border:none;color:#fff;border-radius:50%;width:22px;height:22px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center}
-.photo-upload-btn{display:inline-block;background:var(--bg2);border:1.5px dashed var(--brd2);border-radius:8px;padding:8px 14px;font-size:11px;color:var(--accent);cursor:pointer;font-weight:700;margin-top:4px}
 .modal-save-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:10px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--f);margin-top:.6rem}
 .modal-save-btn:hover{background:var(--accent2)}
 .modal-save-status{font-size:12px;font-weight:800;padding:9px 12px;border-radius:8px;margin-bottom:.9rem;text-align:center}
@@ -1050,7 +1045,6 @@ ${stars?`<span class="card-stars">${stars}</span>`:''}
 </div>
 ${t.df?`<div class="cd">🗓 ${t.df}${t.dt&&t.dt!==t.df?' ~ '+t.dt:''}</div>`:''}
 ${t.memo?`<div class="cm">👥 ${t.memo}</div>`:''}
-${t.photo?`<img class="card-thumb" src="${t.photo}" alt="">`:''}
 <button class="cdel" onclick="event.stopPropagation();del(${t._i})">✕</button>
 </div>${idx<list.length-1?'<div class="tl-connector"></div>':''}</div>`;
 });
@@ -1584,15 +1578,12 @@ document.getElementById('modalContent').innerHTML=`
 </div>
 <div class="modal-row"><div class="modal-lbl">만족도</div><div class="star-row">${starHtml}</div></div>
 <div class="modal-row">
-<div class="modal-lbl">사진</div>
-${t.photo?`<div class="modal-img-wrap"><img src="${t.photo}" alt=""><button class="modal-img-del" onclick="removePhoto()">✕</button></div>`:''}
-<label class="photo-upload-btn">📷 사진 추가<input type="file" accept="image/*" style="display:none" onchange="uploadPhoto(this)"></label>
 </div>
 <button class="modal-save-btn" onclick="saveModal()">💾 저장하기</button>`;
 _meDrInit(t.df,t.dt);
 document.getElementById('modalBg').classList.add('show');
 }
-function closeModal(){document.getElementById('modalBg').classList.remove('show');_editIdx=null;window._tmpStars=undefined;window._tmpPhoto=undefined;}
+function closeModal(){document.getElementById('modalBg').classList.remove('show');_editIdx=null;window._tmpStars=undefined;}
 function openCountryMap(countryEn,countryKo,flag){
 const q=countryEn||countryKo;
 if(!q){toast('⚠️ 나라 정보를 찾을 수 없어요');return;}
@@ -1605,37 +1596,6 @@ document.getElementById('cmapBg').classList.remove('show');
 document.getElementById('cmapFrame').src=''; // 닫을 때 iframe 로딩 중지
 }
 function setStar(n){[1,2,3,4,5].forEach(i=>document.getElementById('star'+i).textContent=i<=n?'⭐':'☆');window._tmpStars=n;}
-function removePhoto(){window._tmpPhoto='';document.querySelector('.modal-img-wrap')?.remove();}
-function uploadPhoto(inp){
-if(!inp.files[0])return;
-const file=inp.files[0];
-const r=new FileReader();
-r.onload=e=>{
-const img=new Image();
-img.onload=()=>{
-// 긴 변 기준 1024px로 리사이즈 + JPEG 압축으로 Firestore 문서 용량(1MB) 제한 대응
-const MAX=1024;
-let{width:w,height:h}=img;
-if(w>h&&w>MAX){h=Math.round(h*MAX/w);w=MAX;}
-else if(h>=w&&h>MAX){w=Math.round(w*MAX/h);h=MAX;}
-const canvas=document.createElement('canvas');
-canvas.width=w;canvas.height=h;
-canvas.getContext('2d').drawImage(img,0,0,w,h);
-let quality=0.82;
-let dataUrl=canvas.toDataURL('image/jpeg',quality);
-// 그래도 크면 품질을 더 낮춰가며 재압축 (최대 ~700KB 목표)
-while(dataUrl.length>700000&&quality>0.35){quality-=0.1;dataUrl=canvas.toDataURL('image/jpeg',quality);}
-if(dataUrl.length>900000){toast('⚠️ 사진이 너무 커서 저장이 안 될 수 있어요. 더 작은 사진을 권장합니다');}
-window._tmpPhoto=dataUrl;
-let wrap=document.querySelector('.modal-img-wrap');
-const label=document.querySelector('.photo-upload-btn');
-if(!wrap){wrap=document.createElement('div');wrap.className='modal-img-wrap';label.before(wrap);}
-wrap.innerHTML=`<img src="${dataUrl}" alt=""><button class="modal-img-del" onclick="removePhoto()">✕</button>`;
-};
-img.src=e.target.result;
-};
-r.readAsDataURL(file);
-}
 async function saveModal(){
 if(_editIdx===null)return;const t=trips[_editIdx];if(!t)return;
 t.city=document.getElementById('me_city').value.trim()||t.city;
@@ -1644,15 +1604,7 @@ t.memo=document.getElementById('me_memo').value.trim();
 const _c=(document.getElementById('me_cost')?.value||'').replace(/,/g,'');t.cost=_c?Number(_c):null;
 t.currency=document.getElementById('me_curr')?.value||'KRW';
 if(window._tmpStars!==undefined)t.stars=window._tmpStars;
-// ⚠️ 성능 버그 수정: 사진을 이번에 새로 바꾼 게 아니라면(_tmpPhoto가 그대로 undefined),
-// 클라우드로 보내는 데이터에서 사진 필드는 아예 빼고 보냅니다.
-// 예전에는 도시명·메모 같은 작은 값 하나만 고쳐도 이미 저장돼 있던 사진(수백 KB짜리
-// base64 데이터)을 매번 통째로 다시 업로드하고 있어서, 사진이 첨부된 여행일수록
-// 저장이 심하게 느려지고 12초 타임아웃까지 걸리는 원인이 되고 있었습니다.
-// (Firestore는 merge:true 저장이라 사진 필드를 안 보내면 기존 사진이 그대로 유지돼요.)
-const photoChangedThisSession=window._tmpPhoto!==undefined;
-if(photoChangedThisSession)t.photo=window._tmpPhoto;
-window._tmpStars=undefined;window._tmpPhoto=undefined;
+window._tmpStars=undefined;
 const statusEl=document.getElementById('modalSaveStatus');
 const setStatus=(cls,msg)=>{if(statusEl){statusEl.style.display='block';statusEl.className='modal-save-status '+cls;statusEl.textContent=msg;}};
 // ① _fbId 방어
@@ -1666,8 +1618,8 @@ setStatus('saving','⏳ Firebase에 저장 중...');
 const loader=document.getElementById('fbLoader');if(loader)loader.style.display='block';
 // ④ Firebase 저장 → 확인 후에만 "저장 완료!" 표시
 // 사진 없는 일반 수정은 3초, 사진 포함은 15초 타임아웃
-const timeoutMs=photoChangedThisSession?15000:3000;
-const cloudPayload=photoChangedThisSession?t:Object.fromEntries(Object.entries(t).filter(([k])=>k!=='photo'));
+const timeoutMs=3000;
+const cloudPayload=Object.fromEntries(Object.entries(t).filter(([k])=>k!=='photo'));
 const doSave=async()=>{
 if(window._fbSave&&window._user){
 await Promise.race([
