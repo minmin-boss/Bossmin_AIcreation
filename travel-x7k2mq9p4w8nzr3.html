@@ -687,13 +687,10 @@ Google로 로그인
 <input type="text" id="memoIn" placeholder="예: 가족여행, 친구와, 혼자"/></div>
 <div class="fg"><label class="fl">💰 여행 경비</label>
 <div style="position:relative">
-<input type="text" inputmode="numeric" id="costIn" placeholder="0" style="padding-right:54px" oninput="formatCostInput(this)"/>
+<input type="text" inputmode="numeric" id="costIn" placeholder="0" style="padding-right:54px" oninput="formatCostInput(this)" onkeydown="handleCostPlusKey(event,this)"/>
 <select id="currIn" style="position:absolute;right:0;top:0;width:58px;height:36px;border-left:none;border-radius:0 7px 7px 0;font-size:11px;padding:0 2px">
 <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
 </select>
-</div>
-<div style="margin-top:5px;text-align:right">
-<button type="button" class="bcl" onclick="addZeros('costIn')">+000</button>
 </div>
 </div>
 </div>
@@ -1111,6 +1108,7 @@ else if(e.key==='Escape')drop.style.display='none';
 document.addEventListener('click',e=>{
 if(!e.target.closest('.ac-wrap')){document.getElementById('cntryDrop').style.display='none';document.getElementById('cityDrop').style.display='none';}
 if(!e.target.closest('.date-range-wrap')){const pop=document.getElementById('dateRangePop');if(pop)pop.style.display='none';}
+if(!e.target.closest('.me-date-range-wrap')){const mpop=document.getElementById('meDateRangePop');if(mpop)mpop.style.display='none';}
 },true);
 // ── 날짜 범위 선택 캘린더 (달력 클릭 + 직접 입력 둘 다 지원) ──
 let _drYear,_drMonth,_drStart=null,_drEnd=null;
@@ -1223,6 +1221,102 @@ if(_drStart&&!_drEnd){_drEnd=_drStart;_drSync();}
 document.getElementById('dateRangePop').style.display='none';
 }
 function _drResetToToday(){const t=new Date();_drStart=t;_drEnd=t;_drYear=t.getFullYear();_drMonth=t.getMonth();_drSync();}
+// ── 수정 모달 전용 여행기간 달력 (추가폼 달력과 완전히 분리된 상태로 동작) ──
+let _meDrYear,_meDrMonth,_meDrStart=null,_meDrEnd=null;
+function meToggleDRP(e){
+e&&e.stopPropagation();
+const pop=document.getElementById('meDateRangePop');
+if(!pop)return;
+const willOpen=pop.style.display!=='block';
+pop.style.display=willOpen?'block':'none';
+if(willOpen){
+if(_meDrStart){_meDrYear=_meDrStart.getFullYear();_meDrMonth=_meDrStart.getMonth();}
+else{const t=new Date();_meDrYear=t.getFullYear();_meDrMonth=t.getMonth();}
+meRenderDRCal();
+}
+}
+function meDRFocus(e){
+const pop=document.getElementById('meDateRangePop');
+if(pop&&pop.style.display!=='block')meToggleDRP(e);
+}
+function meDRKey(e){
+if(e.key==='Enter'){e.preventDefault();meDRBlur();const pop=document.getElementById('meDateRangePop');if(pop)pop.style.display='none';}
+else if(e.key==='Escape'){const pop=document.getElementById('meDateRangePop');if(pop)pop.style.display='none';}
+}
+function meDRBlur(){
+const input=document.getElementById('me_dateRangeText');
+if(!input)return;
+const raw=input.value;
+if(!raw.trim()){if(_meDrStart)meDrSync();return;}
+const parsed=_drParseRangeText(raw);
+if(parsed){
+_meDrStart=parsed.start;_meDrEnd=parsed.end;
+_meDrYear=_meDrStart.getFullYear();_meDrMonth=_meDrStart.getMonth();
+meDrSync();
+meRenderDRCal();
+}else{
+toast('⚠️ 날짜 형식을 확인해주세요 (예: 2026.06.10 ~ 2026.06.18)');
+meDrSync();
+}
+}
+function meDrNav(delta){_meDrMonth+=delta;if(_meDrMonth<0){_meDrMonth=11;_meDrYear--;}if(_meDrMonth>11){_meDrMonth=0;_meDrYear++;}meRenderDRCal();}
+function meRenderDRCal(){
+const title=document.getElementById('meDrpTitle');
+if(title)title.textContent=`${_meDrYear}년 ${_meDrMonth+1}월`;
+const grid=document.getElementById('meDrpGrid');
+if(!grid)return;
+const firstDow=new Date(_meDrYear,_meDrMonth,1).getDay();
+const daysInMonth=new Date(_meDrYear,_meDrMonth+1,0).getDate();
+const today=new Date();
+let html='';
+for(let i=0;i<firstDow;i++)html+='<span class="drp-day drp-empty"></span>';
+for(let d=1;d<=daysInMonth;d++){
+const cur=new Date(_meDrYear,_meDrMonth,d);
+let cls='drp-day';
+if(_drSameDay(cur,today))cls+=' today';
+const isStart=_meDrStart&&_drSameDay(cur,_meDrStart);
+const isEnd=_meDrEnd&&_drSameDay(cur,_meDrEnd);
+if(isStart)cls+=' start';
+if(isEnd)cls+=' end';
+if(_meDrStart&&_meDrEnd&&cur>_meDrStart&&cur<_meDrEnd)cls+=' in-range';
+html+=`<span class="${cls}" onclick="meDrPickDay(${_meDrYear},${_meDrMonth},${d})">${d}</span>`;
+}
+grid.innerHTML=html;
+}
+function meDrPickDay(y,m,d){
+const clicked=new Date(y,m,d);
+if(!_meDrStart||(_meDrStart&&_meDrEnd)){_meDrStart=clicked;_meDrEnd=null;}
+else if(clicked<_meDrStart){_meDrEnd=_meDrStart;_meDrStart=clicked;}
+else{_meDrEnd=clicked;}
+meDrSync();
+meRenderDRCal();
+}
+function meDrSync(){
+const dfEl=document.getElementById('me_df'),dtEl=document.getElementById('me_dt');
+const txt=document.getElementById('me_dateRangeText');
+if(!dfEl||!dtEl||!txt)return;
+if(_meDrStart){
+const isoStart=_drISO(_meDrStart.getFullYear(),_meDrStart.getMonth(),_meDrStart.getDate());
+const isoEnd=_meDrEnd?_drISO(_meDrEnd.getFullYear(),_meDrEnd.getMonth(),_meDrEnd.getDate()):isoStart;
+dfEl.value=_drFmt(isoStart);
+dtEl.value=_drFmt(isoEnd);
+txt.value=_meDrEnd?`${_drFmt(isoStart)} ~ ${_drFmt(isoEnd)}`:`${_drFmt(isoStart)} ~ `;
+}
+}
+function meDrToday(){const t=new Date();_meDrStart=t;_meDrEnd=t;_meDrYear=t.getFullYear();_meDrMonth=t.getMonth();meDrSync();meRenderDRCal();}
+function meDrConfirm(){
+if(_meDrStart&&!_meDrEnd){_meDrEnd=_meDrStart;meDrSync();}
+const pop=document.getElementById('meDateRangePop');if(pop)pop.style.display='none';
+}
+// 모달을 열 때 기존 저장된 출발일/귀국일(t.df, t.dt — "YYYY.MM.DD" 형식)로 달력 초기값을 채움
+function _meDrInit(dfStr,dtStr){
+const start=dfStr?_drParseOneDate(dfStr):null;
+const end=dtStr?_drParseOneDate(dtStr):null;
+_meDrStart=start;_meDrEnd=end||start;
+if(_meDrStart){_meDrYear=_meDrStart.getFullYear();_meDrMonth=_meDrStart.getMonth();}
+else{const t=new Date();_meDrYear=t.getFullYear();_meDrMonth=t.getMonth();}
+meDrSync();
+}
 // ── Add / Edit / Delete ──
 // ── 경비 입력 1000단위 콤마 자동 포맷 ──
 function formatCostInput(el){
@@ -1241,13 +1335,13 @@ if(count===digitsBeforeCursor){pos=i+1;break;}
 }
 el.setSelectionRange(pos,pos);
 }
-function addZeros(id){
-const el=document.getElementById(id);
-if(!el)return;
+// + 키를 누르면 현재 숫자 뒤에 0을 3개 자동으로 붙여줌 (예: 100 + "+" → 100000)
+function handleCostPlusKey(e,el){
+if(e.key!=='+')return;
+e.preventDefault(); // '+' 문자가 그대로 입력되지 않도록 막음
 const raw=el.value.replace(/[^0-9]/g,'');
-const next=(raw?raw:'')+'000'; // 현재 숫자 뒤에 0 세 개 추가 (비어있으면 '000'부터 시작)
+const next=(raw?raw:'')+'000'; // 비어있으면 '000'부터 시작
 el.value=Number(next).toLocaleString('ko-KR');
-el.focus();
 el.setSelectionRange(el.value.length,el.value.length);
 }
 function addTrip(){
@@ -1358,11 +1452,33 @@ document.getElementById('modalContent').innerHTML=`
 <div id="modalSaveStatus" class="modal-save-status" style="display:none"></div>
 <div class="modal-row"><div class="modal-lbl">나라</div><div style="font-size:13px;font-weight:700">${t.cntry||'—'}</div></div>
 <div class="modal-row"><div class="modal-lbl">도시</div><input class="modal-inp" id="me_city" value="${t.city||''}"/></div>
-<div class="modal-row"><div class="modal-lbl">출발일</div><input class="modal-inp" id="me_df" value="${t.df||''}"/></div>
-<div class="modal-row"><div class="modal-lbl">귀국일</div><input class="modal-inp" id="me_dt" value="${t.dt||''}"/></div>
+<div class="modal-row me-date-range-wrap" style="position:relative">
+<div class="modal-lbl">여행 기간</div>
+<div class="date-range-input">
+<input type="text" id="me_dateRangeText" class="dr-text-input" placeholder="YYYY.MM.DD ~ YYYY.MM.DD" autocomplete="off" onfocus="meDRFocus(event)" onkeydown="meDRKey(event)" onblur="meDRBlur()"/>
+<span class="dr-icon" onclick="meToggleDRP(event)">📅</span>
+</div>
+<input type="hidden" id="me_df" value="${t.df||''}"/>
+<input type="hidden" id="me_dt" value="${t.dt||''}"/>
+<div class="date-range-pop" id="meDateRangePop" style="display:none">
+<div class="drp-header">
+<button type="button" class="drp-nav" onclick="meDrNav(-1)">‹</button>
+<span id="meDrpTitle" class="drp-title"></span>
+<button type="button" class="drp-nav" onclick="meDrNav(1)">›</button>
+</div>
+<div class="drp-weekdays">
+<span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+</div>
+<div class="drp-grid" id="meDrpGrid"></div>
+<div class="drp-footer">
+<button type="button" class="drp-today" onclick="meDrToday()">오늘</button>
+<button type="button" class="drp-ok" onclick="meDrConfirm()">확인</button>
+</div>
+</div>
+</div>
 <div class="modal-row"><div class="modal-lbl">👥 누구와 함께</div><input class="modal-inp" id="me_memo" value="${t.memo||''}" placeholder="가족여행, 친구와, 혼자"/></div>
 <div class="modal-row" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-<div><div class="modal-lbl">💰 경비</div><input class="modal-inp" type="text" inputmode="numeric" id="me_cost" value="${t.cost?Number(t.cost).toLocaleString('ko-KR'):''}" placeholder="0" oninput="formatCostInput(this)"/><div style="margin-top:5px;text-align:right"><button type="button" class="bcl" onclick="addZeros('me_cost')">+000</button></div></div>
+<div><div class="modal-lbl">💰 경비</div><input class="modal-inp" type="text" inputmode="numeric" id="me_cost" value="${t.cost?Number(t.cost).toLocaleString('ko-KR'):''}" placeholder="0" oninput="formatCostInput(this)" onkeydown="handleCostPlusKey(event,this)"/></div>
 <div><div class="modal-lbl">통화</div><select class="modal-inp" id="me_curr" style="height:36px">${['KRW','USD','JPY','EUR','CNY','THB'].map(cu=>`<option${t.currency===cu?' selected':''}>${cu}</option>`).join('')}</select></div>
 </div>
 <div class="modal-row"><div class="modal-lbl">만족도</div><div class="star-row">${starHtml}</div></div>
@@ -1372,6 +1488,7 @@ ${t.photo?`<div class="modal-img-wrap"><img src="${t.photo}" alt=""><button clas
 <label class="photo-upload-btn">📷 사진 추가<input type="file" accept="image/*" style="display:none" onchange="uploadPhoto(this)"></label>
 </div>
 <button class="modal-save-btn" onclick="saveModal()">💾 저장하기</button>`;
+_meDrInit(t.df,t.dt);
 document.getElementById('modalBg').classList.add('show');
 }
 function closeModal(){document.getElementById('modalBg').classList.remove('show');_editIdx=null;window._tmpStars=undefined;window._tmpPhoto=undefined;}
@@ -1557,6 +1674,8 @@ let _glInited=false,_glRafId=null;
 let _glPins=[];
 let _glPlaneEl=null;
 let _glCurArcLine=null,_glCompletedLines=[];
+const ARC_MAX_SEG=60;
+let _arcPositions=null;
 let _glIdleAngle=0;
 let _glPlaying=false,_glAutoIdx=0;
 let _glFromLat=SEOUL_LAT,_glFromLon=SEOUL_LON;
@@ -1653,7 +1772,15 @@ const glowGeo=new THREE.SphereGeometry(GLOBE_RADIUS*1.07,48,48);
 const glowMat=new THREE.MeshBasicMaterial({color:0x3a8bd8,transparent:true,opacity:0.14,side:THREE.BackSide});
 _glScene.add(new THREE.Mesh(glowGeo,glowMat));
 // 현재 비행 경로선 (노란색, 매 프레임 갱신)
-_glCurArcLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0xffcc33,linewidth:2,transparent:true,opacity:0.95}));
+// ⚡ 성능 개선: 예전에는 매 프레임마다 geometry를 dispose()하고 새로 만들어서
+// (약 60fps로 계속 메모리 할당/해제가 일어나 버벅임의 원인이 되었습니다)
+// 이제는 최대 크기의 버퍼를 한 번만 만들어두고, 매 프레임에는 그 안의 좌표값만
+// 갱신(setDrawRange)하는 방식으로 바꿔 훨씬 가볍게 동작합니다.
+_arcPositions=new Float32Array((ARC_MAX_SEG+1)*3);
+const _arcGeo=new THREE.BufferGeometry();
+_arcGeo.setAttribute('position',new THREE.BufferAttribute(_arcPositions,3).setUsage(THREE.DynamicDrawUsage));
+_arcGeo.setDrawRange(0,0);
+_glCurArcLine=new THREE.Line(_arcGeo,new THREE.LineBasicMaterial({color:0xffcc33,linewidth:2,transparent:true,opacity:0.95}));
 _glScene.add(_glCurArcLine);
 // 비행기 DOM 오버레이
 _glPlaneEl=document.createElement('div');
@@ -1764,6 +1891,20 @@ const line=new THREE.Line(geo,mat);
 _glScene.add(line);
 _glCompletedLines.push(line);
 }
+// 현재 비행 경로선(_glCurArcLine) 갱신 — geometry를 새로 만들지 않고 버퍼만 갱신
+function _updateArcLine(pts){
+const arr=_arcPositions;
+const n=Math.min(pts.length,ARC_MAX_SEG+1);
+for(let i=0;i<n;i++){
+arr[i*3]=pts[i].x;arr[i*3+1]=pts[i].y;arr[i*3+2]=pts[i].z;
+}
+const posAttr=_glCurArcLine.geometry.getAttribute('position');
+posAttr.needsUpdate=true;
+_glCurArcLine.geometry.setDrawRange(0,n);
+}
+function _clearArcLine(){
+_glCurArcLine.geometry.setDrawRange(0,0);
+}
 // ── 메인 애니메이션 루프 ──
 function _animateGlobe(){
 _glRafId=requestAnimationFrame(_animateGlobe);
@@ -1789,10 +1930,10 @@ _glCamera.up.set(0,1,0);
 _glCamera.lookAt(0,0,0);
 // 노란 경로선 갱신
 const pts=_buildArcPoints(_glFlightState.fromLat,_glFlightState.fromLon,_glFlightState.toLat,_glFlightState.toLon,60,et);
-if(pts.length>1){_glCurArcLine.geometry.dispose();_glCurArcLine.geometry=new THREE.BufferGeometry().setFromPoints(pts);}
+if(pts.length>1)_updateArcLine(pts);
 if(t>=1){
 _addCompletedArc(_glFlightState.fromLat,_glFlightState.fromLon,_glFlightState.toLat,_glFlightState.toLon);
-_glCurArcLine.geometry.dispose();_glCurArcLine.geometry=new THREE.BufferGeometry();
+_clearArcLine();
 _pulsePinAt(_glFlightState.toLat,_glFlightState.toLon);
 const cb=_glFlightState.onDone;
 _glFlightState=null;
@@ -1848,29 +1989,45 @@ function _getOrdered(){
 const o=chronoTrips().filter(t=>t.df||t.dt);
 return o.length?o:chronoTrips();
 }
-// ── 순서대로 비행 (날짜순) ──
+// ── 순서대로 비행 (날짜순) — 서울 ↔ 각 도시 왕복 방식 ──
+// ⚠️ 예전에는 서울→도시1→도시2→도시3...→서울 순으로 도시끼리 바로 이어서 날아가서,
+// 서로 관련 없는 두 도시 사이에 긴 대권항로 선이 지구본을 가로질러 지나가며
+// 지저분하고 이상하게 겹쳐 보였습니다.
+// 이제는 매번 "서울 → 목적지 → 서울" 왕복으로 날아가고, 한 왕복이 끝나면 그 선을
+// 깨끗이 지운 뒤 다음 목적지로 넘어가도록 바꿔서 항상 선이 하나(또는 둘: 갈 때/올 때)만
+// 보이고, 화면이 훨씬 깔끔하고 예측 가능하게 동작합니다.
 function _flyNext(){
 if(!_glPlaying)return;
 const ordered=_getOrdered();
 if(!ordered.length)return;
 if(_glAutoIdx>=ordered.length){
-_globeFlyTo(_glFromLat,_glFromLon,SEOUL_LAT,SEOUL_LON,'🇰🇷 서울(인천) 귀환!',()=>{
-if(!_glPlaying)return;
-_glAutoIdx=0;_glFromLat=SEOUL_LAT;_glFromLon=SEOUL_LON;
-_glCompletedLines.forEach(l=>{_glScene.remove(l);l.geometry.dispose();});
-_glCompletedLines=[];
-setTimeout(_flyNext,700);
-});
+// 모든 여행지 왕복 완료 — 자동 재생 종료
+_glPlaying=false;
+const btn=document.getElementById('globePlayBtn');const ico=document.getElementById('globePlayIco');const txt=document.getElementById('globePlayTxt');
+if(btn)btn.classList.remove('playing');if(ico)ico.textContent='▶';if(txt)txt.textContent='자동 비행';
+document.getElementById('globeStatus').textContent='🇰🇷 서울(인천) 도착 — 모든 여행지 왕복 완료! ✅';
 return;
 }
 const t=ordered[_glAutoIdx];
 const ll=_getGlobeLL(t);
 if(!ll){_glAutoIdx++;setTimeout(_flyNext,50);return;}
-_globeFlyTo(_glFromLat,_glFromLon,ll[0],ll[1],`✈️ ${t.flag||''} ${t.city||t.cntry}${t.df?' — '+t.df:''}`,()=>{
+const label=`✈️ ${t.flag||''} ${t.city||t.cntry}${t.df?' — '+t.df:''}`;
+// 1) 서울 → 목적지
+_globeFlyTo(SEOUL_LAT,SEOUL_LON,ll[0],ll[1],label+' 로 출발',()=>{
 if(!_glPlaying)return;
-_glFromLat=ll[0];_glFromLon=ll[1];
+// 목적지에 잠깐 머무는 딜레이
+setTimeout(()=>{
+if(!_glPlaying)return;
+// 2) 목적지 → 서울 (귀환)
+_globeFlyTo(ll[0],ll[1],SEOUL_LAT,SEOUL_LON,'🇰🇷 서울(인천)으로 귀환 중...',()=>{
+if(!_glPlaying)return;
+// 다음 목적지로 넘어가기 전, 이번 왕복 경로선을 깨끗이 정리
+_glCompletedLines.forEach(l=>{_glScene.remove(l);l.geometry.dispose();});
+_glCompletedLines=[];
 _glAutoIdx++;
 setTimeout(_flyNext,500);
+});
+},650);
 });
 }
 function globeTogglePlay(){
@@ -1882,7 +2039,7 @@ const txt=document.getElementById('globePlayTxt');
 if(_glPlaying){
 btn.classList.add('playing');
 if(ico)ico.textContent='⏸';if(txt)txt.textContent='정지';
-_glAutoIdx=0;_glFromLat=SEOUL_LAT;_glFromLon=SEOUL_LON;
+_glAutoIdx=0;
 _glCompletedLines.forEach(l=>{_glScene.remove(l);l.geometry.dispose();});
 _glCompletedLines=[];
 document.getElementById('globeStatus').textContent='🇰🇷 서울(인천) 출발!';
@@ -1898,11 +2055,11 @@ _glPlaying=false;
 const btn=document.getElementById('globePlayBtn');const ico=document.getElementById('globePlayIco');const txt=document.getElementById('globePlayTxt');
 if(btn)btn.classList.remove('playing');if(ico)ico.textContent='▶';if(txt)txt.textContent='자동 비행';
 _glFlightState=null;
-_glFromLat=SEOUL_LAT;_glFromLon=SEOUL_LON;_glAutoIdx=0;
+_glAutoIdx=0;
 if(_glScene){
 _glCompletedLines.forEach(l=>{_glScene.remove(l);l.geometry.dispose();});
 _glCompletedLines=[];
-if(_glCurArcLine){_glCurArcLine.geometry.dispose();_glCurArcLine.geometry=new THREE.BufferGeometry();}
+if(_glCurArcLine)_clearArcLine();
 }
 document.getElementById('globeStatus').textContent='🇰🇷 서울(인천) 대기 — ▶ 자동 비행!';
 setTimeout(renderGlobePins,200);
