@@ -7,20 +7,61 @@
 <!-- Firebase SDK -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot,query,where,orderBy}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import{getFirestore,collection,doc,setDoc,deleteDoc,onSnapshot,query,where}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,setPersistence,browserLocalPersistence}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 const _fc={apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",authDomain:"travel-tracker-9f0f7.firebaseapp.com",projectId:"travel-tracker-9f0f7",storageBucket:"travel-tracker-9f0f7.firebasestorage.app",messagingSenderId:"157327971618",appId:"1:157327971618:web:b5eca73698db54034b817b"};
 const _app=initializeApp(_fc);
 const _db=getFirestore(_app);
 const _auth=getAuth(_app);
 const _gp=new GoogleAuthProvider();
-try{setPersistence(_auth,browserLocalPersistence);}catch(e){console.warn('Auth persistence 설정 실패 (브라우저 제약일 수 있음):',e);}
-let _unsub=null;
+try{setPersistence(_auth,browserLocalPersistence);}catch(e){console.warn('Auth persistence 설정 실패:',e);}
+// ── Firestore 타임아웃 래퍼 (무한 대기 방지) ──
+// setDoc이 서버 응답 없이 무한 대기하는 현상 방지. 15초 안에 응답 없으면 에러로 처리.
+function _withTimeout(promise,ms=15000,label='Firestore'){
+return Promise.race([
+promise,
+new Promise((_,rej)=>setTimeout(()=>rej(new Error(
+`[${label}] ${ms/1000}초 내 응답 없음 — Firestore 연결을 확인하세요.
+`+
+`확인사항: ① Firebase 콘솔 > Firestore Database 가 존재하는지
+`+
+`② Rules 탭에서 규칙이 만료되지 않았는지
+`+
+`③ 브라우저 콘솔(F12)에 오류 메시지가 있는지`
+)),ms))
+]);
+}
+// ── 로그인 후 Firestore 연결 테스트 (travel_trips 컬렉션 사용 — rules와 일치) ──
+async function _testFirestoreConnection(uid){
+const testRef=doc(_db,'travel_trips','_conn_test_'+uid);
+try{
+await _withTimeout(setDoc(testRef,{t:Date.now()},{merge:true}),8000,'연결테스트');
+console.log('✅ Firestore 연결 정상');
+window._firestoreOk=true;
+}catch(e){
+window._firestoreOk=false;
+const code=e.code||e.message||'unknown';
+console.error('❌ Firestore 연결 실패:',code);
+let msg='';
+if(code.includes('permission-denied')||code.includes('PERMISSION_DENIED')){
+msg='🔒 보안 규칙(Rules)이 쓰기를 차단하고 있어요. Firebase 콘솔 > Firestore Database > Rules 탭을 확인해주세요. 테스트 모드는 30일 후 자동 만료됩니다.';
+}else if(code.includes('not-found')||code.includes('NOT_FOUND')){
+msg='📭 Firestore 데이터베이스가 없어요. Firebase 콘솔 > Firestore Database 메뉴에서 [데이터베이스 만들기]를 클릭해서 생성해주세요.';
+}else if(code.includes('응답 없음')||code.includes('unavailable')){
+msg='🌐 Firestore 서버에 연결할 수 없어요. 가능한 원인: (1) Firestore Database가 아직 생성되지 않음 (2) 네트워크/방화벽이 Firebase 차단 (3) Firebase 프로젝트 비활성화. Firebase 콘솔 > Firestore Database에서 확인해주세요.';
+}else{
+msg='⚠️ Firestore 오류: '+code+' F12 콘솔에서 자세한 오류를 확인해주세요.';
+}
+if(typeof window.toast==='function')window.toast('❌ Firebase 저장 불가: '+code.slice(0,40));
+setTimeout(()=>alert('⚠️ Firebase 저장이 작동하지 않습니다. '+msg),500);
+}
+}
 onAuthStateChanged(_auth,user=>{
 if(user){
 window._user=user;
 const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
 window._updateUserUI&&window._updateUserUI(user);
+_testFirestoreConnection(user.uid); // 로그인 시 연결 상태 즉시 진단
 _startListen(user.uid);
 if(!window._appReady)window._bootApp&&window._bootApp();
 }else{
@@ -36,7 +77,8 @@ if(_unsub){_unsub();_unsub=null;}
 });
 function _startListen(uid){
 if(_unsub){_unsub();_unsub=null;}
-const q=query(collection(_db,'travel_trips'),where('uid','==',uid),orderBy('createdAt','asc'));
+// orderBy 제거 → 복합 인덱스 없어도 동작, 정렬은 클라이언트(chronoTrips)에서 처리
+const q=query(collection(_db,'travel_trips'),where('uid','==',uid));
 _unsub=onSnapshot(q,snap=>{
 window._fbData=[];
 snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
@@ -91,14 +133,11 @@ if(btn){btn.disabled=false;btn.textContent='Google로 로그인';}
 window._logout=async function(){if(!confirm('로그아웃 하시겠어요?\n(저장된 여행 기록은 클라우드에 남아있고, 이 기기의 임시 캐시만 정리됩니다)'))return;try{localStorage.removeItem('travel_map_trips_cache_v1');}catch(e){}await signOut(_auth);};
 window._fbSave=async function(entry){
 if(!entry._fbId){
-// 방어 코드: _fbId가 없는 채로 저장하면 doc(_db,'travel_trips',undefined)가
-// 되어 실제로는 이름이 "undefined"인 문서 하나에 여러 여행 기록이 겹쳐
-// 저장되는 심각한 데이터 유실 버그로 이어집니다. 여기서 미리 막습니다.
-console.error('_fbSave 호출 실패: _fbId가 없는 entry는 저장할 수 없습니다.', entry);
+console.error('_fbSave 호출 실패: _fbId 없음', entry);
 throw new Error('_fbId 없음 - 저장 취소됨');
 }
 const ref=doc(_db,'travel_trips',entry._fbId);
-await setDoc(ref,entry,{merge:true});
+await _withTimeout(setDoc(ref,entry,{merge:true}),15000,'저장');
 };
 window._fbDel=async function(fbId){
 await deleteDoc(doc(_db,'travel_trips',fbId));
