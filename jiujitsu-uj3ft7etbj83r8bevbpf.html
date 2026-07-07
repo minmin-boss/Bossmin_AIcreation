@@ -458,6 +458,8 @@
   }
 
   // ---------- firebase init ----------
+  let firebaseInitError = null;
+
   async function initFirebase(){
     try{
       const appMod = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js");
@@ -470,6 +472,7 @@
       fb.onAuthStateChanged(auth, onAuthChanged);
     }catch(err){
       console.error("Firebase 초기화 실패", err);
+      firebaseInitError = err.message || String(err);
       auth = null; db = null;
       renderAuthBar();
     }
@@ -490,17 +493,39 @@
     }
   }
 
+  function showSyncError(msg){
+    const bar = $("#authBar");
+    if(!bar) return;
+    let box = document.getElementById("syncErrorBox");
+    if(!box){
+      box = document.createElement("div");
+      box.id = "syncErrorBox";
+      box.style.cssText = "width:100%;background:rgba(166,61,64,0.18);border:1px solid var(--red);color:#ffb3b3;padding:8px 12px;border-radius:6px;font-size:12px;margin-top:6px;";
+      bar.parentElement.insertBefore(box, bar.nextSibling);
+    }
+    box.textContent = "⚠️ 동기화 오류: " + msg;
+  }
+  function clearSyncError(){
+    const box = document.getElementById("syncErrorBox");
+    if(box) box.remove();
+  }
+
   function subscribeCloud(){
     unsubscribeCloud();
     const entriesCol = fb.collection(db, "users", currentUser.uid, "entries");
     unsubEntries = fb.onSnapshot(entriesCol, snap=>{
+      clearSyncError();
       entries = snap.docs.map(d=>d.data());
       renderEntries();
       renderChips();
-    }, err=> console.error(err));
+    }, err=>{
+      console.error(err);
+      showSyncError((err.code || "") + " " + (err.message || err));
+    });
 
     const userRef = fb.doc(db, "users", currentUser.uid);
     unsubUserDoc = fb.onSnapshot(userRef, snap=>{
+      clearSyncError();
       const d = snap.exists() ? snap.data() : {};
       categories = (d.categories && d.categories.length) ? d.categories : [...DEFAULT_CATEGORIES];
       theoryOverrides = d.theoryOverrides || {};
@@ -508,11 +533,15 @@
       renderChips();
       renderTheory();
       initFlowChart();
-    }, err=> console.error(err));
+    }, err=>{
+      console.error(err);
+      showSyncError((err.code || "") + " " + (err.message || err));
+    });
   }
   function unsubscribeCloud(){
     if(unsubEntries){ unsubEntries(); unsubEntries = null; }
     if(unsubUserDoc){ unsubUserDoc(); unsubUserDoc = null; }
+    clearSyncError();
   }
 
   async function handleLogin(){
@@ -537,6 +566,10 @@
     if(!bar) return;
     if(!FIREBASE_CONFIGURED){
       bar.innerHTML = `<span class="auth-note">⚙️ Firebase 미설정 — 지금은 이 기기에만 저장돼요</span>`;
+      return;
+    }
+    if(firebaseInitError && !currentUser){
+      bar.innerHTML = `<span class="auth-note">⚠️ Firebase 연결 실패: ${escapeHtml(firebaseInitError)} (이 기기에만 저장돼요)</span>`;
       return;
     }
     if(currentUser){
