@@ -7,29 +7,29 @@
 <!-- Firebase SDK -->
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import{
-  getFirestore,collection,doc,deleteDoc,onSnapshot,query,where,setDoc
-}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import{getDatabase,ref,set,remove,onValue,off}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,setPersistence,browserLocalPersistence}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const _FC={
   apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",
   authDomain:"travel-tracker-9f0f7.firebaseapp.com",
   projectId:"travel-tracker-9f0f7",
+  databaseURL:"https://travel-tracker-9f0f7-default-rtdb.firebaseio.com",
   storageBucket:"travel-tracker-9f0f7.firebasestorage.app",
   messagingSenderId:"157327971618",
   appId:"1:157327971618:web:b5eca73698db54034b817b"
 };
-const _PROJECT='travel-tracker-9f0f7';
+
 const _app=initializeApp(_FC);
-const _db=getFirestore(_app);
+const _rtdb=getDatabase(_app);
 const _auth=getAuth(_app);
 const _gp=new GoogleAuthProvider();
 
 try{setPersistence(_auth,browserLocalPersistence);}catch(e){}
+
+let _unsubRef=null;
 let _unsub=null;
 
-// ── Auth ──
 onAuthStateChanged(_auth,user=>{
   if(user){
     window._user=user;
@@ -41,80 +41,33 @@ onAuthStateChanged(_auth,user=>{
   }else{
     window._user=null;
     const ls=document.getElementById('lockScreen');if(ls)ls.style.display='flex';
-    if(_unsub){_unsub();_unsub=null;}
+    if(_unsubRef){off(_unsubRef);_unsubRef=null;}
   }
 });
 
-// ── 읽기: SDK onSnapshot (캐시 포함) ──
 function _startListen(uid){
-  if(_unsub){_unsub();_unsub=null;}
-  const q=query(collection(_db,'travel_trips'),where('uid','==',uid));
-  console.log('[Firestore] 읽기 리스너 등록');
-  _unsub=onSnapshot(q,snap=>{
-    const data=[];
-    snap.forEach(d=>data.push({_fbId:d.id,...d.data()}));
-    const fromCache=snap.metadata.fromCache;
-    console.log('[Firestore] 데이터 수신:',data.length,'건','('+(fromCache?'캐시':'서버')+')');
-    window._fbData=data;
+  if(_unsubRef){off(_unsubRef);_unsubRef=null;}
+  _unsubRef=ref(_rtdb,'travel_trips/'+uid);
+  console.log('[RTDB] 리스너 등록');
+  onValue(_unsubRef,snap=>{
+    const data=snap.val();
+    const trips=data?Object.values(data):[];
+    console.log('[RTDB] 데이터 수신:',trips.length,'건');
+    window._fbData=trips;
     window._fbReady=true;
-    if(!fromCache){
-      // 서버에서 온 실제 데이터
-      if(data.length>0){
-        if(window._appReady&&typeof window._syncTripsFromCloud==='function')
-          window._syncTripsFromCloud(data);
-      }else if(!window._didMigrate){
-        window._didMigrate=true;
-        setTimeout(_migrateLocalToCloud,800);
-      }
+    if(trips.length>0){
+      if(window._appReady&&typeof window._syncTripsFromCloud==='function')
+        window._syncTripsFromCloud(trips);
+    }else if(!window._didMigrate){
+      window._didMigrate=true;
+      setTimeout(_migrateLocalToCloud,800);
     }
   },err=>{
-    console.error('[Firestore] 읽기 실패:',err.code);
-    if(err.code==='permission-denied')
-      if(typeof window.toast==='function')window.toast('⚠️ Firestore Rules 차단');
+    console.error('[RTDB] 읽기 실패:',err.code,err.message);
+    if(typeof window.toast==='function')window.toast('⚠️ DB 읽기 실패: '+err.message);
   });
 }
 
-// ── 쓰기: REST API (HTTP 직접 호출 — SDK WebSocket 우회) ──
-// SDK setDoc은 WebSocket/long-polling 의존 → 막히면 무한 대기
-// REST API는 순수 HTTPS fetch → Firebase Auth처럼 항상 동작
-async function _restSave(entry){
-  const token=await window._user.getIdToken();
-  const url=`https://firestore.googleapis.com/v1/projects/${_PROJECT}/databases/(default)/documents/travel_trips/${entry._fbId}`;
-
-  // JavaScript 값 → Firestore REST 형식 변환
-  const toV=v=>{
-    if(v===null||v===undefined)return{nullValue:null};
-    if(typeof v==='boolean')return{booleanValue:v};
-    if(typeof v==='number')return Number.isInteger(v)?{integerValue:''+v}:{doubleValue:v};
-    if(typeof v==='string')return{stringValue:v};
-    return{stringValue:String(v)};
-  };
-  const fields={};
-  for(const[k,v]of Object.entries(entry)){
-    if(k==='photo')continue; // 사진 제외
-    fields[k]=toV(v);
-  }
-
-  const res=await fetch(url,{
-    method:'PATCH',
-    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
-    body:JSON.stringify({fields})
-  });
-  if(!res.ok){
-    const err=await res.json().catch(()=>({}));
-    throw new Error('HTTP '+res.status+': '+(err.error?.message||res.statusText));
-  }
-  console.log('[REST] 저장 성공:',entry.city);
-}
-
-async function _restDelete(fbId){
-  const token=await window._user.getIdToken();
-  const url=`https://firestore.googleapis.com/v1/projects/${_PROJECT}/databases/(default)/documents/travel_trips/${fbId}`;
-  const res=await fetch(url,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
-  if(!res.ok&&res.status!==404)throw new Error('삭제 실패 HTTP '+res.status);
-}
-
-// 마이그레이션: 로컬 → 클라우드
 async function _migrateLocalToCloud(){
   if(!window._user)return;
   let localData=[];
@@ -126,7 +79,8 @@ async function _migrateLocalToCloud(){
     try{
       if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
       t.uid=window._user.uid;
-      await _restSave(t);ok++;
+      await window._fbSave(t);
+      ok++;
     }catch(e){console.error('[Migration] 실패:',t.city,e.message);fail++;}
   }
   console.log('[Migration] 완료: 성공',ok,'실패',fail);
@@ -149,19 +103,22 @@ window._logout=async function(){
   await signOut(_auth);
 };
 
-// 외부에서 호출하는 CRUD 함수 (REST API 사용)
 window._fbSave=async function(entry){
   if(!entry._fbId)throw new Error('_fbId 없음');
   if(!window._user)throw new Error('로그인 필요');
-  await _restSave(entry);
+  console.log('[RTDB] 저장:',entry.city);
+  const r=ref(_rtdb,'travel_trips/'+window._user.uid+'/'+entry._fbId);
+  await set(r,entry);
+  console.log('[RTDB] 저장 완료:',entry.city);
 };
 window._fbDel=async function(fbId){
   if(!window._user)return;
-  await _restDelete(fbId);
+  const r=ref(_rtdb,'travel_trips/'+window._user.uid+'/'+fbId);
+  await remove(r);
 };
 window._fbClear=async function(allTrips){
   if(!window._user)return;
-  for(const t of allTrips){if(t._fbId)await _restDelete(t._fbId);}
+  for(const t of allTrips){if(t._fbId)await window._fbDel(t._fbId);}
 };
 </script>
 <style>
