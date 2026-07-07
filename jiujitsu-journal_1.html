@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JiuJitSu_by bossmin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mat:#171b17;
+    --mat-2:#1f2420;
+    --card:#262b25;
+    --card-2:#2e342d;
+    --line: rgba(237,234,224,0.09);
+    --ink:#EDEAE0;
+    --ink-dim:#9B9E92;
+    --belt-white:#F5F1E8;
+    --belt-blue:#3572A5;
+    --belt-purple:#7C5C93;
+    --belt-brown:#8A5A34;
+    --belt-black:#141414;
+    --red:#A63D40;
+    --focus:#D9C36A;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 42px),
+      repeating-linear-gradient(90deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 42px),
+      var(--mat);
+    color:var(--ink);
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+    min-height:100vh;
+  }
+  .app{max-width:900px;margin:0 auto;padding:28px 20px 80px;}
+
+  /* ---------- header / belt signature ---------- */
+  header{margin-bottom:22px;}
+  .titlebar{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+  h1{
+    font-family: 'Bebas Neue','Arial Narrow',sans-serif;
+    text-transform:none;
+    letter-spacing:1.5px;
+    font-size:38px;
+    font-weight:400;
+    margin:0;
+  }
+  .subtitle{color:var(--ink-dim);font-size:13px;letter-spacing:0.5px;}
+
+  .authbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 2px;}
+  .auth-note{color:var(--ink-dim);font-size:12px;}
+
+  .belt{
+    display:flex;
+    height:20px;
+    border-radius:3px;
+    overflow:hidden;
+    margin:16px 0 22px;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.4);
+  }
+  .belt-body{flex:1;background:var(--belt-black);}
+  .belt-bar{width:36px;background:var(--red);border-left:2px solid rgba(0,0,0,0.5);border-right:2px solid rgba(0,0,0,0.5);}
+
+  nav.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);}
+  nav.tabs button{
+    appearance:none;border:none;background:none;color:var(--ink-dim);
+    font-family:'Oswald','Arial Narrow',sans-serif;
+    font-size:15px;letter-spacing:1px;text-transform:uppercase;
+    padding:10px 4px;margin-right:22px;cursor:pointer;
+    border-bottom:3px solid transparent;
+    transition:color .15s, border-color .15s;
+  }
+  nav.tabs button:hover{color:var(--ink);}
+  nav.tabs button.active{color:var(--ink);border-bottom-color:var(--focus);}
+
+  main{margin-top:22px;}
+  section{display:none;}
+  section.active{display:block;}
+
+  /* ---------- toolbar ---------- */
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:18px;}
+  .toolbar input[type="text"]{
+    flex:1;min-width:160px;
+    background:var(--card);border:1px solid var(--line);color:var(--ink);
+    padding:9px 12px;border-radius:6px;font-size:14px;
+  }
+  .toolbar input[type="text"]:focus{outline:2px solid var(--focus);outline-offset:1px;}
+  .btn{
+    background:var(--belt-blue);color:#fff;border:none;border-radius:6px;
+    padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;
+    font-family:inherit;letter-spacing:0.3px;
+    transition:filter .12s, transform .12s;
+  }
+  .btn:hover{filter:brightness(1.12);}
+  .btn:active{transform:scale(0.98);}
+  .btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+  .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+  .btn.danger{background:var(--red);}
+  .btn.small{padding:6px 11px;font-size:12.5px;}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px;}
+  .chip{
+    padding:5px 12px;border-radius:20px;font-size:12.5px;cursor:pointer;
+    border:1px solid var(--c, var(--line));color:var(--c, var(--ink-dim));background:transparent;
+    font-family:inherit;
+  }
+  .chip.active{color:#fff;border-color:transparent;font-weight:700;background:var(--c, var(--focus));}
+
+  /* ---------- entry form ---------- */
+  .form-card{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:18px;margin-bottom:20px;
+  }
+  .form-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+  .field{display:flex;flex-direction:column;gap:5px;flex:1;min-width:140px;}
+  .field.wide{flex-basis:100%;}
+  .field label{font-size:12px;color:var(--ink-dim);letter-spacing:0.4px;}
+  .field input, .field select, .field textarea{
+    background:var(--mat-2);border:1px solid var(--line);color:var(--ink);
+    padding:9px 10px;border-radius:6px;font-size:14px;font-family:inherit;
+    resize:vertical;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:2px solid var(--focus);outline-offset:1px;
+  }
+  .field-hint{font-size:11px;color:var(--ink-dim);}
+  .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px;}
+
+  /* ---------- photo attach ---------- */
+  .field input[type="file"]{
+    padding:8px 0;border:none;background:none;color:var(--ink-dim);font-size:13px;
+  }
+  .photo-preview-wrap{margin-top:8px;}
+  .photo-preview{display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+  .photo-preview img{
+    width:110px;height:110px;object-fit:cover;border-radius:8px;border:1px solid var(--line);
+  }
+  .entry-photo{
+    display:block;max-width:260px;width:100%;border-radius:8px;border:1px solid var(--line);
+    cursor:zoom-in;margin-top:2px;
+  }
+  .lightbox-overlay{
+    position:fixed;inset:0;background:rgba(10,12,10,0.9);
+    display:flex;align-items:center;justify-content:center;
+    z-index:1000;cursor:zoom-out;padding:20px;
+  }
+  .lightbox-overlay img{
+    max-width:92vw;max-height:88vh;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,0.5);
+  }
+
+  /* ---------- entry list ---------- */
+  .entry{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:16px 18px;margin-bottom:12px;border-left:4px solid var(--ink-dim);
+  }
+  .entry-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+  .entry-title{font-size:16px;font-weight:700;margin:0 0 4px;}
+  .entry-meta{font-size:12px;color:var(--ink-dim);display:flex;gap:10px;flex-wrap:wrap;}
+  .tag{
+    display:inline-block;font-size:11px;padding:2px 9px;border-radius:20px;
+    background:var(--mat-2);color:var(--ink-dim);border:1px solid var(--line);
+  }
+  .entry-body{margin-top:10px;font-size:14px;line-height:1.6;white-space:pre-wrap;}
+  .entry-body .label{color:var(--ink-dim);font-size:12px;display:block;margin-bottom:2px;letter-spacing:0.3px;}
+  .entry-section{margin-top:10px;}
+  .entry-actions{display:flex;gap:6px;flex-shrink:0;}
+  .empty{
+    text-align:center;color:var(--ink-dim);padding:50px 20px;font-size:14px;
+    border:1px dashed var(--line);border-radius:10px;
+  }
+
+  /* ---------- theory ---------- */
+  .theory-card{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    margin-bottom:12px;overflow:hidden;
+  }
+  .theory-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:15px 18px;cursor:pointer;user-select:none;
+    background:var(--card-2);
+  }
+  .theory-head:hover{filter:brightness(1.08);}
+  .theory-head h3{margin:0;font-size:15.5px;font-family:'Oswald','Arial Narrow',sans-serif;letter-spacing:0.5px;text-transform:uppercase;}
+  .theory-num{color:var(--focus);font-family:'Oswald',sans-serif;margin-right:10px;font-size:14px;}
+  .chevron{transition:transform .18s;color:var(--ink-dim);font-size:13px;}
+  .theory-card.open .chevron{transform:rotate(90deg);}
+  .theory-body{max-height:0;overflow:hidden;transition:max-height .25s ease;}
+  .theory-card.open .theory-body{max-height:3000px;}
+  .theory-inner{padding:4px 18px 18px;font-size:14px;line-height:1.75;}
+  .theory-inner h4{font-size:13px;color:var(--focus);margin:14px 0 6px;letter-spacing:0.3px;}
+  .theory-inner ul{margin:4px 0 4px 18px;padding:0;}
+  .theory-inner li{margin-bottom:4px;}
+  .hier{list-style:none;margin:8px 0;padding:0;counter-reset:h;}
+  .hier li{
+    counter-increment:h;
+    background:var(--mat-2);border:1px solid var(--line);border-radius:6px;
+    padding:8px 12px;margin-bottom:6px;font-size:13.5px;
+    position:relative;padding-left:34px;
+  }
+  .hier li::before{
+    content:counter(h);
+    position:absolute;left:10px;top:50%;transform:translateY(-50%);
+    color:var(--focus);font-family:'Oswald',sans-serif;font-weight:700;font-size:13px;
+  }
+  .glossary{width:100%;border-collapse:collapse;font-size:13.5px;}
+  .glossary td{padding:6px 8px;border-bottom:1px solid var(--line);}
+  .glossary td:first-child{color:var(--focus);width:38%;font-weight:600;}
+
+  .theory-edit-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;}
+  .theory-content.editing{
+    outline:2px dashed var(--focus); outline-offset:4px; border-radius:6px; padding:6px;
+  }
+
+  /* ---------- pinned theory intro (always visible) ---------- */
+  .theory-pinned{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:18px 18px 6px;margin-bottom:18px;
+  }
+  .theory-pinned-title{
+    margin:0 0 6px;font-family:'Oswald','Arial Narrow',sans-serif;
+    text-transform:uppercase;letter-spacing:0.5px;font-size:16px;
+  }
+  .theory-pinned-desc{font-size:13.5px;color:var(--ink-dim);margin:0 0 12px;line-height:1.6;}
+  .theory-pinned h4{font-size:13px;color:var(--focus);margin:14px 0 6px;letter-spacing:0.3px;}
+  .theory-pinned .flow-note{font-size:12px;color:var(--ink-dim);margin:8px 0 4px;}
+
+  /* ---------- flow diagram ---------- */
+  .flow-chart-wrap{
+    background:var(--mat-2);border:1px solid var(--line);border-radius:8px;
+    padding:10px 6px;margin:12px 0 14px;
+  }
+  .flow-chart-wrap svg{display:block;width:100%;height:auto;}
+  .flow-node rect{
+    fill:var(--card); stroke:var(--line); stroke-width:1.3px;
+    transition:fill .15s, stroke .15s;
+  }
+  .flow-node text{
+    fill:var(--ink); font-size:15px; font-family:inherit; pointer-events:none;
+  }
+  .flow-node text.pt{ fill:var(--focus); font-size:12px; font-weight:700; }
+  .flow-node{cursor:pointer;}
+  .flow-node:hover rect{stroke:var(--focus);}
+  .flow-node.selected rect{fill:var(--focus); stroke:var(--focus);}
+  .flow-node.selected text{fill:#141414;}
+  .flow-node.selected text.pt{fill:#3d3312;}
+  .flow-edge{stroke:var(--ink-dim); stroke-width:1.3px; fill:none; opacity:0.6;}
+  .flow-edge.bypass{stroke-dasharray:4 3; opacity:0.45;}
+  .flow-detail{
+    background:var(--mat-2);border:1px solid var(--line);border-radius:8px;
+    padding:14px 16px;margin-bottom:14px;font-size:13.5px;line-height:1.7;
+    min-height:20px;
+  }
+  .flow-detail-empty{color:var(--ink-dim);margin:0;font-size:13px;}
+  .flow-detail h4{margin:0 0 8px;color:var(--focus);font-size:14px;}
+  .flow-detail ul{margin:6px 0 0 18px;padding:0;}
+  .flow-detail li{margin-bottom:4px;}
+  .venn-wrap{display:flex;justify-content:center;margin:14px 0;}
+  .point-table{width:100%;border-collapse:collapse;font-size:13.5px;margin:10px 0;}
+  .point-table td{padding:6px 8px;border-bottom:1px solid var(--line);}
+  .point-table td:last-child{color:var(--focus);font-weight:700;text-align:right;}
+  .my-note{margin-top:14px;}
+  .my-note label{font-size:11.5px;color:var(--ink-dim);display:block;margin-bottom:5px;letter-spacing:0.3px;}
+  .my-note textarea{
+    width:100%;background:var(--mat-2);border:1px solid var(--line);color:var(--ink);
+    border-radius:6px;padding:9px 10px;font-family:inherit;font-size:13.5px;min-height:60px;
+  }
+  .my-note textarea:focus{outline:2px solid var(--focus);outline-offset:1px;}
+  .save-hint{font-size:11px;color:var(--ink-dim);margin-top:4px;height:14px;}
+
+  .hidden{display:none !important;}
+  .status{font-size:12px;color:var(--ink-dim);margin-bottom:14px;}
+
+  @media (prefers-reduced-motion: reduce){
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="titlebar">
+      <h1>JiuJitSu_by bossmin</h1>
+      <span class="subtitle">오늘 배운 것, 잊기 전에 남겨두기</span>
+    </div>
+    <div class="authbar" id="authBar"></div>
+    <div class="belt" aria-hidden="true">
+      <div class="belt-body"></div>
+      <div class="belt-bar"></div>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="log">훈련 일지</button>
+      <button class="tab-btn" data-tab="theory">기본 이론</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- ============ LOG VIEW ============ -->
+    <section id="log" class="active">
+      <div class="toolbar">
+        <input type="text" id="searchInput" placeholder="기술명, 내용으로 검색…">
+        <button class="btn" id="newEntryBtn">+ 오늘 배운 것 기록</button>
+      </div>
+      <div class="chips" id="catChips"></div>
+
+      <div id="formContainer"></div>
+      <div class="status" id="statusMsg">불러오는 중…</div>
+      <div id="entriesList"></div>
+    </section>
+
+    <!-- ============ THEORY VIEW ============ -->
+    <section id="theory">
+      <div class="theory-pinned">
+        <h3 class="theory-pinned-title">주짓수 플로우 & 포인트 체계</h3>
+        <p class="theory-pinned-desc">도장에 붙어있는 흐름표를 그대로 재현했습니다. 박스를 눌러보면 해당 단계 설명이 아래에 나타나요.</p>
+        <div class="flow-chart-wrap">
+          <svg id="flowSvg" viewBox="0 0 780 620" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+        <div class="flow-detail" id="flowDetail"><p class="flow-detail-empty">위 도표에서 박스를 눌러보세요. 가드 포지션, 패스, 서브미션 등을 누르면 세부 종류가 나옵니다.</p></div>
+        <p class="flow-note">점선 화살표는 가드 포지션에서 바로 서브미션으로 연결되는 지름길입니다 — 꼭 순서를 다 거쳐야 하는 건 아니에요.</p>
+
+        <h4>득점표 (IBJJF 기준)</h4>
+        <table class="point-table">
+          <tr><td>테이크다운</td><td>2점</td></tr>
+          <tr><td>스윕</td><td>2점</td></tr>
+          <tr><td>니온벨리</td><td>2점</td></tr>
+          <tr><td>가드 패스</td><td>3점</td></tr>
+          <tr><td>마운트</td><td>4점</td></tr>
+          <tr><td>백 포지션</td><td>4점</td></tr>
+        </table>
+
+        <h4>컨트롤 · 서브미션 · 포지션의 관계</h4>
+        <div class="venn-wrap">
+          <svg width="280" height="170" viewBox="0 0 280 170" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="110" cy="85" r="70" fill="var(--belt-blue)" fill-opacity="0.35" stroke="var(--belt-blue)" stroke-width="1.5"/>
+            <circle cx="170" cy="85" r="70" fill="var(--red)" fill-opacity="0.3" stroke="var(--red)" stroke-width="1.5"/>
+            <text x="62" y="90" fill="var(--ink)" font-size="13" font-weight="700" text-anchor="middle">컨트롤</text>
+            <text x="140" y="90" fill="var(--ink)" font-size="13" font-weight="700" text-anchor="middle">서브미션</text>
+            <text x="218" y="90" fill="var(--ink)" font-size="13" font-weight="700" text-anchor="middle">포지션</text>
+          </svg>
+        </div>
+        <p class="theory-pinned-desc">포지션은 공간적인 우위(마운트, 백 등)이고, 컨트롤은 그 포지션을 유지하고 상대의 움직임을 제한하는 능력입니다. 이 둘이 겹치는 곳에서 서브미션 기회가 생깁니다 — 즉, 좋은 자리(포지션)만으로는 부족하고, 그 자리를 실제로 통제(컨트롤)해야 서브미션까지 이어진다는 뜻입니다.</p>
+      </div>
+      <div id="theoryList"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+(function(){
+  /* =========================================================
+     Firebase 설정 — 여기에 본인 Firebase 프로젝트 값을 넣으세요.
+     (Firebase 콘솔 > 프로젝트 설정 > 일반 > 내 앱 > SDK 설정에서 확인)
+     값을 채우지 않으면 이 브라우저(로컬)에만 저장되는 모드로 동작합니다.
+  ========================================================= */
+  const firebaseConfig = {
+    apiKey: "AIzaSyDcoUMPyjfETBlU1WNvW1aB4hsDgRVtt80",
+    authDomain: "jiujitsu-note.firebaseapp.com",
+    projectId: "jiujitsu-note",
+    storageBucket: "jiujitsu-note.firebasestorage.app",
+    messagingSenderId: "134571125329",
+    appId: "1:134571125329:web:60a3a6caf21ae0ecd56670"
+  };
+  const FIREBASE_CONFIGURED = !!(firebaseConfig.apiKey && !firebaseConfig.apiKey.startsWith("YOUR_"));
+
+  const DEFAULT_CATEGORIES = ["가드","패스","서브미션","이스케이프","테이크다운","스파링","기타"];
+  const CATEGORY_PALETTE = ['#3572A5','#7C5C93','#A63D40','#8A5A34','#5b6b57','#4E8098','#B0725C','#6D8B74','#9B6B9E','#3F7D5C'];
+
+  let entries = [];
+  let categories = [...DEFAULT_CATEGORIES];
+  let theoryOverrides = {};
+  let theoryNotes = {};
+  let activeCat = "all";
+  let editingId = null;
+  let formPhotoData = null;
+
+  // ---------- firebase state ----------
+  let fb = {};
+  let auth = null, db = null;
+  let currentUser = null;
+  let unsubEntries = null, unsubUserDoc = null;
+
+  const $ = (sel, root=document) => root.querySelector(sel);
+  const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
+
+  function escapeHtml(str){
+    return (str||"").replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  }
+  function escapeAttr(str){ return escapeHtml(str); }
+
+  function categoryColor(cat){
+    let hash = 0;
+    for(let i=0;i<cat.length;i++){ hash = (hash*31 + cat.charCodeAt(i)) >>> 0; }
+    return CATEGORY_PALETTE[hash % CATEGORY_PALETTE.length];
+  }
+
+  // ---------- local storage ----------
+  function loadLocalAll(){
+    try{ entries = JSON.parse(localStorage.getItem("bjj:entries") || "[]"); }catch(e){ entries = []; }
+    try{
+      const c = JSON.parse(localStorage.getItem("bjj:categories") || "null");
+      categories = (c && c.length) ? c : [...DEFAULT_CATEGORIES];
+    }catch(e){ categories = [...DEFAULT_CATEGORIES]; }
+    try{ theoryOverrides = JSON.parse(localStorage.getItem("bjj:theory-overrides") || "{}"); }catch(e){ theoryOverrides = {}; }
+    try{ theoryNotes = JSON.parse(localStorage.getItem("bjj:theory-notes") || "{}"); }catch(e){ theoryNotes = {}; }
+  }
+  function saveLocalEntries(){ try{ localStorage.setItem("bjj:entries", JSON.stringify(entries)); }catch(e){ console.error(e); } }
+  function saveLocalMeta(){
+    try{
+      localStorage.setItem("bjj:categories", JSON.stringify(categories));
+      localStorage.setItem("bjj:theory-overrides", JSON.stringify(theoryOverrides));
+      localStorage.setItem("bjj:theory-notes", JSON.stringify(theoryNotes));
+    }catch(e){ console.error(e); }
+  }
+
+  // ---------- unified persistence (local or cloud) ----------
+  async function persistEntry(data){
+    if(currentUser && db){
+      try{
+        await fb.setDoc(fb.doc(db, "users", currentUser.uid, "entries", data.id), data);
+      }catch(err){ console.error(err); alert("클라우드 저장에 실패했어요: " + err.message); }
+    } else {
+      const idx = entries.findIndex(x=>x.id===data.id);
+      if(idx>-1) entries[idx] = data; else entries.unshift(data);
+      saveLocalEntries();
+      renderEntries();
+      renderChips();
+    }
+  }
+  async function removeEntryById(id){
+    if(currentUser && db){
+      try{
+        await fb.deleteDoc(fb.doc(db, "users", currentUser.uid, "entries", id));
+      }catch(err){ console.error(err); alert("삭제에 실패했어요: " + err.message); }
+    } else {
+      entries = entries.filter(x=>x.id!==id);
+      saveLocalEntries();
+      renderEntries();
+    }
+  }
+  async function persistMeta(){
+    if(currentUser && db){
+      try{
+        await fb.setDoc(fb.doc(db, "users", currentUser.uid), {categories, theoryOverrides, theoryNotes}, {merge:true});
+      }catch(err){ console.error(err); alert("클라우드 저장에 실패했어요: " + err.message); }
+    } else {
+      saveLocalMeta();
+    }
+  }
+  async function ensureCategory(cat){
+    if(cat && !categories.includes(cat)){
+      categories.push(cat);
+      await persistMeta();
+      renderChips();
+    }
+  }
+
+  // ---------- firebase init ----------
+  async function initFirebase(){
+    try{
+      const appMod = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js");
+      const authMod = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js");
+      const fsMod = await import("https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js");
+      fb = Object.assign({}, appMod, authMod, fsMod);
+      const app = fb.initializeApp(firebaseConfig);
+      auth = fb.getAuth(app);
+      db = fb.getFirestore(app);
+      fb.onAuthStateChanged(auth, onAuthChanged);
+    }catch(err){
+      console.error("Firebase 초기화 실패", err);
+      auth = null; db = null;
+      renderAuthBar();
+    }
+  }
+
+  async function onAuthChanged(user){
+    currentUser = user;
+    renderAuthBar();
+    if(user){
+      subscribeCloud();
+    } else {
+      unsubscribeCloud();
+      loadLocalAll();
+      renderChips();
+      renderEntries();
+      renderTheory();
+      initFlowChart();
+    }
+  }
+
+  function subscribeCloud(){
+    unsubscribeCloud();
+    const entriesCol = fb.collection(db, "users", currentUser.uid, "entries");
+    unsubEntries = fb.onSnapshot(entriesCol, snap=>{
+      entries = snap.docs.map(d=>d.data());
+      renderEntries();
+      renderChips();
+    }, err=> console.error(err));
+
+    const userRef = fb.doc(db, "users", currentUser.uid);
+    unsubUserDoc = fb.onSnapshot(userRef, snap=>{
+      const d = snap.exists() ? snap.data() : {};
+      categories = (d.categories && d.categories.length) ? d.categories : [...DEFAULT_CATEGORIES];
+      theoryOverrides = d.theoryOverrides || {};
+      theoryNotes = d.theoryNotes || {};
+      renderChips();
+      renderTheory();
+      initFlowChart();
+    }, err=> console.error(err));
+  }
+  function unsubscribeCloud(){
+    if(unsubEntries){ unsubEntries(); unsubEntries = null; }
+    if(unsubUserDoc){ unsubUserDoc(); unsubUserDoc = null; }
+  }
+
+  async function handleLogin(){
+    if(!FIREBASE_CONFIGURED || !auth){
+      alert("Firebase 설정이 안 되어 있어요. 파일 상단 firebaseConfig 값을 채워주세요.");
+      return;
+    }
+    try{
+      await fb.signInWithPopup(auth, new fb.GoogleAuthProvider());
+    }catch(err){
+      console.error(err);
+      alert("로그인에 실패했어요: " + err.message);
+    }
+  }
+  async function handleLogout(){
+    if(!auth) return;
+    try{ await fb.signOut(auth); }catch(err){ console.error(err); }
+  }
+
+  function renderAuthBar(){
+    const bar = $("#authBar");
+    if(!bar) return;
+    if(!FIREBASE_CONFIGURED){
+      bar.innerHTML = `<span class="auth-note">⚙️ Firebase 미설정 — 지금은 이 기기에만 저장돼요</span>`;
+      return;
+    }
+    if(currentUser){
+      const name = currentUser.displayName || currentUser.email || "사용자";
+      bar.innerHTML = `<span class="auth-note">☁️ ${escapeHtml(name)} 님으로 동기화 중</span><button class="btn ghost small" id="logoutBtn">로그아웃</button>`;
+      $("#logoutBtn").addEventListener("click", handleLogout);
+    } else {
+      bar.innerHTML = `<button class="btn ghost small" id="loginBtn">Google로 로그인</button><span class="auth-note">로그인하면 어디서든 기록을 볼 수 있어요</span>`;
+      $("#loginBtn").addEventListener("click", handleLogin);
+    }
+  }
+
+  // ---------- tabs ----------
+  $$(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      $$(".tab-btn").forEach(b=>b.classList.remove("active"));
+      btn.classList.add("active");
+      $$("main section").forEach(s=>s.classList.remove("active"));
+      $("#"+btn.dataset.tab).classList.add("active");
+    });
+  });
+
+  // ---------- category chips ----------
+  function renderChips(){
+    const wrap = $("#catChips");
+    if(!wrap) return;
+    const known = Array.from(new Set([...categories, ...entries.map(e=>e.category).filter(Boolean)]));
+    const chipsHtml = [`<button class="chip ${activeCat==="all"?"active":""}" data-cat="all" style="--c:var(--focus)">전체</button>`]
+      .concat(known.map(c=>`<button class="chip ${activeCat===c?"active":""}" data-cat="${escapeAttr(c)}" style="--c:${categoryColor(c)}">${escapeHtml(c)}</button>`));
+    wrap.innerHTML = chipsHtml.join("");
+    $$(".chip", wrap).forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        activeCat = chip.dataset.cat;
+        renderChips();
+        renderEntries();
+      });
+    });
+  }
+
+  // ---------- search ----------
+  $("#searchInput").addEventListener("input", renderEntries);
+
+  // ---------- form ----------
+  function todayStr(){
+    const d = new Date();
+    const pad = n => String(n).padStart(2,"0");
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  }
+
+  // ---------- image helpers ----------
+  function openLightbox(src){
+    const overlay = document.createElement("div");
+    overlay.className = "lightbox-overlay";
+    overlay.innerHTML = `<img src="${src}" alt="사진 크게 보기">`;
+    overlay.addEventListener("click", ()=> overlay.remove());
+    document.body.appendChild(overlay);
+  }
+
+  function resizeImage(file, maxDim, quality){
+    maxDim = maxDim || 900; quality = quality || 0.72;
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error("파일을 읽지 못했습니다"));
+      reader.onload = () => {
+        const img = new Image();
+        img.onerror = () => reject(new Error("이미지를 불러오지 못했습니다"));
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if(w > h && w > maxDim){ h = Math.round(h * (maxDim/w)); w = maxDim; }
+          else if(h > maxDim){ w = Math.round(w * (maxDim/h)); h = maxDim; }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        };
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function renderForm(entry){
+    const isEdit = !!entry;
+    const e = entry || {date: todayStr(), category: (categories[0]||"가드"), title:"", learned:"", notes:"", tags:"", photo:""};
+    formPhotoData = e.photo || null;
+    const container = $("#formContainer");
+    container.innerHTML = `
+      <div class="form-card">
+        <div class="form-row">
+          <div class="field">
+            <label for="f-date">날짜</label>
+            <input type="date" id="f-date" value="${e.date}">
+          </div>
+          <div class="field">
+            <label for="f-cat">카테고리</label>
+            <input type="text" id="f-cat" list="categoryOptions" placeholder="예: 가드 (직접 입력 가능)" value="${escapeAttr(e.category)}">
+            <datalist id="categoryOptions">
+              ${categories.map(c=>`<option value="${escapeAttr(c)}"></option>`).join("")}
+            </datalist>
+            <span class="field-hint">목록에 없으면 새로 입력해도 자동 추가돼요</span>
+          </div>
+          <div class="field" style="flex:2;">
+            <label for="f-title">기술명 / 제목</label>
+            <input type="text" id="f-title" placeholder="예: 클로즈드가드에서 암바" value="${escapeAttr(e.title)}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field wide">
+            <label for="f-learned">오늘 배운 내용</label>
+            <textarea id="f-learned" rows="3" placeholder="어떤 상황에서, 어떤 순서로 하는 기술인지 적어보세요">${escapeHtml(e.learned)}</textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field wide">
+            <label for="f-notes">헷갈렸던 점 / 다음에 신경 쓸 점</label>
+            <textarea id="f-notes" rows="2" placeholder="놓쳤던 디테일, 파트너 피드백 등">${escapeHtml(e.notes)}</textarea>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field wide">
+            <label for="f-tags">태그 (쉼표로 구분, 선택)</label>
+            <input type="text" id="f-tags" placeholder="예: 하프가드, 왼쪽" value="${escapeAttr(e.tags)}">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="field wide">
+            <label for="f-photo">사진 (선택)</label>
+            <input type="file" id="f-photo" accept="image/*">
+            <div class="photo-preview-wrap" id="photoPreviewWrap"></div>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn ghost" id="cancelFormBtn">취소</button>
+          <button class="btn" id="saveEntryBtn">${isEdit ? "수정 완료" : "저장"}</button>
+        </div>
+      </div>
+    `;
+    renderPhotoPreview();
+    $("#f-photo").addEventListener("change", async (ev)=>{
+      const file = ev.target.files && ev.target.files[0];
+      if(!file) return;
+      const wrap = $("#photoPreviewWrap");
+      wrap.innerHTML = `<span class="save-hint">이미지 처리 중…</span>`;
+      try{
+        formPhotoData = await resizeImage(file);
+      }catch(err){
+        console.error(err);
+        alert("사진을 처리하지 못했어요. 다른 사진으로 시도해 주세요.");
+        formPhotoData = null;
+      }
+      ev.target.value = "";
+      renderPhotoPreview();
+    });
+    $("#cancelFormBtn").addEventListener("click", closeForm);
+    $("#saveEntryBtn").addEventListener("click", async ()=>{
+      const title = $("#f-title").value.trim();
+      if(!title){ $("#f-title").focus(); return; }
+      const category = ($("#f-cat").value || "").trim() || "기타";
+      const data = {
+        id: isEdit ? e.id : (Date.now().toString(36)+Math.random().toString(36).slice(2,6)),
+        date: $("#f-date").value || todayStr(),
+        category,
+        title,
+        learned: $("#f-learned").value.trim(),
+        notes: $("#f-notes").value.trim(),
+        tags: $("#f-tags").value.trim(),
+        photo: formPhotoData || "",
+      };
+      await ensureCategory(category);
+      await persistEntry(data);
+      closeForm();
+    });
+  }
+
+  function renderPhotoPreview(){
+    const wrap = $("#photoPreviewWrap");
+    if(!wrap) return;
+    if(formPhotoData){
+      wrap.innerHTML = `
+        <div class="photo-preview">
+          <img src="${formPhotoData}" alt="첨부 사진 미리보기">
+          <button type="button" class="btn danger small" id="removePhotoBtn">사진 제거</button>
+        </div>`;
+      $("#removePhotoBtn").addEventListener("click", ()=>{
+        formPhotoData = null;
+        renderPhotoPreview();
+      });
+    } else {
+      wrap.innerHTML = "";
+    }
+  }
+
+  function openForm(entry){
+    editingId = entry ? entry.id : null;
+    renderForm(entry);
+  }
+  function closeForm(){
+    editingId = null;
+    formPhotoData = null;
+    $("#formContainer").innerHTML = "";
+  }
+
+  $("#newEntryBtn").addEventListener("click", ()=> openForm(null));
+
+  // ---------- render entries ----------
+  function renderEntries(){
+    const q = $("#searchInput").value.trim().toLowerCase();
+    let list = entries.filter(e=>{
+      const matchesCat = activeCat === "all" || e.category === activeCat;
+      const hay = (e.title+" "+e.learned+" "+e.notes+" "+e.tags).toLowerCase();
+      const matchesQ = !q || hay.includes(q);
+      return matchesCat && matchesQ;
+    });
+    list.sort((a,b)=> (b.date||"").localeCompare(a.date||"") || 0);
+
+    $("#statusMsg").textContent = entries.length
+      ? `총 ${entries.length}개 기록 중 ${list.length}개 표시`
+      : "";
+
+    const wrap = $("#entriesList");
+    if(list.length === 0){
+      wrap.innerHTML = `<div class="empty">${entries.length===0 ? "아직 기록이 없어요. 오늘 배운 것부터 남겨보세요." : "조건에 맞는 기록이 없어요."}</div>`;
+      return;
+    }
+    wrap.innerHTML = list.map(e=>`
+      <div class="entry" data-cat="${escapeAttr(e.category)}" style="border-left-color:${categoryColor(e.category||"기타")}">
+        <div class="entry-top">
+          <div>
+            <p class="entry-title">${escapeHtml(e.title)}</p>
+            <div class="entry-meta">
+              <span>${e.date}</span>
+              <span class="tag">${escapeHtml(e.category)}</span>
+              ${e.tags ? e.tags.split(",").map(t=>t.trim()).filter(Boolean).map(t=>`<span class="tag">#${escapeHtml(t)}</span>`).join("") : ""}
+            </div>
+          </div>
+          <div class="entry-actions">
+            <button class="btn ghost small" data-action="edit" data-id="${e.id}">수정</button>
+            <button class="btn danger small" data-action="delete" data-id="${e.id}">삭제</button>
+          </div>
+        </div>
+        ${e.photo ? `<div class="entry-section"><img class="entry-photo" src="${e.photo}" alt="${escapeAttr(e.title)} 사진" data-action="view-photo" data-id="${e.id}"></div>` : ""}
+        ${e.learned ? `<div class="entry-section entry-body"><span class="label">배운 내용</span>${escapeHtml(e.learned)}</div>` : ""}
+        ${e.notes ? `<div class="entry-section entry-body"><span class="label">헷갈렸던 점 / 체크포인트</span>${escapeHtml(e.notes)}</div>` : ""}
+      </div>
+    `).join("");
+
+    $$('[data-action="edit"]', wrap).forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const entry = entries.find(x=>x.id===btn.dataset.id);
+        openForm(entry);
+        window.scrollTo({top:0, behavior:"smooth"});
+      });
+    });
+    $$('[data-action="delete"]', wrap).forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        if(!confirm("이 기록을 삭제할까요?")) return;
+        await removeEntryById(btn.dataset.id);
+      });
+    });
+    $$('[data-action="view-photo"]', wrap).forEach(img=>{
+      img.addEventListener("click", ()=> openLightbox(img.src));
+    });
+  }
+
+  // ---------- theory content ----------
+  const THEORY = [
+    {
+      id:"hierarchy",
+      title:"포지션 위계 (Position Hierarchy)",
+      html:`
+        <p>주짓수는 상대보다 <b>더 통제력 있는 자리</b>를 차지하는 게임입니다. 아래는 일반적으로 통제력이 높은 순서입니다. 위쪽일수록 상대의 움직임을 더 많이 제한하고, 서브미션으로 연결하기 쉽습니다.</p>
+        <ol class="hier">
+          <li>백 컨트롤 (등 뒤 잡기) — 상대가 방어하기 가장 어려운 자리</li>
+          <li>마운트 — 상대 위에 완전히 올라탄 상태</li>
+          <li>니온벨리 — 무릎으로 배를 눌러 압박, 이동이 자유로움</li>
+          <li>사이드 컨트롤 — 옆에서 눌러 상대의 힙 움직임을 제한</li>
+          <li>하프가드 (탑) — 다리 하나가 잡혀 있지만 위쪽 우위</li>
+          <li>가드 (바텀) — 다리로 거리를 만들며 방어 및 스윕/서브미션 기회 탐색</li>
+          <li>턱아웃 / 스탠딩 — 아직 포지션이 결정되지 않은 중립 상태</li>
+        </ol>
+        <p>실전에서는 이 순서를 따라 <b>포지션을 개선(improve) → 유지(maintain) → 활용(submit)</b> 하는 흐름으로 생각하면 다음 행동을 정하기 쉬워집니다.</p>
+      `
+    },
+    {
+      id:"principles",
+      title:"기본 원칙 5가지",
+      html:`
+        <h4>1. 베이스 (Base)</h4>
+        <p>무게 중심을 낮고 넓게 유지해 쉽게 넘어지거나 스윕당하지 않는 상태. 모든 포지션의 출발점입니다.</p>
+        <h4>2. 자세 (Posture)</h4>
+        <p>가드 안에 있을 때 척추를 세우고 팔을 뻗어 상대와 거리를 만드는 것. 자세가 무너지면 서브미션에 걸리기 쉽습니다.</p>
+        <h4>3. 프레임 (Frame)</h4>
+        <p>팔, 다리, 무릎으로 뼈대를 세워 상대의 압박을 분산시키는 기술. 힘이 아니라 구조로 버티는 것이 핵심입니다.</p>
+        <h4>4. 압박과 무게 분배 (Pressure)</h4>
+        <p>탑 포지션에서는 체중을 상대에게 실어 호흡과 움직임을 제한하고, 바텀에서는 그 무게를 프레임으로 흘려보냅니다.</p>
+        <h4>5. 연결 (Connection)</h4>
+        <p>손, 팔꿈치, 무릎, 힙을 상대 몸에 최대한 밀착시켜 상대의 움직임을 먼저 감지하고 반응하는 능력.</p>
+      `
+    },
+    {
+      id:"guards",
+      title:"가드의 종류",
+      html:`
+        <h4>클로즈드 가드</h4>
+        <p>발목을 상대 등 뒤에서 잠가 거리를 완전히 통제하는 기본 가드입니다.</p>
+        <ul>
+          <li>목깃</li><li>언더훅</li><li>오버훅</li><li>암드래그</li><li>싯업</li>
+        </ul>
+        <h4>하프 가드</h4>
+        <p>상대 다리 하나만 잡은 상태로, 탑/바텀 모두에게 스윕·백테이크 기회가 있습니다.</p>
+        <ul>
+          <li>플랫</li><li>니실드</li><li>겨드랑이 싸움</li><li>딥하프</li><li>하프 버터플라이</li><li>락다운</li>
+        </ul>
+        <h4>오픈 가드</h4>
+        <p>발을 풀고 다리로 프레임을 만들어 더 다양한 스윕·서브미션을 시도하는 가드입니다.</p>
+        <ul>
+          <li>버터플라이</li><li>엑스가드</li><li>데라히바</li><li>리버스 데라히바</li><li>스파이더</li><li>라쏘</li><li>싯업</li>
+        </ul>
+      `
+    },
+    {
+      id:"passes",
+      title:"패스의 종류",
+      html:`
+        <p>가드를 넘어 사이드컨트롤·니온벨리·마운트 등 더 좋은 포지션으로 이동하는 기술입니다. 크게 상대를 밀어붙이는 <b>프레셔 패스</b>와 발을 피해 도는 <b>스피드 패스</b>로 나뉘며, 대표적인 방식은 다음과 같습니다.</p>
+        <ul>
+          <li><b>토레안도 (불패스)</b> — 상대 다리를 양옆으로 밀어내며 옆으로 돌아 들어감</li>
+          <li><b>레그 드래그</b> — 상대 다리를 몸 쪽으로 끌어와 반대편으로 넘어감</li>
+          <li><b>니 슬라이드</b> — 무릎을 상대 다리 사이로 밀어 넣으며 압박</li>
+          <li><b>스매쉬 패스</b> — 상대 다리를 눌러 뭉갠 상태로 체중을 실어 전진</li>
+          <li><b>언더 오버</b> — 한쪽은 언더훅, 반대쪽은 오버훅으로 잡고 패스</li>
+          <li><b>더블 언더 / 싱글 언더</b> — 양쪽 또는 한쪽 다리를 감싸 안고 들어 올리며 패스</li>
+          <li><b>클로즈드가드 패스</b> — 발목 잠금을 풀어내고 자세를 세워 압박하며 패스</li>
+        </ul>
+      `
+    },
+    {
+      id:"submissions",
+      title:"서브미션 대분류",
+      html:`
+        <h4>조르기 (기도·경동맥 압박)</h4>
+        <ul>
+          <li>백초크</li><li>길로틴</li><li>삼각조르기 (트라이앵글)</li><li>암트라이앵글</li><li>다스 (브라보)</li><li>아나콘다</li>
+        </ul>
+        <h4>비틀기 (관절 회전)</h4>
+        <ul>
+          <li>기무라</li><li>키락</li><li>토홀드</li><li>힐훅 <span style="color:var(--ink-dim);font-size:12px;">(IBJJF 반칙)</span></li><li>크랭크류 <span style="color:var(--ink-dim);font-size:12px;">(IBJJF 반칙)</span></li>
+        </ul>
+        <h4>꺾기 (관절 신전)</h4>
+        <ul>
+          <li>암바</li><li>니바</li><li>앵클락</li><li>리스트락</li><li>암크랭크</li>
+        </ul>
+        <p>초보 단계에서는 <b>암바, 삼각조르기, 백초크</b> 세 가지가 가장 기본이자 활용도가 높습니다. 힐훅과 크랭크류는 대회 규정(IBJJF)에서는 반칙이지만 일부 노기·서브미션 전용 대회에서는 허용되므로, 다니는 도장의 스파링 규칙을 꼭 확인하세요.</p>
+      `
+    },
+    {
+      id:"escapes",
+      title:"이스케이프 기본 원칙",
+      html:`
+        <ul>
+          <li><b>프레임 먼저</b> — 팔이나 무릎으로 공간을 만들지 않으면 어떤 이스케이프도 시작되지 않습니다.</li>
+          <li><b>힙 무브먼트(쉬림핑)</b> — 엉덩이를 빼서 각도를 만들면 상대의 압박이 힘을 잃습니다.</li>
+          <li><b>가장 나쁜 포지션부터 벗어나기</b> — 백 → 마운트 → 사이드 순으로 우선순위를 두고 탈출을 시도합니다.</li>
+          <li><b>타이밍</b> — 상대가 자세를 전환하거나 공격을 시도하는 순간(빈틈)이 가장 좋은 탈출 타이밍입니다.</li>
+          <li><b>완전한 탈출보다 개선</b> — 한 번에 완벽히 벗어나려 하지 말고, 한 단계 나은 포지션으로 옮기는 것을 목표로 합니다.</li>
+        </ul>
+      `
+    },
+    {
+      id:"glossary",
+      title:"용어집",
+      html:`
+        <table class="glossary">
+          <tr><td>가드 (Guard)</td><td>다리로 상대와의 거리를 통제하는 바텀 포지션</td></tr>
+          <tr><td>패스 (Pass)</td><td>상대의 가드를 넘어 더 좋은 포지션으로 이동하는 것</td></tr>
+          <tr><td>스윕 (Sweep)</td><td>바텀에서 탑으로 포지션을 뒤집는 동작</td></tr>
+          <tr><td>서브미션 (Submission)</td><td>조르기·관절기로 항복을 받아내는 기술</td></tr>
+          <tr><td>탭 (Tap)</td><td>항복 의사 표시. 안전을 위해 즉시 인정해야 함</td></tr>
+          <tr><td>마운트 (Mount)</td><td>상대 몸통 위에 걸터앉은 포지션</td></tr>
+          <tr><td>백 (Back)</td><td>상대 등 뒤에서 컨트롤하는 최상위 포지션</td></tr>
+          <tr><td>니온벨리 (Knee on Belly)</td><td>무릎으로 복부를 눌러 압박하는 포지션</td></tr>
+          <tr><td>스크램블 (Scramble)</td><td>포지션이 결정되지 않고 빠르게 뒤엉키는 구간</td></tr>
+          <tr><td>그립 (Grip)</td><td>도복이나 손목 등을 잡아 통제하는 손 위치</td></tr>
+          <tr><td>드릴 (Drill)</td><td>기술을 반복 연습해 몸에 익히는 훈련</td></tr>
+          <tr><td>롤링 (Rolling)</td><td>실전처럼 자유롭게 하는 스파링</td></tr>
+        </table>
+      `
+    },
+  ];
+
+  function renderTheory(){
+    const wrap = $("#theoryList");
+    wrap.innerHTML = THEORY.map((t,i)=>{
+      const content = (Object.prototype.hasOwnProperty.call(theoryOverrides, t.id)) ? theoryOverrides[t.id] : t.html;
+      return `
+      <div class="theory-card" data-id="${t.id}">
+        <div class="theory-head" role="button" tabindex="0">
+          <h3><span class="theory-num">0${i+1}</span>${t.title}</h3>
+          <span class="chevron">▶</span>
+        </div>
+        <div class="theory-body">
+          <div class="theory-inner">
+            <div class="theory-edit-bar" data-id="${t.id}">
+              <button class="btn ghost small" data-action="edit-theory" data-id="${t.id}">✏️ 내용 수정</button>
+            </div>
+            <div class="theory-content" id="content-${t.id}">${content}</div>
+            <div class="my-note">
+              <label for="note-${t.id}">나의 메모 (이 주제에 대해 내가 이해한 방식, 헷갈리는 부분 등)</label>
+              <textarea id="note-${t.id}" data-theory-id="${t.id}" placeholder="자유롭게 적어보세요">${escapeHtml(theoryNotes[t.id]||"")}</textarea>
+              <div class="save-hint" id="hint-${t.id}"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    }).join("");
+
+    $$(".theory-head", wrap).forEach(head=>{
+      const toggle = ()=> head.closest(".theory-card").classList.toggle("open");
+      head.addEventListener("click", toggle);
+      head.addEventListener("keydown", (ev)=>{ if(ev.key==="Enter"||ev.key===" "){ ev.preventDefault(); toggle(); }});
+    });
+
+    $$('[data-action="edit-theory"]', wrap).forEach(btn=>{
+      btn.addEventListener("click", ()=> enterTheoryEdit(btn.dataset.id));
+    });
+
+    $$("textarea[data-theory-id]", wrap).forEach(ta=>{
+      let timer;
+      ta.addEventListener("input", ()=>{
+        clearTimeout(timer);
+        const id = ta.dataset.theoryId;
+        const hint = $("#hint-"+id);
+        hint.textContent = "저장 중…";
+        timer = setTimeout(async ()=>{
+          theoryNotes[id] = ta.value;
+          await persistMeta();
+          hint.textContent = "저장됨";
+          setTimeout(()=>{ if(hint.textContent==="저장됨") hint.textContent=""; }, 1500);
+        }, 500);
+      });
+    });
+  }
+
+  function enterTheoryEdit(id){
+    const contentEl = document.getElementById("content-"+id);
+    const bar = document.querySelector(`.theory-edit-bar[data-id="${id}"]`);
+    contentEl.dataset.original = contentEl.innerHTML;
+    contentEl.contentEditable = "true";
+    contentEl.classList.add("editing");
+    contentEl.focus();
+    bar.innerHTML = `
+      <button class="btn small" data-action="save-theory" data-id="${id}">저장</button>
+      <button class="btn ghost small" data-action="cancel-theory" data-id="${id}">취소</button>
+      <button class="btn ghost small" data-action="reset-theory" data-id="${id}">기본값으로</button>
+    `;
+    bar.querySelector('[data-action="save-theory"]').addEventListener("click", ()=> saveTheoryEdit(id));
+    bar.querySelector('[data-action="cancel-theory"]').addEventListener("click", ()=> cancelTheoryEdit(id));
+    bar.querySelector('[data-action="reset-theory"]').addEventListener("click", ()=> resetTheoryEdit(id));
+  }
+  async function saveTheoryEdit(id){
+    const contentEl = document.getElementById("content-"+id);
+    theoryOverrides[id] = contentEl.innerHTML;
+    contentEl.contentEditable = "false";
+    contentEl.classList.remove("editing");
+    await persistMeta();
+    exitTheoryEditBar(id);
+  }
+  function cancelTheoryEdit(id){
+    const contentEl = document.getElementById("content-"+id);
+    contentEl.innerHTML = contentEl.dataset.original;
+    contentEl.contentEditable = "false";
+    contentEl.classList.remove("editing");
+    exitTheoryEditBar(id);
+  }
+  async function resetTheoryEdit(id){
+    if(!confirm("기본 내용으로 되돌릴까요? 수정한 내용은 사라져요.")) return;
+    const original = THEORY.find(t=>t.id===id).html;
+    delete theoryOverrides[id];
+    const contentEl = document.getElementById("content-"+id);
+    contentEl.innerHTML = original;
+    contentEl.contentEditable = "false";
+    contentEl.classList.remove("editing");
+    await persistMeta();
+    exitTheoryEditBar(id);
+  }
+  function exitTheoryEditBar(id){
+    const bar = document.querySelector(`.theory-edit-bar[data-id="${id}"]`);
+    bar.innerHTML = `<button class="btn ghost small" data-action="edit-theory" data-id="${id}">✏️ 내용 수정</button>`;
+    bar.querySelector('[data-action="edit-theory"]').addEventListener("click", ()=> enterTheoryEdit(id));
+  }
+
+  // ---------- interactive flow chart ----------
+  const FLOW_NODES = [
+    {id:"standing",   x:310,y:15, w:140,h:42, label:"스탠딩"},
+    {id:"takedown",   x:90, y:95, w:170,h:42, label:"테이크다운", pt:"2점"},
+    {id:"guardpull",  x:560,y:95, w:140,h:42, label:"가드 풀"},
+    {id:"top",        x:100,y:175,w:150,h:42, label:"탑 포지션"},
+    {id:"guardpos",   x:540,y:175,w:160,h:42, label:"가드 포지션"},
+    {id:"pass",       x:10, y:270,w:110,h:42, label:"패스", pt:"3점"},
+    {id:"backtake",   x:300,y:270,w:140,h:42, label:"백 테이크"},
+    {id:"sweep",      x:620,y:270,w:110,h:42, label:"스윕", pt:"2점"},
+    {id:"positioning",x:310,y:365,w:140,h:42, label:"포지셔닝"},
+    {id:"sidemount",  x:0,  y:460,w:140,h:42, label:"사이드 마운트"},
+    {id:"kneebelly",  x:170,y:460,w:140,h:42, label:"니온벨리", pt:"2점"},
+    {id:"mount",      x:340,y:460,w:120,h:42, label:"마운트", pt:"4점"},
+    {id:"backpos",    x:500,y:460,w:140,h:42, label:"백 포지션", pt:"4점"},
+    {id:"submission", x:310,y:555,w:140,h:42, label:"서브미션"},
+  ];
+  const FLOW_EDGES = [
+    ["standing","takedown"], ["standing","guardpull"],
+    ["takedown","top"], ["guardpull","guardpos"],
+    ["top","pass"], ["top","backtake"],
+    ["guardpos","backtake"], ["guardpos","sweep"],
+    ["pass","positioning"], ["backtake","positioning"], ["sweep","positioning"],
+    ["positioning","sidemount"], ["positioning","kneebelly"], ["positioning","mount"], ["positioning","backpos"],
+    ["sidemount","submission"], ["kneebelly","submission"], ["mount","submission"], ["backpos","submission"],
+  ];
+  const FLOW_NODE_MAP = Object.fromEntries(FLOW_NODES.map(n=>[n.id,n]));
+
+  const FLOW_DETAILS = {
+    standing: `<h4>스탠딩</h4><p>아직 포지션이 정해지지 않은 중립 상태입니다. 여기서 테이크다운으로 상대를 넘어뜨리거나, 스스로 앉아 가드를 잡을 수 있습니다.</p>`,
+    takedown: `<h4>테이크다운 <span style="color:var(--ink-dim);font-weight:400;">(2점)</span></h4><p>상대를 서서 넘어뜨려 탑 포지션을 가져오는 기술입니다.</p><ul><li>더블렉</li><li>싱글렉</li><li>오소토가리</li><li>팔로우스로우</li></ul>`,
+    guardpull: `<h4>가드 풀</h4><p>억지로 넘어뜨리지 않고 스스로 앉으며 가드 포지션으로 들어가는 방법입니다. 가드 게임에 강한 선수들이 자주 사용합니다.</p>`,
+    top: `<h4>탑 포지션</h4><p>테이크다운 이후 상대 위에서 통제권을 가진 상태입니다. 여기서 패스나 백테이크를 노립니다.</p>`,
+    guardpos: `<h4>가드 포지션 — 가드의 종류</h4><p><b>클로즈드 가드</b>: 목깃 · 언더훅 · 오버훅 · 암드래그 · 싯업</p><p><b>하프 가드</b>: 플랫 · 니실드 · 겨드랑이 싸움 · 딥하프 · 하프 버터플라이 · 락다운</p><p><b>오픈 가드</b>: 버터플라이 · 엑스가드 · 데라히바 · 리버스 데라히바 · 스파이더 · 라쏘 · 싯업</p>`,
+    pass: `<h4>패스 <span style="color:var(--ink-dim);font-weight:400;">(3점)</span> — 패스의 종류</h4><ul><li>토레안도 (불패스)</li><li>레그 드래그</li><li>니 슬라이드</li><li>스매쉬 패스</li><li>언더 오버</li><li>더블 언더 / 싱글 언더</li><li>클로즈드가드 패스</li></ul>`,
+    backtake: `<h4>백 테이크</h4><p>상대의 등 뒤로 이동해 백 컨트롤을 잡는 과정입니다. 탑에서는 상대가 터틀 자세를 취할 때, 가드에서는 스윕 도중에도 노릴 수 있습니다.</p>`,
+    sweep: `<h4>스윕 <span style="color:var(--ink-dim);font-weight:400;">(2점)</span></h4><p>바텀에서 탑으로 포지션을 뒤집는 기술입니다.</p><ul><li>시저 스윕</li><li>힙 범프</li><li>플라워 스윕</li><li>버터플라이 스윕</li></ul>`,
+    positioning: `<h4>포지셔닝</h4><p>포지션이 완전히 결정되기 직전, 압박을 유지하며 다음 자리로 이동하는 전환 구간입니다.</p>`,
+    sidemount: `<h4>사이드 마운트 (사이드 컨트롤)</h4><p>옆에서 눌러 상대의 힙 움직임을 제한하는 포지션입니다.</p>`,
+    kneebelly: `<h4>니온벨리 <span style="color:var(--ink-dim);font-weight:400;">(2점)</span></h4><p>무릎으로 복부를 눌러 압박하면서도 이동이 자유로운 포지션입니다.</p>`,
+    mount: `<h4>마운트 <span style="color:var(--ink-dim);font-weight:400;">(4점)</span></h4><p>상대 몸통 위에 완전히 올라탄 상태로, 가장 강력한 통제 포지션 중 하나입니다.</p>`,
+    backpos: `<h4>백 포지션 <span style="color:var(--ink-dim);font-weight:400;">(4점)</span></h4><p>상대 등 뒤에서 훅을 걸어 컨트롤하는 최상위 포지션입니다.</p>`,
+    submission: `<h4>서브미션 — 대분류</h4><p><b>조르기</b>: 백초크 · 길로틴 · 삼각조르기 · 암트라이앵글 · 다스(브라보) · 아나콘다</p><p><b>비틀기</b>: 기무라 · 키락 · 토홀드 · 힐훅* · 크랭크류*</p><p><b>꺾기</b>: 암바 · 니바 · 앵클락 · 리스트락 · 암크랭크</p><p style="color:var(--ink-dim);font-size:12px;">* IBJJF 반칙 기술</p>`,
+  };
+
+  function buildFlowSvg(){
+    const defs = `<defs><marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L6,3 L0,6 Z" fill="var(--ink-dim)"></path>
+    </marker></defs>`;
+
+    const edgeEls = FLOW_EDGES.map(([fromId,toId])=>{
+      const f = FLOW_NODE_MAP[fromId], t = FLOW_NODE_MAP[toId];
+      const x1 = f.x+f.w/2, y1 = f.y+f.h;
+      const x2 = t.x+t.w/2, y2 = t.y;
+      return `<line class="flow-edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#arrowhead)"></line>`;
+    }).join("");
+
+    const gp = FLOW_NODE_MAP.guardpos, sub = FLOW_NODE_MAP.submission;
+    const bypass = `<path class="flow-edge bypass" d="M${gp.x+gp.w},${gp.y+gp.h/2} L750,${gp.y+gp.h/2} L750,${sub.y+sub.h/2} L${sub.x+sub.w},${sub.y+sub.h/2}" marker-end="url(#arrowhead)"></path>`;
+
+    const nodeEls = FLOW_NODES.map(n=>{
+      const cx = n.x+n.w/2;
+      const labelY = n.pt ? n.y+n.h/2-3 : n.y+n.h/2+4;
+      return `<g class="flow-node" data-id="${n.id}" tabindex="0" role="button" aria-label="${n.label} 자세히 보기">
+        <rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="7"></rect>
+        <text x="${cx}" y="${labelY}" text-anchor="middle">${n.label}</text>
+        ${n.pt ? `<text class="pt" x="${cx}" y="${n.y+n.h/2+13}" text-anchor="middle">${n.pt}</text>` : ""}
+      </g>`;
+    }).join("");
+
+    return defs + edgeEls + bypass + nodeEls;
+  }
+
+  function initFlowChart(){
+    const svg = $("#flowSvg");
+    if(!svg) return;
+    svg.innerHTML = buildFlowSvg();
+    const detail = $("#flowDetail");
+
+    function selectNode(id){
+      $$(".flow-node", svg).forEach(g=> g.classList.toggle("selected", g.dataset.id===id));
+      detail.innerHTML = FLOW_DETAILS[id] || "";
+    }
+    $$(".flow-node", svg).forEach(g=>{
+      g.addEventListener("click", ()=> selectNode(g.dataset.id));
+      g.addEventListener("keydown", (ev)=>{
+        if(ev.key==="Enter" || ev.key===" "){ ev.preventDefault(); selectNode(g.dataset.id); }
+      });
+    });
+  }
+
+  // ---------- init ----------
+  (function init(){
+    loadLocalAll();
+    renderChips();
+    renderEntries();
+    renderTheory();
+    initFlowChart();
+    renderAuthBar();
+    if(FIREBASE_CONFIGURED){ initFirebase(); }
+  })();
+})();
+</script>
+</body>
+</html>
