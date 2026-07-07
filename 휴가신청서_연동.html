@@ -124,6 +124,7 @@
     color: var(--ink);
     outline: none;
     cursor: pointer;
+    text-align: center;
   }
 
   /* 메인 테이블 */
@@ -171,6 +172,7 @@
     color: var(--ink);
     outline: none;
     padding: 0;
+    text-align: center;
   }
 
   input[type="text"]::placeholder,
@@ -270,7 +272,70 @@
   .period-row {
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
+  }
+
+  .period-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .period-item:last-child {
+    margin-bottom: 0;
+  }
+
+  .period-item .period-row {
+    flex: 1;
+    max-width: 320px;
+  }
+
+  .period-remove {
+    width: 20px;
+    height: 20px;
+    border: 1.5px solid var(--border-light);
+    background: var(--cell-bg);
+    color: var(--ink-light);
+    border-radius: 50%;
+    font-size: 12px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 0;
+  }
+
+  .period-remove:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+
+  .periods-footer {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+  }
+
+  .btn-add-period {
+    border: 1.5px dashed var(--border-light);
+    background: transparent;
+    color: var(--ink-light);
+    font-family: 'Noto Sans KR', sans-serif;
+    font-size: 11.5px;
+    padding: 4px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .btn-add-period:hover {
+    border-color: var(--accent);
+    color: var(--accent);
   }
 
   .period-row input[type="date"] {
@@ -284,6 +349,7 @@
     outline: none;
     cursor: pointer;
     flex: 1;
+    text-align: center;
   }
 
   .period-sep {
@@ -468,14 +534,17 @@ function countWeekdays(start, end) {
 // 휴가 관리에 저장
 window.saveToLeaveManager = async function() {
   const name      = document.getElementById('name').value.trim();
-  const startDate = document.getElementById('startDate').value;
-  const endDate   = document.getElementById('endDate').value;
   const reason    = document.getElementById('reason').value.trim();
   const cat       = document.querySelector('input[name="category"]:checked')?.value;
 
+  const periods = Array.from(document.querySelectorAll('.period-item')).map(item => ({
+    start: item.querySelector('.period-start').value,
+    end:   item.querySelector('.period-end').value
+  })).filter(p => p.start);
+
   if (!name)      { showSaveMsg('이름을 입력해주세요.', 'error'); return; }
   if (!cat)       { showSaveMsg('구분을 선택해주세요.', 'error'); return; }
-  if (!startDate) { showSaveMsg('기간을 입력해주세요.', 'error'); return; }
+  if (periods.length === 0) { showSaveMsg('기간을 입력해주세요.', 'error'); return; }
 
   // 이름으로 Firebase에서 사원 찾기
   try {
@@ -501,32 +570,38 @@ window.saveToLeaveManager = async function() {
       return;
     }
 
-    // 차감 일수 계산
-    let deduct;
-    if (cat === '반차') {
-      deduct = 0.5;
-    } else {
-      deduct = endDate ? countWeekdays(startDate, endDate) : (window.currentDays || 1);
-    }
-
     // 장기특별휴가는 tenure 컬렉션에 저장, 나머지는 leaves
     const type = mapCategory(cat);
-    const leaveData = {
-      date:    startDate,
-      dateEnd: endDate || '',
-      type,
-      memo:    reason || cat,
-      deduct,
-    };
+    const targetCollection = cat === '장기특별휴가' ? 'tenure' : 'leaves';
 
-    if (cat === '장기특별휴가') {
-      await addDoc(collection(db, 'members', foundUid, 'tenure'), leaveData);
-    } else {
-      await addDoc(collection(db, 'members', foundUid, 'leaves'), leaveData);
+    let totalDeduct = 0;
+    const summaryParts = [];
+
+    for (const p of periods) {
+      // 차감 일수 계산 (기간별)
+      let deduct;
+      if (cat === '반차') {
+        deduct = 0.5;
+      } else {
+        deduct = p.end ? countWeekdays(p.start, p.end) : (window.currentDays || 1);
+      }
+      totalDeduct += deduct;
+      summaryParts.push(`${p.start}${p.end && p.end !== p.start ? ' ~ ' + p.end : ''} (${deduct}일)`);
+
+      const leaveData = {
+        date:    p.start,
+        dateEnd: p.end || '',
+        type,
+        memo:    reason || cat,
+        deduct,
+      };
+
+      await addDoc(collection(db, 'members', foundUid, targetCollection), leaveData);
     }
 
     showSaveMsg(`✅ ${name}님의 휴가가 저장되었습니다!
-(${startDate}${endDate&&endDate!==startDate?' ~ '+endDate:''} / ${deduct}일)`, 'success');
+${summaryParts.join('\n')}
+총 ${totalDeduct}일`, 'success');
 
   } catch(e) {
     showSaveMsg('저장 실패: ' + e.message, 'error');
@@ -673,10 +748,18 @@ function showSaveMsg(msg, type) {
     <tr>
       <td class="label-cell">기&nbsp;&nbsp;&nbsp;간</td>
       <td colspan="3">
-        <div class="period-row">
-          <input type="date" id="startDate">
-          <span class="period-sep">~</span>
-          <input type="date" id="endDate">
+        <div id="periods-container">
+          <div class="period-item">
+            <div class="period-row">
+              <input type="date" class="period-start">
+              <span class="period-sep">~</span>
+              <input type="date" class="period-end">
+            </div>
+            <button type="button" class="period-remove" onclick="removePeriod(this)" style="display:none;">×</button>
+          </div>
+        </div>
+        <div class="periods-footer">
+          <button type="button" class="btn-add-period" onclick="addPeriod()">+ 기간 추가</button>
         </div>
       </td>
     </tr>
@@ -734,7 +817,7 @@ let currentDays = 1;
       halfNote.style.display = 'block';
       const badge = document.getElementById('badge_half');
       badge.classList.add('active');
-      badge.textContent = '0.5일';
+      badge.textContent = getPeriodsTotalDays() + '일';
     } else if (selectedCategory) {
       daysControl.style.display = 'flex';
       halfNote.style.display = 'none';
@@ -755,6 +838,38 @@ let currentDays = 1;
     updateActiveBadge();
   }
 
+  // 평일 계산 (화면 표시용, Firebase 저장 스크립트의 countWeekdays와 동일 로직)
+  function countWeekdaysUI(start, end) {
+    const s = new Date(start + 'T00:00:00');
+    const e = end ? new Date(end + 'T00:00:00') : s;
+    let cnt = 0;
+    const cur = new Date(s);
+    while (cur <= e) {
+      const day = cur.getDay();
+      if (day !== 0 && day !== 6) cnt++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return cnt;
+  }
+
+  // 기간(들)의 총 일수 계산: 종료일이 있으면 평일 수, 없으면 수동 카운터 값 사용
+  function getPeriodsTotalDays() {
+    if (selectedCategory === '반차') {
+      const filled = document.querySelectorAll('.period-item .period-start');
+      let count = 0;
+      filled.forEach(inp => { if (inp.value) count++; });
+      return Math.max(count, 1) * 0.5;
+    }
+    let total = 0;
+    document.querySelectorAll('.period-item').forEach(item => {
+      const start = item.querySelector('.period-start').value;
+      const end = item.querySelector('.period-end').value;
+      if (!start) return;
+      total += end ? countWeekdaysUI(start, end) : currentDays;
+    });
+    return total;
+  }
+
   function updateActiveBadge() {
     const map = {
       '휴가': 'badge_vacation',
@@ -766,14 +881,51 @@ let currentDays = 1;
     const badgeId = map[selectedCategory];
     if (badgeId) {
       const badge = document.getElementById(badgeId);
-      badge.textContent = currentDays + '일';
+      const total = getPeriodsTotalDays();
+      badge.textContent = (total || currentDays) + '일';
       badge.classList.add('active');
     }
   }
 
+  // 기간 추가
+  function addPeriod() {
+    const container = document.getElementById('periods-container');
+    const item = document.createElement('div');
+    item.className = 'period-item';
+    item.innerHTML = `
+      <div class="period-row">
+        <input type="date" class="period-start">
+        <span class="period-sep">~</span>
+        <input type="date" class="period-end">
+      </div>
+      <button type="button" class="period-remove" onclick="removePeriod(this)">×</button>
+    `;
+    container.appendChild(item);
+    updatePeriodRemoveButtons();
+  }
+
+  // 기간 삭제
+  function removePeriod(btn) {
+    const item = btn.closest('.period-item');
+    item.remove();
+    updatePeriodRemoveButtons();
+    updateActiveBadge();
+  }
+
+  // 기간이 1개면 삭제 버튼 숨김, 2개 이상이면 모두 표시
+  function updatePeriodRemoveButtons() {
+    const items = document.querySelectorAll('.period-item');
+    items.forEach(item => {
+      const btn = item.querySelector('.period-remove');
+      btn.style.display = items.length > 1 ? 'flex' : 'none';
+    });
+  }
+
+  // 기간 날짜가 바뀔 때마다 일수 뱃지 갱신
+  document.getElementById('periods-container').addEventListener('change', updateActiveBadge);
+
   function resetForm() {
     document.querySelectorAll('input[type="text"], input[type="tel"], textarea').forEach(el => el.value = '');
-    document.querySelectorAll('input[type="date"]').forEach(el => el.value = '');
     document.querySelectorAll('input[type="radio"]').forEach(el => el.checked = false);
     document.querySelectorAll('.days-badge').forEach(b => {
       b.classList.remove('active');
@@ -783,7 +935,22 @@ let currentDays = 1;
     document.getElementById('days-control').style.display = 'none';
     document.getElementById('half-note').style.display = 'none';
     document.getElementById('submitDate').value = today;
+
+    // 기간을 1개로 초기화
+    const container = document.getElementById('periods-container');
+    container.innerHTML = `
+      <div class="period-item">
+        <div class="period-row">
+          <input type="date" class="period-start">
+          <span class="period-sep">~</span>
+          <input type="date" class="period-end">
+        </div>
+        <button type="button" class="period-remove" onclick="removePeriod(this)" style="display:none;">×</button>
+      </div>
+    `;
+
     currentDays = 1;
+    window.currentDays = 1;
     selectedCategory = null;
   }
 </script>
