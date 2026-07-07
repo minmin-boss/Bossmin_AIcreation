@@ -8,30 +8,32 @@
 <script type="module">
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import{
-  initializeFirestore,persistentLocalCache,
-  collection,doc,setDoc,deleteDoc,onSnapshot,query,where,CACHE_SIZE_UNLIMITED
+  getFirestore,collection,doc,deleteDoc,onSnapshot,query,where,setDoc
 }from"https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import{getAuth,GoogleAuthProvider,signInWithPopup,signOut,onAuthStateChanged,setPersistence,browserLocalPersistence}from"https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-const _fc={apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",authDomain:"travel-tracker-9f0f7.firebaseapp.com",projectId:"travel-tracker-9f0f7",storageBucket:"travel-tracker-9f0f7.firebasestorage.app",messagingSenderId:"157327971618",appId:"1:157327971618:web:b5eca73698db54034b817b"};
-const _app=initializeApp(_fc);
-
-// persistentLocalCache: IndexedDB에 즉시 저장 → setDoc이 빠르게 완료됨
-// 서버 동기화는 백그라운드 자동 처리 (오프라인이어도 나중에 자동 동기화)
-const _db=initializeFirestore(_app,{
-  localCache:persistentLocalCache({cacheSizeBytes:CACHE_SIZE_UNLIMITED})
-});
+const _FC={
+  apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",
+  authDomain:"travel-tracker-9f0f7.firebaseapp.com",
+  projectId:"travel-tracker-9f0f7",
+  storageBucket:"travel-tracker-9f0f7.firebasestorage.app",
+  messagingSenderId:"157327971618",
+  appId:"1:157327971618:web:b5eca73698db54034b817b"
+};
+const _PROJECT='travel-tracker-9f0f7';
+const _app=initializeApp(_FC);
+const _db=getFirestore(_app);
 const _auth=getAuth(_app);
 const _gp=new GoogleAuthProvider();
 
 try{setPersistence(_auth,browserLocalPersistence);}catch(e){}
-
 let _unsub=null;
 
+// ── Auth ──
 onAuthStateChanged(_auth,user=>{
   if(user){
     window._user=user;
-    console.log('[Firebase] 로그인:',user.email);
+    console.log('[Auth] 로그인:',user.email);
     const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
     window._updateUserUI&&window._updateUserUI(user);
     _startListen(user.uid);
@@ -43,54 +45,92 @@ onAuthStateChanged(_auth,user=>{
   }
 });
 
+// ── 읽기: SDK onSnapshot (캐시 포함) ──
 function _startListen(uid){
   if(_unsub){_unsub();_unsub=null;}
   const q=query(collection(_db,'travel_trips'),where('uid','==',uid));
-  console.log('[Firebase] onSnapshot 등록');
-  _unsub=onSnapshot(q,{includeMetadataChanges:false},snap=>{
-    const cloudData=[];
-    snap.forEach(d=>cloudData.push({_fbId:d.id,...d.data()}));
+  console.log('[Firestore] 읽기 리스너 등록');
+  _unsub=onSnapshot(q,snap=>{
+    const data=[];
+    snap.forEach(d=>data.push({_fbId:d.id,...d.data()}));
     const fromCache=snap.metadata.fromCache;
-    console.log('[Firebase] 데이터 수신:',cloudData.length,'건','('+(fromCache?'로컬캐시':'서버')+')',);
-    window._fbData=cloudData;
+    console.log('[Firestore] 데이터 수신:',data.length,'건','('+(fromCache?'캐시':'서버')+')');
+    window._fbData=data;
     window._fbReady=true;
-    // 서버에서 온 데이터만 화면에 반영 (로컬캐시는 이미 로컬에 있으므로 무시)
     if(!fromCache){
-      if(cloudData.length>0){
-        if(window._appReady&&typeof window._syncTripsFromCloud==='function'){
-          window._syncTripsFromCloud(cloudData);
-        }
+      // 서버에서 온 실제 데이터
+      if(data.length>0){
+        if(window._appReady&&typeof window._syncTripsFromCloud==='function')
+          window._syncTripsFromCloud(data);
       }else if(!window._didMigrate){
         window._didMigrate=true;
         setTimeout(_migrateLocalToCloud,800);
       }
     }
   },err=>{
-    console.error('[Firebase] 읽기 실패:',err.code,err.message);
-    if(err.code==='permission-denied'){
-      if(typeof window.toast==='function')window.toast('⚠️ Firestore Rules 차단 — 규칙을 확인해주세요');
-    }
+    console.error('[Firestore] 읽기 실패:',err.code);
+    if(err.code==='permission-denied')
+      if(typeof window.toast==='function')window.toast('⚠️ Firestore Rules 차단');
   });
 }
 
+// ── 쓰기: REST API (HTTP 직접 호출 — SDK WebSocket 우회) ──
+// SDK setDoc은 WebSocket/long-polling 의존 → 막히면 무한 대기
+// REST API는 순수 HTTPS fetch → Firebase Auth처럼 항상 동작
+async function _restSave(entry){
+  const token=await window._user.getIdToken();
+  const url=`https://firestore.googleapis.com/v1/projects/${_PROJECT}/databases/(default)/documents/travel_trips/${entry._fbId}`;
+
+  // JavaScript 값 → Firestore REST 형식 변환
+  const toV=v=>{
+    if(v===null||v===undefined)return{nullValue:null};
+    if(typeof v==='boolean')return{booleanValue:v};
+    if(typeof v==='number')return Number.isInteger(v)?{integerValue:''+v}:{doubleValue:v};
+    if(typeof v==='string')return{stringValue:v};
+    return{stringValue:String(v)};
+  };
+  const fields={};
+  for(const[k,v]of Object.entries(entry)){
+    if(k==='photo')continue; // 사진 제외
+    fields[k]=toV(v);
+  }
+
+  const res=await fetch(url,{
+    method:'PATCH',
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'},
+    body:JSON.stringify({fields})
+  });
+  if(!res.ok){
+    const err=await res.json().catch(()=>({}));
+    throw new Error('HTTP '+res.status+': '+(err.error?.message||res.statusText));
+  }
+  console.log('[REST] 저장 성공:',entry.city);
+}
+
+async function _restDelete(fbId){
+  const token=await window._user.getIdToken();
+  const url=`https://firestore.googleapis.com/v1/projects/${_PROJECT}/databases/(default)/documents/travel_trips/${fbId}`;
+  const res=await fetch(url,{method:'DELETE',headers:{'Authorization':'Bearer '+token}});
+  if(!res.ok&&res.status!==404)throw new Error('삭제 실패 HTTP '+res.status);
+}
+
+// 마이그레이션: 로컬 → 클라우드
 async function _migrateLocalToCloud(){
   if(!window._user)return;
-  const uid=window._user.uid;
   let localData=[];
-  try{const raw=localStorage.getItem('travel_map_trips_cache_v1');localData=raw?JSON.parse(raw):[];}catch(e){}
-  if(!Array.isArray(localData)||!localData.length){console.log('[Firebase] 마이그레이션: 로컬 없음');return;}
-  console.log('[Firebase] 마이그레이션 시작:',localData.length,'건');
+  try{const r=localStorage.getItem('travel_map_trips_cache_v1');localData=r?JSON.parse(r):[];}catch(e){}
+  if(!localData.length){console.log('[Migration] 로컬 없음');return;}
+  console.log('[Migration] 시작:',localData.length,'건');
   let ok=0,fail=0;
   for(const t of localData){
     try{
       if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
-      t.uid=uid;
-      await window._fbSave(t);
-      ok++;
-    }catch(e){console.error('[Firebase] 마이그레이션 실패:',t.city,e.code||e.message);fail++;}
+      t.uid=window._user.uid;
+      await _restSave(t);ok++;
+    }catch(e){console.error('[Migration] 실패:',t.city,e.message);fail++;}
   }
-  console.log('[Firebase] 마이그레이션 완료: 성공',ok,'/ 실패',fail);
-  if(ok>0&&typeof window.toast==='function')window.toast('☁️ 기존 여행 기록 '+ok+'개를 계정에 동기화했어요!');
+  console.log('[Migration] 완료: 성공',ok,'실패',fail);
+  if(ok>0&&typeof window.toast==='function')window.toast('☁️ 여행 기록 '+ok+'개를 계정에 동기화했어요!');
 }
 
 window._googleLogin=async function(){
@@ -109,20 +149,19 @@ window._logout=async function(){
   await signOut(_auth);
 };
 
-// persistentLocalCache 덕분에 setDoc은 IndexedDB에 즉시 저장 → 빠르게 완료
-// 이후 서버 동기화는 Firestore SDK가 백그라운드에서 자동 처리
+// 외부에서 호출하는 CRUD 함수 (REST API 사용)
 window._fbSave=async function(entry){
   if(!entry._fbId)throw new Error('_fbId 없음');
-  console.log('[Firebase] 저장:',entry.city);
-  const ref=doc(_db,'travel_trips',entry._fbId);
-  await setDoc(ref,entry,{merge:true});
-  console.log('[Firebase] 저장 완료:',entry.city);
+  if(!window._user)throw new Error('로그인 필요');
+  await _restSave(entry);
 };
 window._fbDel=async function(fbId){
-  await deleteDoc(doc(_db,'travel_trips',fbId));
+  if(!window._user)return;
+  await _restDelete(fbId);
 };
 window._fbClear=async function(allTrips){
-  for(const t of allTrips){if(t._fbId)await deleteDoc(doc(_db,'travel_trips',t._fbId));}
+  if(!window._user)return;
+  for(const t of allTrips){if(t._fbId)await _restDelete(t._fbId);}
 };
 </script>
 <style>
