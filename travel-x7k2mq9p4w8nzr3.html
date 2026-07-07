@@ -16,16 +16,14 @@ const _db=getFirestore(_app);
 const _auth=getAuth(_app);
 const _gp=new GoogleAuthProvider();
 
-// await 없이 — await 쓰면 실행 중단 사이에 onAuthStateChanged 먼저 발동 → _unsub TDZ 에러
 try{setPersistence(_auth,browserLocalPersistence);}catch(e){}
 
-// 반드시 onAuthStateChanged 등록 전에 선언
 let _unsub=null;
 
 onAuthStateChanged(_auth,user=>{
   if(user){
     window._user=user;
-    console.log('✅ Firebase 로그인 확인:',user.email);
+    console.log('[Firebase] 로그인:',user.email);
     const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
     window._updateUserUI&&window._updateUserUI(user);
     _startListen(user.uid);
@@ -40,38 +38,50 @@ onAuthStateChanged(_auth,user=>{
 function _startListen(uid){
   if(_unsub){_unsub();_unsub=null;}
   const q=query(collection(_db,'travel_trips'),where('uid','==',uid));
-  console.log('👂 Firestore onSnapshot 시작, uid:',uid);
+  console.log('[Firebase] onSnapshot 등록, uid:',uid.slice(0,8)+'...');
   _unsub=onSnapshot(q,snap=>{
     const cloudData=[];
     snap.forEach(d=>cloudData.push({_fbId:d.id,...d.data()}));
-    console.log('☁️ Firestore 데이터 수신:',cloudData.length,'건');
+    console.log('[Firebase] 클라우드 데이터:',cloudData.length,'건');
     window._fbData=cloudData;
     window._fbReady=true;
-    // 앱이 준비됐으면 클라우드 데이터로 화면 갱신
-    if(window._appReady&&typeof window._syncTripsFromCloud==='function'){
-      window._syncTripsFromCloud(cloudData);
-    }
-    // 최초 1회: 클라우드 0건인데 로컬에 데이터 있으면 자동 업로드
-    if(cloudData.length===0&&!window._didMigrate){
-      window._didMigrate=true;
-      setTimeout(_migrateLocalToCloud,500);
+
+    if(cloudData.length>0){
+      // 클라우드에 데이터 있음 → 클라우드가 정보 원본
+      if(window._appReady&&typeof window._syncTripsFromCloud==='function'){
+        window._syncTripsFromCloud(cloudData);
+      }
+    }else{
+      // 클라우드 비어있음 → 로컬 데이터 보존, 마이그레이션 시도
+      if(!window._didMigrate){
+        window._didMigrate=true;
+        setTimeout(_migrateLocalToCloud,800);
+      }
     }
   },err=>{
-    console.error('❌ Firestore 읽기 실패:',err.code,err.message);
-    const code=err.code||'';
-    if(code.includes('permission-denied')){
-      alert('🔒 Firestore Rules 차단 — Firebase 콘솔 > Firestore Database > Security 탭에서 규칙을 확인해주세요.');
+    console.error('[Firebase] 읽기 실패:',err.code,err.message);
+    if(err.code==='permission-denied'){
+      if(typeof window.toast==='function')window.toast('⚠️ Firestore Rules 차단 — 규칙을 확인해주세요');
+      console.error('[Firebase] Rules 확인: Firebase 콘솔 > Firestore > Security');
     }
   });
 }
 
-// 로컬 데이터 → 클라우드 1회 마이그레이션 (클라우드가 비어있을 때만)
+// 로컬 → 클라우드 마이그레이션
 async function _migrateLocalToCloud(){
   if(!window._user)return;
   const uid=window._user.uid;
-  const localData=window.trips&&window.trips.length?[...window.trips]:[];
-  if(!localData.length)return;
-  console.log('📤 로컬→클라우드 마이그레이션 시작:',localData.length,'건');
+  // localStorage에서 직접 읽기 (window.trips는 이미 변경됐을 수 있음)
+  let localData=[];
+  try{
+    const raw=localStorage.getItem('travel_map_trips_cache_v1');
+    localData=raw?JSON.parse(raw):[];
+  }catch(e){localData=[];}
+  if(!Array.isArray(localData)||!localData.length){
+    console.log('[Firebase] 마이그레이션: 로컬 데이터 없음');
+    return;
+  }
+  console.log('[Firebase] 마이그레이션 시작:',localData.length,'건');
   let ok=0,fail=0;
   for(const t of localData){
     try{
@@ -79,10 +89,13 @@ async function _migrateLocalToCloud(){
       t.uid=uid;
       await window._fbSave(t);
       ok++;
-    }catch(e){console.error('마이그레이션 실패:',t.city,e.code||e.message);fail++;}
+    }catch(e){
+      console.error('[Firebase] 마이그레이션 실패:',t.city,e.code||e.message);
+      fail++;
+    }
   }
-  console.log('✅ 마이그레이션 완료:',ok,'건 성공,',fail,'건 실패');
-  if(ok>0&&typeof window.toast==='function')window.toast('☁️ 여행 기록 '+ok+'개를 계정에 동기화했어요!');
+  console.log('[Firebase] 마이그레이션 완료: 성공',ok,'/ 실패',fail);
+  if(ok>0&&typeof window.toast==='function')window.toast('☁️ 기존 여행 기록 '+ok+'개를 계정에 동기화했어요!');
 }
 
 window._googleLogin=async function(){
@@ -101,16 +114,15 @@ window._logout=async function(){
   await signOut(_auth);
 };
 
-// CRUD
 window._fbSave=async function(entry){
   if(!entry._fbId){throw new Error('_fbId 없음');}
-  console.log('💾 Firestore 저장 시도:',entry.city,'→',entry._fbId);
+  console.log('[Firebase] 저장 시도:',entry.city,'('+entry._fbId.slice(0,12)+'...)');
   const ref=doc(_db,'travel_trips',entry._fbId);
   await Promise.race([
     setDoc(ref,entry,{merge:true}),
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('15초 응답 없음')),15000))
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('15초 타임아웃')),15000))
   ]);
-  console.log('✅ Firestore 저장 완료:',entry.city);
+  console.log('[Firebase] 저장 완료:',entry.city);
 };
 window._fbDel=async function(fbId){
   await deleteDoc(doc(_db,'travel_trips',fbId));
@@ -975,6 +987,8 @@ if(_glInited)renderGlobePins();
 window._render=render;
 // 클라우드 데이터 → 화면 동기화 (module script onSnapshot에서 호출)
 window._syncTripsFromCloud=function(cloudData){
+// 클라우드에 데이터 있을 때만 덮어씀 (빈 클라우드로 로컬 데이터 지우는 것 방지)
+if(!cloudData||cloudData.length===0)return;
 trips=cloudData;window.trips=trips;
 try{localStorage.setItem('travel_map_trips_cache_v1',JSON.stringify(trips));}catch(e){}
 render();
