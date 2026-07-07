@@ -173,10 +173,40 @@
     text-align: right;
     margin-bottom: 40px;
   }
+  .submit-date-inner {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    position: relative;
+    border-bottom: 1px solid transparent;
+    cursor: pointer;
+  }
+  .submit-date-inner:hover {
+    border-bottom-color: #b0b8c4;
+  }
   .submit-date {
     font-size: 10.5pt;
     color: #333;
     letter-spacing: 1.5px;
+  }
+  .submit-date-inner .cal-btn {
+    font-size: 11px;
+  }
+  .submit-date-inner input[type="date"] {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: 20px;
+    height: 20px;
+    opacity: 0;
+    pointer-events: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+  }
+  @media print {
+    .submit-date-inner { border-bottom-color: transparent !important; cursor: default; }
+    .submit-date-inner .cal-btn { display: none !important; }
   }
 
   /* ── 메인 테이블 ── */
@@ -481,6 +511,14 @@
     }
     .add-period-btn, .remove-period-btn, .cal-btn { display: none !important; }
 
+    .form-table select {
+      border: none !important;
+      background: transparent !important;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+      padding: 2px 4px;
+    }
     .form-table .period-row select.period-type,
     .form-table .period-row select.bancha-time {
       border: none !important;
@@ -658,7 +696,11 @@ function showSaveMsg(msg, type) {
 
   <!-- ④ 날짜 -->
   <div class="submit-date-wrap">
-    <span class="submit-date" id="displayDate"></span>
+    <span class="submit-date-inner" onclick="openPicker(this.querySelector('.cal-btn'))">
+      <span class="submit-date" id="displayDate"></span>
+      <input type="date" id="displayDatePicker" onchange="onSubmitDatePick(this)">
+      <button class="cal-btn" type="button" onclick="event.stopPropagation(); openPicker(this)">📅</button>
+    </span>
   </div>
 
   <!-- ⑤ 메인 테이블 -->
@@ -823,6 +865,12 @@ function showSaveMsg(msg, type) {
   }
   document.getElementById('displayDate').textContent = formatKorDate(new Date());
 
+  function onSubmitDatePick(picker) {
+    if (!picker.value) return;
+    const [y, m, d] = picker.value.split('-').map(Number);
+    document.getElementById('displayDate').textContent = formatKorDate(new Date(y, m - 1, d));
+  }
+
   function savePerson() {
     localStorage.setItem('hv_name',  document.getElementById('empName').value);
     localStorage.setItem('hv_team',  document.getElementById('empTeam').value);
@@ -981,6 +1029,7 @@ function showSaveMsg(msg, type) {
     document.getElementById('periodList').innerHTML = '';
     addPeriod();
     document.getElementById('displayDate').textContent = formatKorDate(new Date());
+    document.getElementById('displayDatePicker').value = '';
   }
 
   /* 초기화 */
