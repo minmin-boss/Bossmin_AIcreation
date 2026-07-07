@@ -16,23 +16,22 @@ const _db=getFirestore(_app);
 const _auth=getAuth(_app);
 const _gp=new GoogleAuthProvider();
 
-// await 없이 호출 — await를 쓰면 모듈 실행이 멈춘 사이 onAuthStateChanged가 먼저
-// 발동되어 _unsub 변수가 초기화 전에 접근되는 ReferenceError가 발생함
-try{setPersistence(_auth,browserLocalPersistence);}catch(e){console.warn('Auth persistence:',e);}
+// await 없이 — await 쓰면 실행 중단 사이에 onAuthStateChanged 먼저 발동 → _unsub TDZ 에러
+try{setPersistence(_auth,browserLocalPersistence);}catch(e){}
 
-// _unsub 반드시 onAuthStateChanged 등록 전에 선언
+// 반드시 onAuthStateChanged 등록 전에 선언
 let _unsub=null;
 
 onAuthStateChanged(_auth,user=>{
   if(user){
     window._user=user;
+    console.log('✅ Firebase 로그인 확인:',user.email);
     const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
     window._updateUserUI&&window._updateUserUI(user);
     _startListen(user.uid);
     if(!window._appReady)window._bootApp&&window._bootApp();
   }else{
     window._user=null;
-    window._migrating=false;
     const ls=document.getElementById('lockScreen');if(ls)ls.style.display='flex';
     if(_unsub){_unsub();_unsub=null;}
   }
@@ -40,49 +39,50 @@ onAuthStateChanged(_auth,user=>{
 
 function _startListen(uid){
   if(_unsub){_unsub();_unsub=null;}
-  // orderBy 제거 → 복합 인덱스 불필요, 정렬은 클라이언트에서 처리
   const q=query(collection(_db,'travel_trips'),where('uid','==',uid));
+  console.log('👂 Firestore onSnapshot 시작, uid:',uid);
   _unsub=onSnapshot(q,snap=>{
-    window._fbData=[];
-    snap.forEach(d=>window._fbData.push({_fbId:d.id,...d.data()}));
-    const localTrips=window.trips&&window.trips.length?window.trips:(typeof _loadLocalCache==='function'?_loadLocalCache():null);
-    if(localTrips&&localTrips.length){
-      const cloudIds=new Set(window._fbData.map(d=>d._fbId));
-      const missing=localTrips.filter(t=>!t._fbId||!cloudIds.has(t._fbId));
-      if(missing.length&&!window._migrating){
-        window._migrating=true;
-        if(typeof window._migrateLocalTrips==='function'){
-          window._migrateLocalTrips(uid,missing).finally(()=>{
-            window._migrating=false;
-            if(window._appReady&&window._render&&window._fbData){
-              window.trips=window._fbData;
-              if(typeof trips!=='undefined')trips=window._fbData;
-              window._render();
-            }
-          });
-        }
-        return;
-      }
-      if(window._migrating)return;
-    }
-    if(window._appReady&&window._render){
-      if(typeof trips!=='undefined')trips=window._fbData;
-      window.trips=window._fbData;
-      window._render();
-    }
+    const cloudData=[];
+    snap.forEach(d=>cloudData.push({_fbId:d.id,...d.data()}));
+    console.log('☁️ Firestore 데이터 수신:',cloudData.length,'건');
+    window._fbData=cloudData;
     window._fbReady=true;
+    // 앱이 준비됐으면 클라우드 데이터로 화면 갱신
+    if(window._appReady&&typeof window._syncTripsFromCloud==='function'){
+      window._syncTripsFromCloud(cloudData);
+    }
+    // 최초 1회: 클라우드 0건인데 로컬에 데이터 있으면 자동 업로드
+    if(cloudData.length===0&&!window._didMigrate){
+      window._didMigrate=true;
+      setTimeout(_migrateLocalToCloud,500);
+    }
   },err=>{
-    console.error('Firestore 읽기 실패:',err.code,err.message);
-    window._fbError=err;
-    const code=err.code||err.message||'';
+    console.error('❌ Firestore 읽기 실패:',err.code,err.message);
+    const code=err.code||'';
     if(code.includes('permission-denied')){
-      if(typeof window.toast==='function')window.toast('⚠️ Firestore Rules 차단 — Firebase 콘솔 > Firestore > Rules 확인');
-    }else if(code.includes('failed-precondition')||code.includes('index')){
-      console.error('인덱스 없음 — orderBy 제거로 해결됨, 재확인 필요');
-    }else{
-      if(typeof window.toast==='function')window.toast('⚠️ Firestore 읽기 실패: '+code);
+      alert('🔒 Firestore Rules 차단 — Firebase 콘솔 > Firestore Database > Security 탭에서 규칙을 확인해주세요.');
     }
   });
+}
+
+// 로컬 데이터 → 클라우드 1회 마이그레이션 (클라우드가 비어있을 때만)
+async function _migrateLocalToCloud(){
+  if(!window._user)return;
+  const uid=window._user.uid;
+  const localData=window.trips&&window.trips.length?[...window.trips]:[];
+  if(!localData.length)return;
+  console.log('📤 로컬→클라우드 마이그레이션 시작:',localData.length,'건');
+  let ok=0,fail=0;
+  for(const t of localData){
+    try{
+      if(!t._fbId)t._fbId='t_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
+      t.uid=uid;
+      await window._fbSave(t);
+      ok++;
+    }catch(e){console.error('마이그레이션 실패:',t.city,e.code||e.message);fail++;}
+  }
+  console.log('✅ 마이그레이션 완료:',ok,'건 성공,',fail,'건 실패');
+  if(ok>0&&typeof window.toast==='function')window.toast('☁️ 여행 기록 '+ok+'개를 계정에 동기화했어요!');
 }
 
 window._googleLogin=async function(){
@@ -96,19 +96,21 @@ window._googleLogin=async function(){
   }
 };
 window._logout=async function(){
-  if(!confirm('로그아웃 하시겠어요?\n(저장된 여행 기록은 클라우드에 남아있고, 이 기기의 임시 캐시만 정리됩니다)'))return;
+  if(!confirm('로그아웃 하시겠어요? (저장된 여행 기록은 클라우드에 남아있고, 이 기기의 임시 캐시만 정리됩니다)'))return;
   try{localStorage.removeItem('travel_map_trips_cache_v1');}catch(e){}
   await signOut(_auth);
 };
 
-// Firestore CRUD — 15초 타임아웃으로 무한 대기 방지
+// CRUD
 window._fbSave=async function(entry){
-  if(!entry._fbId){console.error('_fbSave: _fbId 없음',entry);throw new Error('_fbId 없음');}
+  if(!entry._fbId){throw new Error('_fbId 없음');}
+  console.log('💾 Firestore 저장 시도:',entry.city,'→',entry._fbId);
   const ref=doc(_db,'travel_trips',entry._fbId);
   await Promise.race([
     setDoc(ref,entry,{merge:true}),
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Firestore 응답 없음 (15초 초과) — Firebase 콘솔 > Firestore Database 확인')),15000))
+    new Promise((_,rej)=>setTimeout(()=>rej(new Error('15초 응답 없음')),15000))
   ]);
+  console.log('✅ Firestore 저장 완료:',entry.city);
 };
 window._fbDel=async function(fbId){
   await deleteDoc(doc(_db,'travel_trips',fbId));
@@ -971,6 +973,12 @@ renderStats();renderPins();renderList();_saveLocalCache();
 if(_glInited)renderGlobePins();
 }
 window._render=render;
+// 클라우드 데이터 → 화면 동기화 (module script onSnapshot에서 호출)
+window._syncTripsFromCloud=function(cloudData){
+trips=cloudData;window.trips=trips;
+try{localStorage.setItem('travel_map_trips_cache_v1',JSON.stringify(trips));}catch(e){}
+render();
+};
 function renderStats(){
 const cs=new Set(trips.map(t=>t.cntry));
 document.getElementById('sc').textContent=cs.size;
