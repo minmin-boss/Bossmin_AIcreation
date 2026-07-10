@@ -484,10 +484,38 @@ let curTab='plan';
 let _cloudSaveFn=null;
 let _localDirty=false;
 
+function sanitizeTrip(t){
+  t=t||{};
+  if(!Array.isArray(t.days)||!t.days.length){
+    t.days=genDays(t.df,t.dt);
+  }else{
+    t.days=t.days.map(d=>({
+      date:(d&&d.date)?d.date:null,
+      items:Array.isArray(d&&d.items)?d.items.map(i=>({
+        time:(i&&i.time)||'',
+        title:(i&&i.title)||'',
+        memo:(i&&i.memo)||'',
+        cost:(i&&i.cost!=null)?i.cost:''
+      })):[]
+    }));
+  }
+  if(!Array.isArray(t.checklist))t.checklist=[];
+  if(typeof t.stars!=='number')t.stars=0;
+  if(typeof t.note!=='string')t.note=t.note||'';
+  if(typeof t.memo!=='string')t.memo=t.memo||'';
+  return t;
+}
+function sanitizeData(){
+  if(!data||!Array.isArray(data.trips))data.trips=[];
+  data.trips=data.trips.map(sanitizeTrip);
+}
+
 function load(){
   try{const r=localStorage.getItem(LS_KEY);if(r)data=JSON.parse(r);}catch(e){}
+  sanitizeData();
 }
 function save(){
+  sanitizeData();
   try{localStorage.setItem(LS_KEY,JSON.stringify(data));}catch(e){}
   _localDirty=true;
   if(_cloudSaveFn)_cloudSaveFn();
@@ -1219,7 +1247,9 @@ renderGrid();
       if(_localDirty)return; // 아직 클라우드에 못 올린 로컬 변경이 있으면 덮어쓰지 않음
       if(cloud&&Array.isArray(cloud.trips)){
         data.trips=cloud.trips;
+        sanitizeData(); // Firebase는 빈 배열([])을 저장하지 않아서 누락된 필드를 채워줌
         renderStats();renderGrid();
+        pushToCloud(); // 보정된 형태를 클라우드에도 다시 반영
       }else if(data.trips&&data.trips.length){
         // 클라우드에 데이터가 없고 로그인 전 로컬에 만든 계획이 있으면 자동으로 올려줌
         pushToCloud();
