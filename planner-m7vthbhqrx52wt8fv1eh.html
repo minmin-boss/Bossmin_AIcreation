@@ -28,6 +28,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .hl p{font-size:11px;color:var(--text2);margin-top:2px;font-weight:700}
 .hbtns{display:flex;gap:8px;flex-wrap:wrap}
 .hbtn{display:flex;align-items:center;gap:6px;background:var(--surf);color:var(--text2);border:1.5px solid var(--brd);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s;text-decoration:none}
+.hbtn.sm{padding:5px 11px;font-size:11px;gap:4px}
 .hbtn:hover{border-color:var(--accent);color:var(--accent)}
 .hbtn.pri{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 3px 10px rgba(58,123,213,.35)}
 .hbtn.pri:hover{background:var(--accent2)}
@@ -191,9 +192,9 @@ input[type=file]{display:none}
         <div class="stat"><span class="sv" id="statTrips">0</span><span class="sl">계획 여행</span></div>
         <div class="stat"><span class="sv" id="statBudget">0</span><span class="sl">총 예산(KRW)</span></div>
       </div>
-      <button class="hbtn" onclick="document.getElementById('importFile').click()">📥 가져오기</button>
-      <button class="hbtn" onclick="openImportModal()">📊 구글시트 가져오기</button>
-      <button class="hbtn" onclick="downloadJSON()">💾 내보내기</button>
+      <button class="hbtn sm" onclick="openImportModal()">📊 구글시트</button>
+      <button class="hbtn sm" onclick="document.getElementById('importFile').click()">📥 가져오기</button>
+      <button class="hbtn sm" onclick="downloadJSON()">💾 내보내기</button>
       <a class="hbtn pri" href="https://minmin-boss.github.io/Bossmin_AIcreation/travel-x7k2mq9p4w8nzr3.html" target="_blank">🗺️ 여행지도 열기</a>
       <div class="user-info" id="userInfo" style="display:none" onclick="window._planLogout&&window._planLogout()">
         <img class="user-avatar" id="userAvatar" src="" alt=""/>
