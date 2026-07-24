@@ -28,7 +28,7 @@ header{display:flex;align-items:center;justify-content:space-between;margin-bott
 .hl p{font-size:11px;color:var(--text2);margin-top:2px;font-weight:700}
 .hbtns{display:flex;gap:8px;flex-wrap:wrap}
 .hbtn{display:flex;align-items:center;gap:6px;background:var(--surf);color:var(--text2);border:1.5px solid var(--brd);border-radius:20px;padding:8px 16px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .18s;text-decoration:none}
-.hbtn.sm{padding:5px 11px;font-size:11px;gap:4px}
+.hbtn.sm{padding:3px 8px;font-size:10.5px;gap:3px;border-radius:14px;line-height:1.3}
 .hbtn:hover{border-color:var(--accent);color:var(--accent)}
 .hbtn.pri{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 3px 10px rgba(58,123,213,.35)}
 .hbtn.pri:hover{background:var(--accent2)}
@@ -50,6 +50,33 @@ input::placeholder{color:var(--text3)}
 select option{background:white;font-family:var(--f)}
 input:focus,select:focus,textarea:focus{border-color:var(--accent);background:white;box-shadow:0 0 0 3px rgba(58,123,213,.1)}
 textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5}
+textarea.ta-lg{height:84px}
+.flight-img-row{margin-top:8px;display:flex;flex-direction:column;gap:6px}
+.flight-img-thumb{display:flex;align-items:center;gap:10px;margin-top:4px}
+.flight-img-thumb img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1.5px solid var(--brd);cursor:pointer;background:var(--bg2)}
+#imgLightbox{position:fixed;inset:0;background:rgba(20,26,34,.88);display:none;align-items:center;justify-content:center;z-index:700;padding:24px}
+#imgLightbox.show{display:flex}
+#imgLightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.shared-wrap{max-width:720px;margin:0 auto;padding:1.4rem 1rem 3rem}
+.shared-msg{text-align:center;padding:4rem 1rem;color:var(--text2);font-size:13px}
+.shared-badge{display:inline-flex;align-items:center;gap:5px;background:var(--acl);color:var(--accent);font-size:10.5px;font-weight:800;padding:4px 12px;border-radius:20px;margin-bottom:12px}
+.shared-hdr{background:var(--surf);border:1.5px solid var(--brd);border-radius:16px;padding:1.3rem;margin-bottom:1rem;box-shadow:0 2px 12px var(--shadow)}
+.shared-hdr .flag{font-size:34px}
+.shared-hdr h2{font-size:18px;font-weight:800;margin:6px 0 2px}
+.shared-hdr .sub{font-size:12px;color:var(--text2);font-weight:700}
+.shared-card{background:var(--surf);border:1.5px solid var(--brd);border-radius:14px;padding:1.1rem 1.2rem;margin-bottom:1rem;box-shadow:0 2px 10px var(--shadow)}
+.shared-card h3{font-size:12.5px;font-weight:800;margin-bottom:.8rem;display:flex;align-items:center;gap:6px}
+.shared-pre{white-space:pre-wrap;font-size:12px;line-height:1.7;color:var(--text);background:var(--bg2);border-radius:8px;padding:10px 12px}
+.shared-day-ttl{font-size:12.5px;font-weight:800;color:var(--accent);margin:.9rem 0 .5rem}
+.shared-day-ttl:first-child{margin-top:0}
+.shared-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px dashed var(--brd);font-size:12px}
+.shared-item:last-child{border-bottom:none}
+.shared-item .time{flex:0 0 100px;color:var(--accent);font-weight:700}
+.shared-item .body{flex:1}
+.shared-item .memo{color:var(--text2);font-size:11px;margin-top:2px}
+.shared-item .cost{flex:0 0 auto;color:var(--text2);font-weight:700;font-size:11px}
+.shared-chk{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px}
+.shared-chk.done{color:var(--text3);text-decoration:line-through}
 .btn-add{height:36px;align-self:flex-end;padding:0 22px;background:var(--accent);color:white;border:none;border-radius:8px;font-family:var(--f);font-size:12px;font-weight:800;cursor:pointer;transition:all .18s;white-space:nowrap;box-shadow:0 3px 10px rgba(58,123,213,.35)}
 .btn-add:hover{background:var(--accent2)}
 .btn-add:active{transform:scale(.97)}
@@ -88,11 +115,11 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .dtab:hover{border-color:var(--accent);color:var(--accent)}
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,123,213,.3)}
 .day-panel{background:var(--bg2);border-radius:12px;padding:12px;margin-bottom:1rem}
-.item-row{display:grid;grid-template-columns:90px 1.4fr 1fr 90px 30px;gap:6px;margin-bottom:6px;align-items:center}
+.item-row{display:grid;grid-template-columns:112px 1.3fr 1fr 90px 30px;gap:6px;margin-bottom:6px;align-items:center}
 .item-row input{height:32px;font-size:11.5px}
 .item-del{width:30px;height:30px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;border-radius:6px}
 .item-del:hover{color:#fff;background:var(--pin)}
-.item-hdr{display:grid;grid-template-columns:90px 1.4fr 1fr 90px 30px;gap:6px;margin-bottom:6px;font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 2px}
+.item-hdr{display:grid;grid-template-columns:112px 1.3fr 1fr 90px 30px;gap:6px;margin-bottom:6px;font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 2px}
 .add-item-btn{width:100%;margin-top:4px;height:32px;background:var(--surf);border:1.5px dashed var(--brd2);border-radius:8px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)}
 .add-item-btn:hover{border-color:var(--accent);color:var(--accent)}
 .day-total{text-align:right;font-size:11px;color:var(--text2);margin-top:6px;font-weight:700}
@@ -111,6 +138,13 @@ textarea{height:54px;padding:8px 10px;resize:none;font-size:12px;line-height:1.5
 .chk-del:hover{color:var(--pin)}
 .chk-add{display:flex;gap:8px}
 .chk-preset{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:.8rem}
+.ess-section{margin-bottom:14px;border:1.5px solid var(--brd);border-radius:10px;overflow:hidden}
+.ess-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;background:var(--bg2);border:none;padding:10px 14px;font-size:12.5px;font-weight:800;color:var(--text);cursor:pointer;font-family:var(--f)}
+.ess-toggle:hover{background:var(--acl)}
+.ess-toggle .arrow{transition:transform .2s;color:var(--text2)}
+.ess-toggle .arrow.open{transform:rotate(180deg)}
+.ess-list{padding:10px;display:flex;flex-direction:column;gap:6px;background:var(--surf)}
+.ess-count{font-size:10.5px;color:var(--text2);font-weight:700}
 .star-row{display:flex;gap:3px}
 .star{font-size:18px;cursor:pointer;user-select:none}
 .modal-save-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--f);margin-top:1rem}
@@ -176,8 +210,10 @@ input[type=file]{display:none}
       <span style="font-size:16px">🔐</span> Google로 로그인
     </button>
     <div id="lockErr"></div>
+    <button class="btn-sm" style="width:100%;margin-top:10px" onclick="enterGuestMode('로그인 없이 이 기기에만 저장돼요')">🔓 로그인 없이 둘러보기</button>
   </div>
 </div>
+<div id="sharedWrap" style="display:none"></div>
 <div class="wrap">
   <header>
     <div class="hl">
@@ -284,6 +320,7 @@ input[type=file]{display:none}
     <div class="page-tabs">
       <button class="page-tab" id="tabBtn-plan" onclick="switchTab('plan')">📅 일정표</button>
       <button class="page-tab" id="tabBtn-budget" onclick="switchTab('budget')">💰 예산</button>
+      <button class="page-tab" id="tabBtn-travel" onclick="switchTab('travel')">✈️ 항공/숙소</button>
       <button class="page-tab" id="tabBtn-check" onclick="switchTab('check')">🎒 체크리스트</button>
       <button class="page-tab" id="tabBtn-info" onclick="switchTab('info')">ℹ️ 정보</button>
     </div>
@@ -304,13 +341,44 @@ input[type=file]{display:none}
     </div>
 
     <div id="tab-check" style="display:none">
-      <div class="chk-preset">
-        <button class="btn-sm" onclick="addPreset()">✨ 기본 준비물 채우기</button>
+      <div class="ess-section">
+        <button class="ess-toggle" id="essToggleBtn" onclick="toggleEssentials()">
+          <span>🎒 필수 준비물 <span class="ess-count" id="essCount"></span></span>
+          <span class="arrow" id="essArrow">▾</span>
+        </button>
+        <div class="ess-list" id="essList" style="display:none"></div>
       </div>
+
+      <div class="sec-ttl">나만의 체크리스트</div>
       <div class="chk-list" id="chkList"></div>
       <div class="chk-add">
         <input id="chkInput" placeholder="준비물 입력 후 Enter" onkeydown="if(event.key==='Enter')addChecklistItem()"/>
         <button class="btn-add" onclick="addChecklistItem()">추가</button>
+      </div>
+    </div>
+
+    <div id="tab-travel" style="display:none">
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl">✈️ 가는 항공편</label>
+        <textarea class="ta-lg" id="mFlightOut" oninput="onInfoEdit()" placeholder="예: KE651 인천→다낭 06:15-09:05 (4시간45분)&#10;수하물, 예약번호, 비용 등도 자유롭게"></textarea>
+        <div class="flight-img-row">
+          <input type="file" id="flightOutImgFile" accept="image/*" onchange="handleFlightImg(event,'flightOut')"/>
+          <button class="btn-sm" onclick="document.getElementById('flightOutImgFile').click()">📱 모바일 항공권 추가</button>
+          <div id="flightOutImgPreview"></div>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl">✈️ 오는 항공편</label>
+        <textarea class="ta-lg" id="mFlightIn" oninput="onInfoEdit()" placeholder="예: KE652 다낭→인천 22:30-04:10(+1)&#10;수하물, 예약번호, 비용 등도 자유롭게"></textarea>
+        <div class="flight-img-row">
+          <input type="file" id="flightInImgFile" accept="image/*" onchange="handleFlightImg(event,'flightIn')"/>
+          <button class="btn-sm" onclick="document.getElementById('flightInImgFile').click()">📱 모바일 항공권 추가</button>
+          <div id="flightInImgPreview"></div>
+        </div>
+      </div>
+      <div class="fg">
+        <label class="fl">🏨 숙소</label>
+        <textarea class="ta-lg" id="mLodging" oninput="onInfoEdit()" placeholder="숙소명, 주소, 체크인/체크아웃 날짜, 예약 사이트, 비용 등"></textarea>
       </div>
     </div>
 
@@ -330,6 +398,7 @@ input[type=file]{display:none}
     </div>
 
     <button class="modal-map-btn" onclick="exportOneToMap()">🗺️ 이 여행을 지도로 보내기</button>
+    <button class="modal-map-btn" onclick="createShareLink()">🔗 일행에게 공유 링크 만들기</button>
     <button class="modal-save-btn" onclick="closeModal()">✔ 완료</button>
   </div>
 </div>
@@ -429,6 +498,10 @@ input[type=file]{display:none}
   </div>
 </div>
 
+<div id="imgLightbox" onclick="closeLightbox()">
+  <img id="lightboxImg" src="" alt="모바일 항공권"/>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -476,12 +549,13 @@ const COUNTRIES=[
 {name:"호주",en:"Australia",flag:"🇦🇺",continent:"오세아니아"},
 {name:"뉴질랜드",en:"New Zealand",flag:"🇳🇿",continent:"오세아니아"},
 ];
-const PRESET_ITEMS=["여권/신분증","충전기/보조배터리","상비약","세면도구","카메라","현금/카드","우산/우비","기내용 파우치"];
+const ESSENTIAL_ITEMS=["여권/신분증","충전기/보조배터리","상비약","세면도구","카메라","현금/카드","우산/우비","기내용 파우치"];
 
 let data={trips:[]};
 let curTripId=null;
 let curDayIdx=0;
 let curTab='plan';
+let essentialsOpen=false;
 let _cloudSaveFn=null;
 let _localDirty=false;
 
@@ -501,9 +575,15 @@ function sanitizeTrip(t){
     }));
   }
   if(!Array.isArray(t.checklist))t.checklist=[];
+  if(!t.essentials||typeof t.essentials!=='object')t.essentials={};
   if(typeof t.stars!=='number')t.stars=0;
   if(typeof t.note!=='string')t.note=t.note||'';
   if(typeof t.memo!=='string')t.memo=t.memo||'';
+  if(typeof t.flightOut!=='string')t.flightOut=t.flightOut||'';
+  if(typeof t.flightIn!=='string')t.flightIn=t.flightIn||'';
+  if(typeof t.lodging!=='string')t.lodging=t.lodging||'';
+  if(typeof t.flightOutImg!=='string')t.flightOutImg=t.flightOutImg||'';
+  if(typeof t.flightInImg!=='string')t.flightInImg=t.flightInImg||'';
   return t;
 }
 function sanitizeData(){
@@ -527,6 +607,12 @@ function toast(msg){
   t.textContent=msg;t.classList.add('show');
   clearTimeout(window._tt);
   window._tt=setTimeout(()=>t.classList.remove('show'),2200);
+}
+function enterGuestMode(msg){
+  const ls=document.getElementById('lockScreen');
+  if(ls)ls.style.display='none';
+  renderStats();renderGrid();
+  if(msg)toast(msg);
 }
 function fmtNum(n){return (n||0).toLocaleString('ko-KR');}
 function fmtD(d){return d?d.replace(/-/g,'.'):null;}
@@ -647,10 +733,10 @@ function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 function getTrip(id){return data.trips.find(t=>t.id===id);}
 
 function openTrip(id){
-  curTripId=id;curDayIdx=0;curTab='plan';
+  curTripId=id;curDayIdx=0;curTab='plan';essentialsOpen=false;
   const t=getTrip(id);
   document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획`;
-  renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderInfoTab();
+  renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderFlightImgs();
   switchTab('plan');
   document.getElementById('modalBg').classList.add('show');
 }
@@ -660,7 +746,7 @@ function closeModal(){
 }
 function switchTab(tab){
   curTab=tab;
-  ['plan','budget','check','info'].forEach(k=>{
+  ['plan','budget','travel','check','info'].forEach(k=>{
     document.getElementById('tab-'+k).style.display=(k===tab?'':'none');
     document.getElementById('tabBtn-'+k).classList.toggle('on',k===tab);
   });
@@ -681,7 +767,7 @@ function renderDayPanel(){
   if(!d){document.getElementById('dayPanels').innerHTML='';return;}
   const rows=d.items.map((it,idx)=>`
     <div class="item-row">
-      <input type="time" value="${it.time||''}" onchange="updateItem(${idx},'time',this.value)"/>
+      <input type="text" placeholder="예: 06:15 - 09:05" value="${escapeHtml(it.time||'')}" onchange="updateItem(${idx},'time',this.value)"/>
       <input type="text" placeholder="활동 / 장소" value="${escapeHtml(it.title||'')}" onchange="updateItem(${idx},'title',this.value)"/>
       <input type="text" placeholder="메모" value="${escapeHtml(it.memo||'')}" onchange="updateItem(${idx},'memo',this.value)"/>
       <input type="text" placeholder="비용" value="${it.cost||''}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateItem(${idx},'cost',this.value)"/>
@@ -752,12 +838,36 @@ function addChecklistItem(){
   inp.value='';
   save();renderChecklist();
 }
-function addPreset(){
+function toggleEssentials(){
+  essentialsOpen=!essentialsOpen;
+  renderEssentials();
+}
+function renderEssentials(){
+  const list=document.getElementById('essList');
+  const arrow=document.getElementById('essArrow');
   const t=getTrip(curTripId);
-  PRESET_ITEMS.forEach(txt=>{
-    if(!t.checklist.some(c=>c.text===txt))t.checklist.push({text:txt,done:false});
-  });
-  save();renderChecklist();
+  if(!t||!list)return;
+  if(!t.essentials||typeof t.essentials!=='object')t.essentials={};
+  const checkedCount=ESSENTIAL_ITEMS.filter(n=>t.essentials[n]).length;
+  const countEl=document.getElementById('essCount');
+  if(countEl)countEl.textContent=`(${checkedCount}/${ESSENTIAL_ITEMS.length})`;
+  list.style.display=essentialsOpen?'':'none';
+  if(arrow)arrow.classList.toggle('open',essentialsOpen);
+  if(!essentialsOpen)return;
+  list.innerHTML=ESSENTIAL_ITEMS.map(name=>{
+    const checked=!!t.essentials[name];
+    return `<div class="chk-row ${checked?'done':''}">
+      <input type="checkbox" ${checked?'checked':''} onchange="toggleEssential('${name.replace(/'/g,"\\'")}',this.checked)"/>
+      <span>${escapeHtml(name)}</span>
+    </div>`;
+  }).join('');
+}
+function toggleEssential(name,checked){
+  const t=getTrip(curTripId);
+  if(!t.essentials||typeof t.essentials!=='object')t.essentials={};
+  t.essentials[name]=checked;
+  save();
+  renderEssentials();
 }
 function toggleChk(i){
   const t=getTrip(curTripId);
@@ -774,6 +884,9 @@ function renderInfoTab(){
   const t=getTrip(curTripId);
   document.getElementById('mMemo').value=t.memo||'';
   document.getElementById('mNote').value=t.note||'';
+  document.getElementById('mFlightOut').value=t.flightOut||'';
+  document.getElementById('mFlightIn').value=t.flightIn||'';
+  document.getElementById('mLodging').value=t.lodging||'';
   const row=document.getElementById('starRow');
   row.innerHTML=[1,2,3,4,5].map(n=>`<span class="star" onclick="setStar(${n})">${n<=(t.stars||0)?'⭐':'☆'}</span>`).join('');
 }
@@ -786,7 +899,82 @@ function onInfoEdit(){
   const t=getTrip(curTripId);
   t.memo=document.getElementById('mMemo').value;
   t.note=document.getElementById('mNote').value;
+  t.flightOut=document.getElementById('mFlightOut').value;
+  t.flightIn=document.getElementById('mFlightIn').value;
+  t.lodging=document.getElementById('mLodging').value;
   save();
+}
+
+/* ---- 모바일 항공권 이미지 ---- */
+function resizeImageFile(file,maxW,quality){
+  maxW=maxW||900;quality=quality||0.72;
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=()=>reject(new Error('이미지를 열지 못했어요'));
+      img.src=e.target.result;
+    };
+    reader.onerror=()=>reject(new Error('파일을 읽지 못했어요'));
+    reader.readAsDataURL(file);
+  });
+}
+async function handleFlightImg(ev,key){
+  const file=ev.target.files[0];
+  if(!file)return;
+  try{
+    const dataUrl=await resizeImageFile(file);
+    const t=getTrip(curTripId);
+    t[key+'Img']=dataUrl;
+    save();
+    renderFlightImgs();
+    toast('📱 모바일 항공권을 추가했어요');
+  }catch(e){
+    toast('⚠️ 이미지를 처리하지 못했어요');
+  }
+  ev.target.value='';
+}
+function removeFlightImg(key){
+  if(!confirm('이 모바일 항공권 이미지를 삭제할까요?'))return;
+  const t=getTrip(curTripId);
+  t[key+'Img']='';
+  save();
+  renderFlightImgs();
+}
+function renderFlightImgs(){
+  const t=getTrip(curTripId);
+  if(!t)return;
+  ['flightOut','flightIn'].forEach(key=>{
+    const box=document.getElementById(key+'ImgPreview');
+    if(!box)return;
+    const url=t[key+'Img'];
+    box.innerHTML=url?`<div class="flight-img-thumb">
+      <img src="${url}" onclick="openLightbox('${key}')"/>
+      <button class="chk-del" onclick="removeFlightImg('${key}')">✕ 삭제</button>
+    </div>`:'';
+  });
+}
+function openLightbox(key){
+  const t=getTrip(curTripId);
+  const url=t&&t[key+'Img'];
+  if(!url)return;
+  openLightboxUrl(url);
+}
+function openLightboxUrl(url){
+  if(!url)return;
+  document.getElementById('lightboxImg').src=url;
+  document.getElementById('imgLightbox').classList.add('show');
+}
+function closeLightbox(){
+  document.getElementById('imgLightbox').classList.remove('show');
 }
 
 function readMapCache(){
@@ -1194,33 +1382,153 @@ function mergeIntoTrip(t,items){
   if(!t.dt||(last.date&&last.date>t.dt))t.dt=last.date||t.dt;
 }
 
-load();
-renderStats();
-renderGrid();
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",
+  authDomain:"travel-tracker-9f0f7.firebaseapp.com",
+  projectId:"travel-tracker-9f0f7",
+  databaseURL:"https://travel-tracker-9f0f7-default-rtdb.firebaseio.com",
+  storageBucket:"travel-tracker-9f0f7.firebasestorage.app",
+  messagingSenderId:"157327971618",
+  appId:"1:157327971618:web:b5eca73698db54034b817b"
+};
 
-/* ===== Firebase: Google 로그인 + 계정별 클라우드 저장 ===== */
-(function(){
+/* ===== 공유 링크(읽기 전용) ===== */
+async function createShareLink(){
+  if(typeof firebase==='undefined'){toast('⚠️ 공유 기능을 사용할 수 없어요 (네트워크 확인)');return;}
+  if(!window._planUser){toast('⚠️ 로그인 후 이용해주세요');return;}
+  const t=getTrip(curTripId);
+  if(!t)return;
+  const shareId='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  const snapshot=sanitizeTrip(JSON.parse(JSON.stringify(t)));
+  try{
+    await firebase.database().ref('shared_plans/'+shareId).set(snapshot);
+    const url=location.origin+location.pathname+'?share='+shareId;
+    try{
+      await navigator.clipboard.writeText(url);
+      toast('🔗 공유 링크를 복사했어요!');
+    }catch(e){
+      window.prompt('아래 링크를 복사해서 전달해주세요:',url);
+    }
+  }catch(e){
+    console.error('[share] 생성 실패',e);
+    toast('⚠️ 링크 생성에 실패했어요 (Firebase 규칙에 shared_plans 경로가 있는지 확인해주세요)');
+  }
+}
+
+function renderSharedView(container,t){
+  const dateStr=t.df?(fmtD(t.df)+(t.dt&&t.dt!==t.df?' ~ '+fmtD(t.dt):'')):'날짜 미정';
+  const planned=t.days.reduce((s,d)=>s+d.items.reduce((s2,i)=>s2+(Number(i.cost)||0),0),0);
+  const stars=t.stars?'⭐'.repeat(t.stars):'';
+
+  let html=`<div class="shared-wrap">
+    <div style="text-align:center"><span class="shared-badge">🔒 공유된 여행 계획 · 읽기 전용</span></div>
+    <div class="shared-hdr" style="text-align:center">
+      <div class="flag">${t.flag||'🌍'}</div>
+      <h2>${escapeHtml(t.cntry||'')} · ${escapeHtml(t.city||'')}</h2>
+      <div class="sub">📅 ${dateStr}${t.memo?' · 👥 '+escapeHtml(t.memo):''}</div>
+      ${stars?`<div style="margin-top:6px">${stars}</div>`:''}
+    </div>`;
+
+  if(t.flightOut||t.flightIn||t.lodging||t.flightOutImg||t.flightInImg){
+    html+=`<div class="shared-card"><h3>✈️ 항공 · 숙소</h3>`;
+    if(t.flightOut||t.flightOutImg)html+=`<div style="margin-bottom:8px"><b style="font-size:11px">가는 항공편</b>${t.flightOut?`<div class="shared-pre">${escapeHtml(t.flightOut)}</div>`:''}${t.flightOutImg?`<div class="flight-img-thumb"><img src="${t.flightOutImg}" onclick="openLightboxUrl('${t.flightOutImg}')"/></div>`:''}</div>`;
+    if(t.flightIn||t.flightInImg)html+=`<div style="margin-bottom:8px"><b style="font-size:11px">오는 항공편</b>${t.flightIn?`<div class="shared-pre">${escapeHtml(t.flightIn)}</div>`:''}${t.flightInImg?`<div class="flight-img-thumb"><img src="${t.flightInImg}" onclick="openLightboxUrl('${t.flightInImg}')"/></div>`:''}</div>`;
+    if(t.lodging)html+=`<div><b style="font-size:11px">숙소</b><div class="shared-pre">${escapeHtml(t.lodging)}</div></div>`;
+    html+=`</div>`;
+  }
+
+  html+=`<div class="shared-card"><h3>📅 일정표</h3>`;
+  t.days.forEach((d,i)=>{
+    const lbl=d.date?(new Date(d.date).getMonth()+1)+'/'+new Date(d.date).getDate()+'일차':('Day '+(i+1));
+    html+=`<div class="shared-day-ttl">${i+1}. ${lbl}</div>`;
+    if(!d.items.length){
+      html+=`<div style="font-size:11px;color:var(--text3);padding:4px 0">일정 없음</div>`;
+    }else{
+      d.items.forEach(it=>{
+        html+=`<div class="shared-item">
+          <div class="time">${escapeHtml(it.time||'')}</div>
+          <div class="body">${escapeHtml(it.title||'')}${it.memo?`<div class="memo">${escapeHtml(it.memo)}</div>`:''}</div>
+          <div class="cost">${it.cost?fmtNum(it.cost):''}</div>
+        </div>`;
+      });
+    }
+  });
+  html+=`</div>`;
+
+  html+=`<div class="shared-card"><h3>💰 예산</h3>
+    <div style="display:flex;justify-content:space-between;font-size:12px">
+      <span>예산</span><b>${t.cost?fmtNum(t.cost)+' '+t.currency:'미정'}</b>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
+      <span>일정표 합계</span><b style="color:var(--accent)">${fmtNum(planned)}</b>
+    </div>
+  </div>`;
+
+  if(t.checklist&&t.checklist.length){
+    html+=`<div class="shared-card"><h3>🎒 체크리스트</h3>`;
+    t.checklist.forEach(c=>{
+      html+=`<div class="shared-chk ${c.done?'done':''}">${c.done?'✅':'⬜'} ${escapeHtml(c.text)}</div>`;
+    });
+    html+=`</div>`;
+  }
+
+  if(t.note){
+    html+=`<div class="shared-card"><h3>📝 메모</h3><div class="shared-pre">${escapeHtml(t.note)}</div></div>`;
+  }
+
+  html+=`<div style="text-align:center;margin-top:1.5rem">
+    <a href="${location.origin+location.pathname}" style="font-size:11.5px;color:var(--accent);font-weight:700;text-decoration:none">📝 나도 여행 계획표 만들어보기 →</a>
+  </div></div>`;
+
+  container.innerHTML=html;
+}
+
+function initSharedView(shareId){
+  const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
+  const wrapEl=document.querySelector('.wrap');if(wrapEl)wrapEl.style.display='none';
+  const sw=document.getElementById('sharedWrap');
+  sw.style.display='';
+  sw.innerHTML='<div class="shared-msg">불러오는 중...</div>';
   if(typeof firebase==='undefined'){
-    console.error('[Firebase] SDK 로드 실패 — 스크립트 태그를 불러오지 못했어요 (네트워크/차단 프로그램 확인)');
+    sw.innerHTML='<div class="shared-msg">이 페이지를 열 수 없어요. 네트워크 상태를 확인해주세요.</div>';
     return;
   }
-  // 여행지도와 같은 Firebase 프로젝트/같은 Google 계정을 사용해요.
-  // 계획표 데이터는 지도의 방문 기록과 겹치지 않게 'travel_plans/{uid}' 경로에 따로 저장돼요.
-  const _FC={
-    apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",
-    authDomain:"travel-tracker-9f0f7.firebaseapp.com",
-    projectId:"travel-tracker-9f0f7",
-    databaseURL:"https://travel-tracker-9f0f7-default-rtdb.firebaseio.com",
-    storageBucket:"travel-tracker-9f0f7.firebasestorage.app",
-    messagingSenderId:"157327971618",
-    appId:"1:157327971618:web:b5eca73698db54034b817b"
-  };
+  try{if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);}catch(e){}
+  firebase.database().ref('shared_plans/'+shareId).once('value').then(snap=>{
+    const raw=snap.val();
+    if(!raw){sw.innerHTML='<div class="shared-msg">존재하지 않거나 삭제된 공유 링크예요.</div>';return;}
+    const t=sanitizeTrip(raw);
+    renderSharedView(sw,t);
+  }).catch(err=>{
+    console.error('[shared] 읽기 실패',err);
+    sw.innerHTML='<div class="shared-msg">불러오는 중 문제가 발생했어요.</div>';
+  });
+}
 
-  firebase.initializeApp(_FC);
-  const _auth=firebase.auth();
-  const _rtdb=firebase.database();
-  const _gp=new firebase.auth.GoogleAuthProvider();
-  try{_auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(e){}
+const _shareId=new URLSearchParams(location.search).get('share');
+if(_shareId){
+  initSharedView(_shareId);
+}else{
+  load();
+  renderStats();
+  renderGrid();
+
+  /* ===== Firebase: Google 로그인 + 계정별 클라우드 저장 ===== */
+  (function(){
+    if(typeof firebase==='undefined'){
+      console.error('[Firebase] SDK 로드 실패 — 스크립트 태그를 불러오지 못했어요 (네트워크/차단 프로그램 확인)');
+      enterGuestMode('클라우드 기능을 불러오지 못해 로컬 모드로 열었어요');
+      return;
+    }
+    // 여행지도와 같은 Firebase 프로젝트/같은 Google 계정을 사용해요.
+    // 계획표 데이터는 지도의 방문 기록과 겹치지 않게 'travel_plans/{uid}' 경로에 따로 저장돼요.
+    const _FC=FIREBASE_CONFIG;
+
+    firebase.initializeApp(_FC);
+    const _auth=firebase.auth();
+    const _rtdb=firebase.database();
+    const _gp=new firebase.auth.GoogleAuthProvider();
+    try{_auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(e){}
 
   let _unsubRef=null;
   let _saveTimer=null;
@@ -1301,7 +1609,9 @@ renderGrid();
     renderStats();renderGrid();
     await _auth.signOut();
   };
-})();
+  })();
+}
 </script>
+
 </body>
 </html>
