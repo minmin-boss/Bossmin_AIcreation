@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>📝 내 여행 계획표</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -128,15 +129,16 @@ textarea.ta-lg{height:84px}
 .dtab:hover{border-color:var(--accent);color:var(--accent)}
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,123,213,.3)}
 .day-panel{background:var(--bg2);border-radius:12px;padding:12px;margin-bottom:1rem}
-.item-row{display:grid;grid-template-columns:106px 1.1fr 0.9fr 150px 28px;gap:6px;margin-bottom:6px;align-items:center}
-.item-row input{height:32px;font-size:11.5px}
-.cost-cell{display:grid;grid-template-columns:1.3fr 1fr;gap:3px;min-width:0}
-.cost-cell input{min-width:0;height:32px}
-.cost-cell select{min-width:0;height:32px;font-size:10px;padding:0 2px}
-.cost-cell select.cat-sel{grid-column:1/3;font-size:10px}
+.item-card{background:var(--surf);border:1.5px solid var(--brd);border-radius:10px;padding:9px;margin-bottom:8px}
+.item-row-top{display:grid;grid-template-columns:100px 1.3fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px}
+.item-row-top input{height:32px;font-size:11.5px}
+.item-costs{display:flex;flex-direction:column;gap:5px}
+.cost-line{display:grid;grid-template-columns:1fr 66px 84px 22px;gap:4px}
+.cost-line input,.cost-line select{height:30px;font-size:10.5px;padding:0 4px}
+.cost-add-btn{width:100%;margin-top:5px;height:26px;background:var(--bg2);border:1.5px dashed var(--brd2);border-radius:6px;color:var(--text2);font-size:10px;font-weight:700;cursor:pointer;font-family:var(--f)}
+.cost-add-btn:hover{border-color:var(--accent);color:var(--accent)}
 .item-del{width:30px;height:30px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;border-radius:6px}
 .item-del:hover{color:#fff;background:var(--pin)}
-.item-hdr{display:grid;grid-template-columns:106px 1.1fr 0.9fr 150px 28px;gap:6px;margin-bottom:6px;font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 2px}
 .add-item-btn{width:100%;margin-top:4px;height:32px;background:var(--surf);border:1.5px dashed var(--brd2);border-radius:8px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)}
 .add-item-btn:hover{border-color:var(--accent);color:var(--accent)}
 .day-total{text-align:right;font-size:11px;color:var(--text2);margin-top:6px;font-weight:700}
@@ -221,9 +223,10 @@ input[type=file]{display:none}
 .stats{gap:.5rem;flex-wrap:wrap}
 .stat{padding:5px 10px}
 .sv{font-size:18px}
-.item-row,.item-hdr{grid-template-columns:56px 1fr 128px 24px;}
-.item-row input:nth-child(3),.item-hdr span:nth-child(3){display:none}
-.cost-cell select{min-width:40px;font-size:9px}
+.item-row-top{grid-template-columns:56px 1fr 24px;}
+.item-row-top input:nth-child(3){display:none}
+.cost-line{grid-template-columns:1fr 56px 66px 20px}
+.cost-line input,.cost-line select{font-size:9.5px}
 .budget-sum{grid-template-columns:1fr}
 .modal-box{padding:1rem}
 }
@@ -313,7 +316,7 @@ input[type=file]{display:none}
       <div class="fg">
         <label class="fl">여행 경비(예산)</label>
         <div style="display:flex;gap:6px">
-          <input type="text" id="costIn" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)"/>
+          <input type="text" id="costIn" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)"/>
           <select id="currIn" style="flex:1;min-width:64px">
             <option>KRW</option><option>USD</option><option>JPY</option>
             <option>EUR</option><option>CNY</option><option>THB</option>
@@ -384,7 +387,7 @@ input[type=file]{display:none}
 
       <div class="sec-ttl">🧮 N빵 계산기</div>
       <div class="row3">
-        <div class="fg"><label class="fl">총 금액</label><input id="splitAmount" placeholder="0" oninput="formatNumInput(this)" onchange="updateSplitCalc('amount',stripComma(this.value))"/></div>
+        <div class="fg"><label class="fl">총 금액</label><input id="splitAmount" placeholder="0" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateSplitCalc('amount',stripComma(this.value))"/></div>
         <div class="fg"><label class="fl">통화</label>
           <select id="splitCurrency" onchange="updateSplitCalc('currency',this.value)">
             <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
@@ -424,7 +427,7 @@ input[type=file]{display:none}
         <div class="fg"><label class="fl">소요시간</label><input id="foDuration" placeholder="예: 4시간 45분" onchange="updateFlight('flightOut','duration',this.value)"/></div>
         <div class="fg"><label class="fl">비용</label>
           <div style="display:flex;gap:6px">
-            <input id="foCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onchange="updateFlight('flightOut','cost',stripComma(this.value))"/>
+            <input id="foCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateFlight('flightOut','cost',stripComma(this.value))"/>
             <select id="foCurrency" style="flex:1;min-width:64px" onchange="updateFlight('flightOut','currency',this.value)">
               <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
             </select>
@@ -457,7 +460,7 @@ input[type=file]{display:none}
         <div class="fg"><label class="fl">소요시간</label><input id="fiDuration" placeholder="예: 5시간 10분" onchange="updateFlight('flightIn','duration',this.value)"/></div>
         <div class="fg"><label class="fl">비용</label>
           <div style="display:flex;gap:6px">
-            <input id="fiCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onchange="updateFlight('flightIn','cost',stripComma(this.value))"/>
+            <input id="fiCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateFlight('flightIn','cost',stripComma(this.value))"/>
             <select id="fiCurrency" style="flex:1;min-width:64px" onchange="updateFlight('flightIn','currency',this.value)">
               <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
             </select>
@@ -502,7 +505,7 @@ input[type=file]{display:none}
       <div class="row2">
         <div class="fg"><label class="fl">비용</label>
           <div style="display:flex;gap:6px">
-            <input id="lgCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onchange="updateLodging('cost',stripComma(this.value))"/>
+            <input id="lgCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateLodging('cost',stripComma(this.value))"/>
             <select id="lgCurrency" style="flex:1;min-width:64px" onchange="updateLodging('currency',this.value)">
               <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
             </select>
@@ -524,7 +527,7 @@ input[type=file]{display:none}
           <div class="fg"><label class="fl">날짜</label><input type="date" id="tourDate"/></div>
           <div class="fg"><label class="fl">비용</label>
             <div style="display:flex;gap:6px">
-              <input id="tourCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)"/>
+              <input id="tourCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)"/>
               <select id="tourCurrency" style="flex:1;min-width:64px">
                 <option>KRW</option><option>USD</option><option>JPY</option>
                 <option>EUR</option><option>CNY</option><option>THB</option>
@@ -653,7 +656,7 @@ input[type=file]{display:none}
         <div class="fg"><label class="fl">도시</label><input id="impCity" placeholder="예: 오사카"/></div>
         <div class="fg"><label class="fl">예산</label>
           <div style="display:flex;gap:6px">
-            <input id="impCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)"/>
+            <input id="impCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)"/>
             <select id="impCurr" style="flex:1;min-width:64px"><option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option></select>
           </div>
         </div>
@@ -777,14 +780,28 @@ function sanitizeTrip(t){
   }else{
     t.days=t.days.map(d=>({
       date:(d&&d.date)?d.date:null,
-      items:Array.isArray(d&&d.items)?d.items.map(i=>({
-        time:(i&&i.time)||'',
-        title:(i&&i.title)||'',
-        memo:(i&&i.memo)||'',
-        cost:(i&&i.cost!=null)?i.cost:'',
-        currency:(i&&i.currency)||defCur,
-        category:(i&&i.category)||'기타'
-      })):[]
+      items:Array.isArray(d&&d.items)?d.items.map(i=>{
+        i=i||{};
+        let costs;
+        if(Array.isArray(i.costs)){
+          costs=i.costs.map(c=>({
+            amount:(c&&c.amount!=null)?c.amount:'',
+            currency:(c&&c.currency)||defCur,
+            category:(c&&c.category)||'기타'
+          })).filter(c=>c.amount!=='');
+        }else if(i.cost!=null&&i.cost!==''){
+          // 예전 단일 비용 필드를 costs 배열로 이전
+          costs=[{amount:i.cost,currency:i.currency||defCur,category:i.category||'기타'}];
+        }else{
+          costs=[];
+        }
+        return{
+          time:i.time||'',
+          title:i.title||'',
+          memo:i.memo||'',
+          costs
+        };
+      }):[]
     }));
   }
   if(!Array.isArray(t.checklist))t.checklist=[];
@@ -794,6 +811,9 @@ function sanitizeTrip(t){
   if(typeof t.memo!=='string')t.memo=t.memo||'';
   if(typeof t.shareId!=='string')t.shareId=t.shareId||'';
   if(!t.collaborators||typeof t.collaborators!=='object')t.collaborators={};
+  if(!t._sharedFrom&&window._planUser&&t.collaborators[window._planUser.uid]){
+    delete t.collaborators[window._planUser.uid]; // 소유자가 자기 자신을 협업자로 갖는 잘못된 데이터 방어적으로 정리
+  }
   if(!t.splitCalc||typeof t.splitCalc!=='object')t.splitCalc={};
   t.splitCalc={
     amount:(t.splitCalc.amount!=null)?t.splitCalc.amount:'',
@@ -986,17 +1006,22 @@ function startListenOwn(uid){
     _ownTripsRefG=firebase.database().ref('travel_plans/'+uid+'/trips');
     _ownTripsRefG.on('value',snap=>{
       if(_localDirty)return; // 아직 클라우드에 못 올린 로컬 변경이 있으면 덮어쓰지 않음
+      const before=JSON.stringify(data.trips.filter(t=>!t._sharedFrom));
       mergeOwnTripsSnapshot(snap.val());
       sanitizeData();
+      const after=JSON.stringify(data.trips.filter(t=>!t._sharedFrom));
+      syncShareBridges();
+      if(before===after)return; // 내가 방금 저장한 내용이 그대로 되돌아온 에코 → 실제 변경 없으니 재렌더링(화면 깜빡임) 생략
       renderStats();renderGrid();
       refreshOpenModalIfNeeded();
-      syncShareBridges();
     },err=>{console.error('[plan] 읽기 실패',err);toast('⚠️ 클라우드 연결에 문제가 있어요');});
     _trashRefG=firebase.database().ref('travel_plans/'+uid+'/trash');
     _trashRefG.on('value',snap=>{
       if(_localDirty)return;
+      const before=JSON.stringify(data.trash);
       mergeTrashSnapshot(snap.val());
       sanitizeData();
+      if(JSON.stringify(data.trash)===before)return;
       renderTrashBadge();
       if(document.getElementById('trashModalBg').classList.contains('show'))renderTrashList();
     },err=>console.error('[trash] 읽기 실패',err));
@@ -1012,15 +1037,24 @@ function startCollabIndexListener(myUid){
   _collabIndexRefG.on('value',snap=>{
     const val=snap.val()||{};
     const wanted={};
-    Object.values(val).forEach(entry=>{
-      if(entry&&entry.ownerUid&&entry.tripId)wanted[entry.ownerUid+':'+entry.tripId]=entry;
+    Object.keys(val).forEach(key=>{
+      const entry=val[key];
+      if(!entry||!entry.ownerUid||!entry.tripId)return;
+      if(entry.ownerUid===myUid){
+        // 내 소유의 여행을 나 자신에게 초대한 잘못된 기록 → 무시하고 정리(자가 치유)
+        firebase.database().ref('collab_index/'+myUid+'/'+key).remove().catch(()=>{});
+        return;
+      }
+      wanted[entry.ownerUid+':'+entry.tripId]=entry;
     });
+    let changed=false;
     Object.keys(_collabListeners).forEach(key=>{
       if(!wanted[key]){
         _collabListeners[key].off();
         delete _collabListeners[key];
         const parts=key.split(':');
         upsertCollabTrip(parts[0],parts[1],null);
+        changed=true;
       }
     });
     Object.keys(wanted).forEach(key=>{
@@ -1029,14 +1063,17 @@ function startCollabIndexListener(myUid){
       const ref=firebase.database().ref('travel_plans/'+entry.ownerUid+'/trips/'+entry.tripId);
       ref.on('value',snap2=>{
         if(_localDirty)return;
+        const before=JSON.stringify(data.trips.find(t=>t.id===entry.tripId&&t._sharedFrom===entry.ownerUid)||null);
         upsertCollabTrip(entry.ownerUid,entry.tripId,snap2.val());
         sanitizeData();
+        const after=JSON.stringify(data.trips.find(t=>t.id===entry.tripId&&t._sharedFrom===entry.ownerUid)||null);
+        if(before===after)return; // 에코 → 재렌더링 생략
         renderStats();renderGrid();
         refreshOpenModalIfNeeded();
       },err=>console.error('[collab] 읽기 실패',err));
       _collabListeners[key]=ref;
     });
-    renderStats();renderGrid();
+    if(changed){renderStats();renderGrid();}
   },err=>console.error('[collab-index] 읽기 실패',err));
 }
 function stopCollabListeners(){
@@ -1078,6 +1115,7 @@ async function inviteCollaborator(){
     const snap=await firebase.database().ref('directory/'+emailKey).once('value');
     const entry=snap.val();
     if(!entry||!entry.uid){toast('⚠️ 그 계정이 아직 로그인한 적이 없어요. 먼저 한 번 로그인해달라고 부탁해주세요.');return;}
+    if(window._planUser&&entry.uid===window._planUser.uid){toast('🙂 이미 내 여행이에요');return;}
     if(!t.collaborators||typeof t.collaborators!=='object')t.collaborators={};
     t.collaborators[entry.uid]={email,name:entry.name||'',addedAt:Date.now()};
     save();
@@ -1125,7 +1163,7 @@ function enterGuestMode(msg){
   renderStats();renderGrid();renderTrashBadge();
   if(msg)toast(msg);
 }
-function fmtNum(n){return (n||0).toLocaleString('ko-KR');}
+function fmtNum(n){return (Number(n)||0).toLocaleString('ko-KR');}
 function formatNumInput(el){
   const raw=el.value.replace(/[^0-9]/g,'');
   el.value=raw?Number(raw).toLocaleString('en-US'):'';
@@ -1364,30 +1402,39 @@ function renderDayTabs(){
     return `<button class="dtab ${i===curDayIdx?'on':''}" onclick="curDayIdx=${i};renderDayTabs();renderDayPanel()">${i+1}. ${lbl}</button>`;
   }).join('');
 }
+function costLineHtml(idx,costs){
+  const list=Array.isArray(costs)?costs:[];
+  const lines=list.map((c,ci)=>`
+    <div class="cost-line">
+      <input type="text" placeholder="비용" value="${c.amount?Number(c.amount).toLocaleString('en-US'):''}" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateItemCost(${idx},${ci},'amount',stripComma(this.value))"/>
+      <select onchange="updateItemCost(${idx},${ci},'currency',this.value)">
+        ${CURRENCY_OPTIONS.map(cur=>`<option ${(c.currency||'KRW')===cur?'selected':''}>${cur}</option>`).join('')}
+      </select>
+      <select onchange="updateItemCost(${idx},${ci},'category',this.value)">
+        ${CATEGORY_OPTIONS.map(cat=>`<option ${(c.category||'기타')===cat?'selected':''}>${cat}</option>`).join('')}
+      </select>
+      <button type="button" class="chk-del" onclick="removeItemCost(${idx},${ci})">✕</button>
+    </div>`).join('');
+  return `<div class="item-costs">${lines}</div><button type="button" class="cost-add-btn" onclick="addItemCost(${idx})">+ 비용 추가</button>`;
+}
 function renderDayPanel(){
   const t=getTrip(curTripId);
   const d=t.days[curDayIdx];
   if(!d){document.getElementById('dayPanels').innerHTML='';return;}
   const rows=d.items.map((it,idx)=>`
-    <div class="item-row">
-      <input type="text" placeholder="예: 06:15 - 09:05" value="${escapeHtml(it.time||'')}" onchange="updateItem(${idx},'time',this.value)"/>
-      <input type="text" placeholder="활동 / 장소" value="${escapeHtml(it.title||'')}" onchange="updateItem(${idx},'title',this.value)"/>
-      <input type="text" placeholder="메모" value="${escapeHtml(it.memo||'')}" onchange="updateItem(${idx},'memo',this.value)"/>
-      <div class="cost-cell">
-        <input type="text" placeholder="비용" value="${it.cost?Number(it.cost).toLocaleString('en-US'):''}" oninput="formatNumInput(this)" onchange="updateItem(${idx},'cost',stripComma(this.value))"/>
-        <select onchange="updateItem(${idx},'currency',this.value)">
-          ${CURRENCY_OPTIONS.map(c=>`<option ${(it.currency||'KRW')===c?'selected':''}>${c}</option>`).join('')}
-        </select>
-        <select class="cat-sel" onchange="updateItem(${idx},'category',this.value)">
-          ${CATEGORY_OPTIONS.map(c=>`<option ${(it.category||'기타')===c?'selected':''}>${c}</option>`).join('')}
-        </select>
+    <div class="item-card">
+      <div class="item-row-top">
+        <input type="text" placeholder="예: 06:15 - 09:05" value="${escapeHtml(it.time||'')}" onchange="updateItem(${idx},'time',this.value)"/>
+        <input type="text" placeholder="활동 / 장소" value="${escapeHtml(it.title||'')}" onchange="updateItem(${idx},'title',this.value)"/>
+        <input type="text" placeholder="메모" value="${escapeHtml(it.memo||'')}" onchange="updateItem(${idx},'memo',this.value)"/>
+        <button class="item-del" onclick="removeItem(${idx})">✕</button>
       </div>
-      <button class="item-del" onclick="removeItem(${idx})">✕</button>
+      ${costLineHtml(idx,it.costs)}
     </div>`).join('');
-  const sums=currencySumsForItems(d.items);
+  const allCosts=d.items.flatMap(i=>i.costs||[]);
+  const sums=currencySumsForCosts(allCosts);
   document.getElementById('dayPanels').innerHTML=`
     <div class="day-panel">
-      <div class="item-hdr"><span>시간</span><span>활동/장소</span><span>메모</span><span>비용</span><span></span></div>
       ${rows||'<div style="font-size:11px;color:var(--text3);padding:6px 2px">아직 일정이 없어요. 아래에서 추가해보세요.</div>'}
       <button class="add-item-btn" onclick="addItem()">+ 일정 추가</button>
       <div class="day-total">이 날 지출 계획: <b>${fmtCurrencySums(sums)}</b></div>
@@ -1395,14 +1442,44 @@ function renderDayPanel(){
 }
 function addItem(){
   const t=getTrip(curTripId);
-  t.days[curDayIdx].items.push({time:'',title:'',memo:'',cost:'',currency:t.currency||'KRW',category:'기타'});
+  t.days[curDayIdx].items.push({time:'',title:'',memo:'',costs:[]});
   save();renderDayPanel();
 }
 function updateItem(idx,field,val){
   const t=getTrip(curTripId);
   t.days[curDayIdx].items[idx][field]=val;
   save();
-  if(field==='cost')renderDayPanel();
+}
+function addItemCost(idx){
+  const t=getTrip(curTripId);
+  const it=t.days[curDayIdx].items[idx];
+  if(!Array.isArray(it.costs))it.costs=[];
+  it.costs.push({amount:'',currency:t.currency||'KRW',category:'기타'});
+  save();renderDayPanel();
+}
+function updateItemCost(idx,costIdx,field,val){
+  const t=getTrip(curTripId);
+  const it=t.days[curDayIdx].items[idx];
+  if(!Array.isArray(it.costs))it.costs=[];
+  if(!it.costs[costIdx])it.costs[costIdx]={amount:'',currency:'KRW',category:'기타'};
+  it.costs[costIdx][field]=val;
+  save();
+  if(field==='amount')renderDayPanel();
+}
+function removeItemCost(idx,costIdx){
+  const t=getTrip(curTripId);
+  const it=t.days[curDayIdx].items[idx];
+  if(Array.isArray(it.costs))it.costs.splice(costIdx,1);
+  save();renderDayPanel();
+}
+function handlePlusZeros(ev){
+  if(ev.key!=='+')return;
+  ev.preventDefault();
+  const el=ev.target;
+  const raw=el.value.replace(/[^0-9]/g,'');
+  const newRaw=(raw||'')+'000';
+  el.value=Number(newRaw).toLocaleString('en-US');
+  el.dispatchEvent(new Event('change',{bubbles:true}));
 }
 function removeItem(idx){
   const t=getTrip(curTripId);
@@ -1410,12 +1487,12 @@ function removeItem(idx){
   save();renderDayPanel();
 }
 
-function currencySumsForItems(items){
+function currencySumsForCosts(costs){
   const sums={};
-  (items||[]).forEach(i=>{
-    const c=i.currency||'KRW';
-    const amt=Number(i.cost)||0;
-    if(amt)sums[c]=(sums[c]||0)+amt;
+  (costs||[]).forEach(c=>{
+    const cur=c.currency||'KRW';
+    const amt=Number(c.amount)||0;
+    if(amt)sums[cur]=(sums[cur]||0)+amt;
   });
   return sums;
 }
@@ -1437,10 +1514,10 @@ function budgetCategories(t){
   const tourSum={};
   (t.tours||[]).forEach(tr=>{if(tr.cost){const c=tr.currency||'KRW';tourSum[c]=(tourSum[c]||0)+(Number(tr.cost)||0);}});
   cats.push({icon:'🎫',label:'투어',sums:tourSum});
-  const allItems=(t.days||[]).flatMap(d=>d.items);
+  const allCosts=(t.days||[]).flatMap(d=>d.items).flatMap(i=>i.costs||[]);
   const catDefs=[['식비','🍜'],['쇼핑','🛍️'],['교통','🚌'],['입장료','🎟️'],['기타','📦']];
   catDefs.forEach(([label,icon])=>{
-    const sums=currencySumsForItems(allItems.filter(i=>(i.category||'기타')===label));
+    const sums=currencySumsForCosts(allCosts.filter(c=>(c.category||'기타')===label));
     cats.push({icon,label,sums});
   });
   return cats;
@@ -2212,7 +2289,6 @@ async function createShareLink(permission){
 
 function renderSharedView(container,t){
   const dateStr=t.df?(fmtD(t.df)+(t.dt&&t.dt!==t.df?' ~ '+fmtD(t.dt):'')):'날짜 미정';
-  const plannedSums=currencySumsForItems(t.days.flatMap(d=>d.items));
   const stars=t.stars?'⭐'.repeat(t.stars):'';
 
   let html=`<div class="shared-wrap">
@@ -2299,10 +2375,11 @@ function renderSharedView(container,t){
       html+=`<div style="font-size:11px;color:var(--text3);padding:4px 0">일정 없음</div>`;
     }else{
       d.items.forEach(it=>{
+        const costTxt=(it.costs||[]).filter(c=>c.amount).map(c=>fmtNum(c.amount)+' '+(c.currency||'KRW')+(c.category?'('+c.category+')':'')).join(', ');
         html+=`<div class="shared-item">
           <div class="time">${escapeHtml(it.time||'')}</div>
           <div class="body">${escapeHtml(it.title||'')}${it.memo?`<div class="memo">${escapeHtml(it.memo)}</div>`:''}</div>
-          <div class="cost">${it.cost?fmtNum(it.cost)+' '+(it.currency||'KRW'):''}</div>
+          <div class="cost">${costTxt}</div>
         </div>`;
       });
     }
@@ -2399,7 +2476,11 @@ function initSharedEditMode(shareId,tripRaw){
     if(_localDirty)return;
     const cloudTrip=snap.val();
     if(!cloudTrip)return;
-    data.trips[0]=sanitizeTrip(cloudTrip);
+    const before=JSON.stringify(data.trips[0]);
+    const incoming=sanitizeTrip(cloudTrip);
+    const after=JSON.stringify(incoming);
+    if(before===after)return; // 내가 방금 보낸 내용이 그대로 되돌아온 에코 → 재렌더링(깜빡임) 생략
+    data.trips[0]=incoming;
     renderStats();
     if(document.getElementById('modalBg').classList.contains('show')){
       renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();
@@ -2500,5 +2581,7 @@ if(_shareId){
 }
 </script>
 
+<!-- boss_min_ 워터마크 -->
+<div style="position:fixed;right:16px;bottom:14px;font-family:Nunito,-apple-system,sans-serif;font-size:12px;font-weight:500;color:#bbb;opacity:.3;letter-spacing:1.5px;z-index:9999;pointer-events:none;user-select:none;">boss_min_</div>
 </body>
 </html>
