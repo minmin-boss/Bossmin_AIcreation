@@ -95,6 +95,7 @@ textarea.ta-lg{height:84px}
 .btn-sm{height:30px;padding:0 12px;background:var(--surf);color:var(--text2);border:1.5px solid var(--brd);border-radius:7px;font-family:var(--f);font-size:11px;font-weight:700;cursor:pointer;transition:all .18s}
 .btn-sm:hover{border-color:var(--accent);color:var(--accent)}
 .btn-sm.danger:hover{border-color:var(--pin);color:var(--pin)}
+.trash-badge{position:absolute;top:-6px;right:-6px;background:var(--pin);color:#fff;font-size:9px;font-weight:800;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center}
 .list-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem}
 .list-ttl{font-size:13px;font-weight:800;color:var(--text)}
 .lc{display:flex;gap:6px}
@@ -113,8 +114,8 @@ textarea.ta-lg{height:84px}
 .tc:hover .cdel{opacity:1}
 .cdel:hover{color:white;background:var(--pin)}
 .empty{text-align:center;padding:3rem;color:var(--text3);font-size:12px;grid-column:1/-1;background:var(--surf);border:1.5px dashed var(--brd);border-radius:14px}
-#modalBg,#importModalBg{position:fixed;inset:0;background:rgba(44,62,80,.45);backdrop-filter:blur(3px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
-#modalBg.show,#importModalBg.show{display:flex}
+#modalBg,#importModalBg,#trashModalBg{position:fixed;inset:0;background:rgba(44,62,80,.45);backdrop-filter:blur(3px);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+#modalBg.show,#importModalBg.show,#trashModalBg.show{display:flex}
 .modal-box{background:#fff;border-radius:16px;padding:1.4rem;width:100%;max-width:760px;box-shadow:0 16px 40px rgba(58,123,213,.2);max-height:92vh;overflow-y:auto;font-family:var(--f)}
 .modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
 .modal-ttl{font-size:16px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:8px}
@@ -127,14 +128,15 @@ textarea.ta-lg{height:84px}
 .dtab:hover{border-color:var(--accent);color:var(--accent)}
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,123,213,.3)}
 .day-panel{background:var(--bg2);border-radius:12px;padding:12px;margin-bottom:1rem}
-.item-row{display:grid;grid-template-columns:112px 1.2fr 1fr 128px 30px;gap:6px;margin-bottom:6px;align-items:center}
+.item-row{display:grid;grid-template-columns:106px 1.1fr 0.9fr 150px 28px;gap:6px;margin-bottom:6px;align-items:center}
 .item-row input{height:32px;font-size:11.5px}
-.cost-cell{display:flex;gap:3px;min-width:0}
-.cost-cell input{flex:1.3;min-width:0}
-.cost-cell select{flex:1;min-width:48px;height:32px;font-size:10px;padding:0 2px}
+.cost-cell{display:grid;grid-template-columns:1.3fr 1fr;gap:3px;min-width:0}
+.cost-cell input{min-width:0;height:32px}
+.cost-cell select{min-width:0;height:32px;font-size:10px;padding:0 2px}
+.cost-cell select.cat-sel{grid-column:1/3;font-size:10px}
 .item-del{width:30px;height:30px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;border-radius:6px}
 .item-del:hover{color:#fff;background:var(--pin)}
-.item-hdr{display:grid;grid-template-columns:112px 1.2fr 1fr 128px 30px;gap:6px;margin-bottom:6px;font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 2px}
+.item-hdr{display:grid;grid-template-columns:106px 1.1fr 0.9fr 150px 28px;gap:6px;margin-bottom:6px;font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 2px}
 .add-item-btn{width:100%;margin-top:4px;height:32px;background:var(--surf);border:1.5px dashed var(--brd2);border-radius:8px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)}
 .add-item-btn:hover{border-color:var(--accent);color:var(--accent)}
 .day-total{text-align:right;font-size:11px;color:var(--text2);margin-top:6px;font-weight:700}
@@ -145,6 +147,13 @@ textarea.ta-lg{height:84px}
 .bsum-box .v.multi{font-size:12px;line-height:1.5}
 .bsum-box.over .v{color:var(--pin)}
 .bsum-box .l{font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+.cat-row{display:flex;align-items:center;gap:10px;background:var(--bg2);border-radius:8px;padding:9px 12px;margin-bottom:6px}
+.cat-row .cat-icon{font-size:16px;width:22px;text-align:center;flex-shrink:0}
+.cat-row .cat-name{font-size:12px;font-weight:700;flex:1}
+.cat-row .cat-amt{font-size:12px;font-weight:800;color:var(--accent);text-align:right}
+.split-result{background:var(--acl);border:1.5px solid var(--brd2);border-radius:10px;padding:14px;text-align:center;margin-top:10px}
+.split-result .big{font-size:20px;font-weight:800;color:var(--accent)}
+.split-result .sub{font-size:11px;color:var(--text2);margin-top:4px}
 .chk-list{display:flex;flex-direction:column;gap:6px;margin-bottom:.8rem}
 .chk-row{display:flex;align-items:center;gap:8px;background:var(--bg2);border-radius:8px;padding:8px 10px}
 .chk-row input[type=checkbox]{width:16px;height:16px;flex-shrink:0}
@@ -212,7 +221,7 @@ input[type=file]{display:none}
 .stats{gap:.5rem;flex-wrap:wrap}
 .stat{padding:5px 10px}
 .sv{font-size:18px}
-.item-row,.item-hdr{grid-template-columns:60px 1fr 106px 26px;}
+.item-row,.item-hdr{grid-template-columns:56px 1fr 128px 24px;}
 .item-row input:nth-child(3),.item-hdr span:nth-child(3){display:none}
 .cost-cell select{min-width:40px;font-size:9px}
 .budget-sum{grid-template-columns:1fr}
@@ -324,10 +333,23 @@ input[type=file]{display:none}
   <div class="list-hdr">
     <div class="list-ttl">🗒️ 계획 중인 여행</div>
     <div class="lc">
+      <button class="btn-sm" onclick="openTrash()" style="position:relative">🗑️ 휴지통<span id="trashBadge" class="trash-badge" style="display:none"></span></button>
       <button class="btn-sm danger" onclick="clearAll()">전체 삭제</button>
     </div>
   </div>
   <div class="tg" id="tripGrid"></div>
+</div>
+
+<div id="trashModalBg" onclick="if(event.target===this)closeTrash()">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div class="modal-ttl">🗑️ 휴지통</div>
+      <button class="modal-close" onclick="closeTrash()">✕</button>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px">삭제한 여행이 여기 보관돼요. 복원하거나 완전히 삭제할 수 있어요.</div>
+    <div id="trashList"></div>
+    <button class="btn-sm danger" style="width:100%;margin-top:10px" onclick="emptyTrash()">휴지통 비우기</button>
+  </div>
 </div>
 
 <div id="modalBg" onclick="if(event.target===this)closeModal()">
@@ -353,11 +375,24 @@ input[type=file]{display:none}
     <div id="tab-budget" style="display:none">
       <div class="budget-sum">
         <div class="bsum-box"><div class="v" id="bTotalBudget">0</div><div class="l">계획 예산</div></div>
-        <div class="bsum-box" id="bPlannedBox"><div class="v" id="bTotalPlanned">0</div><div class="l">일정표 합계</div></div>
+        <div class="bsum-box" id="bPlannedBox"><div class="v" id="bTotalPlanned">0</div><div class="l">전체 합계</div></div>
         <div class="bsum-box"><div class="v" id="bDiff">0</div><div class="l">차액</div></div>
       </div>
-      <div class="sec-ttl">일자별 지출 계획</div>
-      <div id="budgetByDay"></div>
+
+      <div class="sec-ttl">카테고리별 지출</div>
+      <div id="budgetByCategory" style="margin-bottom:1rem"></div>
+
+      <div class="sec-ttl">🧮 N빵 계산기</div>
+      <div class="row3">
+        <div class="fg"><label class="fl">총 금액</label><input id="splitAmount" placeholder="0" oninput="formatNumInput(this)" onchange="updateSplitCalc('amount',stripComma(this.value))"/></div>
+        <div class="fg"><label class="fl">통화</label>
+          <select id="splitCurrency" onchange="updateSplitCalc('currency',this.value)">
+            <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">인원 수</label><input type="number" min="1" id="splitPeople" onchange="updateSplitCalc('people',this.value)"/></div>
+      </div>
+      <div class="split-result" id="splitResult"></div>
     </div>
 
     <div id="tab-check" style="display:none">
@@ -387,7 +422,17 @@ input[type=file]{display:none}
       <div class="row3">
         <div class="fg"><label class="fl">도착시간</label><input type="time" id="foArrTime" onchange="updateFlight('flightOut','arrTime',this.value)"/></div>
         <div class="fg"><label class="fl">소요시간</label><input id="foDuration" placeholder="예: 4시간 45분" onchange="updateFlight('flightOut','duration',this.value)"/></div>
-        <div class="fg"><label class="fl">메모</label><input id="foMemo" placeholder="수하물, 예약번호, 비용 등" onchange="updateFlight('flightOut','memo',this.value)"/></div>
+        <div class="fg"><label class="fl">비용</label>
+          <div style="display:flex;gap:6px">
+            <input id="foCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onchange="updateFlight('flightOut','cost',stripComma(this.value))"/>
+            <select id="foCurrency" style="flex:1;min-width:64px" onchange="updateFlight('flightOut','currency',this.value)">
+              <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl">메모</label><input id="foMemo" placeholder="수하물, 예약번호 등" onchange="updateFlight('flightOut','memo',this.value)"/>
       </div>
       <div class="fg" style="margin-bottom:16px">
         <label class="fl">📱 모바일 항공권 (인원별)</label>
@@ -410,7 +455,17 @@ input[type=file]{display:none}
       <div class="row3">
         <div class="fg"><label class="fl">도착시간</label><input type="time" id="fiArrTime" onchange="updateFlight('flightIn','arrTime',this.value)"/></div>
         <div class="fg"><label class="fl">소요시간</label><input id="fiDuration" placeholder="예: 5시간 10분" onchange="updateFlight('flightIn','duration',this.value)"/></div>
-        <div class="fg"><label class="fl">메모</label><input id="fiMemo" placeholder="수하물, 예약번호, 비용 등" onchange="updateFlight('flightIn','memo',this.value)"/></div>
+        <div class="fg"><label class="fl">비용</label>
+          <div style="display:flex;gap:6px">
+            <input id="fiCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onchange="updateFlight('flightIn','cost',stripComma(this.value))"/>
+            <select id="fiCurrency" style="flex:1;min-width:64px" onchange="updateFlight('flightIn','currency',this.value)">
+              <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl">메모</label><input id="fiMemo" placeholder="수하물, 예약번호 등" onchange="updateFlight('flightIn','memo',this.value)"/>
       </div>
       <div class="fg" style="margin-bottom:16px">
         <label class="fl">📱 모바일 항공권 (인원별)</label>
@@ -444,9 +499,18 @@ input[type=file]{display:none}
         <div class="fg"><label class="fl">체크아웃 날짜</label><input type="date" id="lgCheckOut" onchange="updateLodging('checkOut',this.value)"/></div>
         <div class="fg"><label class="fl">체크아웃 시간</label><input type="time" id="lgCheckOutTime" onchange="updateLodging('checkOutTime',this.value)"/></div>
       </div>
-      <div class="fg" style="margin-bottom:16px">
-        <label class="fl">메모</label>
-        <input id="lgMemo" placeholder="예약 사이트, 비용 등" onchange="updateLodging('memo',this.value)"/>
+      <div class="row2">
+        <div class="fg"><label class="fl">비용</label>
+          <div style="display:flex;gap:6px">
+            <input id="lgCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onchange="updateLodging('cost',stripComma(this.value))"/>
+            <select id="lgCurrency" style="flex:1;min-width:64px" onchange="updateLodging('currency',this.value)">
+              <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
+            </select>
+          </div>
+        </div>
+        <div class="fg"><label class="fl">메모</label>
+          <input id="lgMemo" placeholder="예약 사이트 등" onchange="updateLodging('memo',this.value)"/>
+        </div>
       </div>
 
       <div class="sec-ttl">🎫 투어 / 액티비티 예약</div>
@@ -658,8 +722,9 @@ const COUNTRIES=[
 ];
 const ESSENTIAL_ITEMS=["여권/신분증","충전기/보조배터리","상비약","세면도구","카메라","현금/카드","우산/우비","기내용 파우치"];
 const CURRENCY_OPTIONS=["KRW","USD","JPY","EUR","CNY","THB"];
+const CATEGORY_OPTIONS=["식비","쇼핑","교통","입장료","기타"];
 
-let data={trips:[]};
+let data={trips:[],trash:[]};
 let curTripId=null;
 let curDayIdx=0;
 let curTab='plan';
@@ -682,12 +747,14 @@ function sanitizeFlight(f,legacyImg){
     depTime:f.depTime||'',
     arrTime:f.arrTime||'',
     duration:f.duration||'',
+    cost:(f.cost!=null)?f.cost:'',
+    currency:f.currency||'KRW',
     memo:f.memo||'',
     tickets
   };
 }
 function sanitizeLodging(l){
-  if(typeof l==='string')return{name:'',location:'',breakfast:'',checkIn:'',checkInTime:'',checkOut:'',checkOutTime:'',memo:l};
+  if(typeof l==='string')return{name:'',location:'',breakfast:'',checkIn:'',checkInTime:'',checkOut:'',checkOutTime:'',cost:'',currency:'KRW',memo:l};
   l=(l&&typeof l==='object')?l:{};
   return{
     name:l.name||'',
@@ -697,6 +764,8 @@ function sanitizeLodging(l){
     checkInTime:l.checkInTime||'',
     checkOut:l.checkOut||'',
     checkOutTime:l.checkOutTime||'',
+    cost:(l.cost!=null)?l.cost:'',
+    currency:l.currency||'KRW',
     memo:l.memo||''
   };
 }
@@ -713,7 +782,8 @@ function sanitizeTrip(t){
         title:(i&&i.title)||'',
         memo:(i&&i.memo)||'',
         cost:(i&&i.cost!=null)?i.cost:'',
-        currency:(i&&i.currency)||defCur
+        currency:(i&&i.currency)||defCur,
+        category:(i&&i.category)||'기타'
       })):[]
     }));
   }
@@ -724,6 +794,12 @@ function sanitizeTrip(t){
   if(typeof t.memo!=='string')t.memo=t.memo||'';
   if(typeof t.shareId!=='string')t.shareId=t.shareId||'';
   if(!t.collaborators||typeof t.collaborators!=='object')t.collaborators={};
+  if(!t.splitCalc||typeof t.splitCalc!=='object')t.splitCalc={};
+  t.splitCalc={
+    amount:(t.splitCalc.amount!=null)?t.splitCalc.amount:'',
+    currency:t.splitCalc.currency||'KRW',
+    people:(t.splitCalc.people!=null&&t.splitCalc.people!=='')?t.splitCalc.people:2
+  };
   t.flightOut=sanitizeFlight(t.flightOut,t.flightOutImg);
   t.flightIn=sanitizeFlight(t.flightIn,t.flightInImg);
   t.lodging=sanitizeLodging(t.lodging);
@@ -744,14 +820,21 @@ function sanitizeTrip(t){
 function sanitizeData(){
   if(!data||!Array.isArray(data.trips))data.trips=[];
   data.trips=data.trips.map(sanitizeTrip);
+  if(!Array.isArray(data.trash))data.trash=[];
+  data.trash=data.trash.map(t=>{
+    const s=sanitizeTrip(t);
+    if(typeof s.deletedAt!=='number')s.deletedAt=Date.now();
+    return s;
+  });
 }
 
 /* ===== 클라우드 동기화 (트립별 개별 저장 + 협업자 실시간 공동편집) ===== */
 let _ownTripsRefG=null;
+let _trashRefG=null;
 let _collabIndexRefG=null;
 let _collabListeners={}; // key `${ownerUid}:${tripId}` -> ref
 let _shareBridges={};
-let _pendingDeletes=[]; // {ownerUid,tripId}
+let _pendingDeletes=[]; // {ownerUid,tripId,bucket:'trips'|'trash'}
 let _saveTimerG=null;
 
 function tripCloudPayload(t){
@@ -785,6 +868,18 @@ function mergeOwnTripsSnapshot(val){
     if(idx>-1)data.trips[idx]=t;else data.trips.push(t);
   });
 }
+function mergeTrashSnapshot(val){
+  const ids=new Set(Object.keys(val||{}));
+  data.trash=data.trash.filter(t=>ids.has(t.id));
+  Object.keys(val||{}).forEach(id=>{
+    const raw=val[id];
+    if(!raw||typeof raw!=='object')return;
+    const t=sanitizeTrip(raw);
+    if(typeof t.deletedAt!=='number')t.deletedAt=Date.now();
+    const idx=data.trash.findIndex(x=>x.id===id);
+    if(idx>-1)data.trash[idx]=t;else data.trash.push(t);
+  });
+}
 function upsertCollabTrip(ownerUid,tripId,raw){
   if(!raw){
     data.trips=data.trips.filter(t=>!(t._sharedFrom===ownerUid&&t.id===tripId));
@@ -802,6 +897,12 @@ async function pushTripToCloud(t){
     await firebase.database().ref('travel_plans/'+ownerUidOf(t)+'/trips/'+t.id).set(tripCloudPayload(t));
   }catch(e){console.error('[plan] 트립 저장 실패',t.id,e);}
 }
+async function pushTrashToCloud(t){
+  if(typeof firebase==='undefined'||!window._planUser)return;
+  try{
+    await firebase.database().ref('travel_plans/'+ownerUidOf(t)+'/trash/'+t.id).set(tripCloudPayload(t));
+  }catch(e){console.error('[plan] 휴지통 저장 실패',t.id,e);}
+}
 function mirrorToShares(){
   if(typeof firebase==='undefined')return;
   data.trips.forEach(t=>{
@@ -814,8 +915,9 @@ async function pushAllToCloud(){
   if(typeof firebase==='undefined'||!window._planUser)return;
   try{
     await Promise.all(data.trips.map(pushTripToCloud));
+    await Promise.all(data.trash.map(pushTrashToCloud));
     const dels=_pendingDeletes;_pendingDeletes=[];
-    await Promise.all(dels.map(d=>firebase.database().ref('travel_plans/'+d.ownerUid+'/trips/'+d.tripId).remove().catch(e=>console.error('[plan] 삭제 실패',e))));
+    await Promise.all(dels.map(d=>firebase.database().ref('travel_plans/'+d.ownerUid+'/'+(d.bucket||'trips')+'/'+d.tripId).remove().catch(e=>console.error('[plan] 삭제 실패',e))));
     _localDirty=false;
     mirrorToShares();
   }catch(e){console.error('[plan] 저장 실패',e);}
@@ -890,10 +992,19 @@ function startListenOwn(uid){
       refreshOpenModalIfNeeded();
       syncShareBridges();
     },err=>{console.error('[plan] 읽기 실패',err);toast('⚠️ 클라우드 연결에 문제가 있어요');});
+    _trashRefG=firebase.database().ref('travel_plans/'+uid+'/trash');
+    _trashRefG.on('value',snap=>{
+      if(_localDirty)return;
+      mergeTrashSnapshot(snap.val());
+      sanitizeData();
+      renderTrashBadge();
+      if(document.getElementById('trashModalBg').classList.contains('show'))renderTrashList();
+    },err=>console.error('[trash] 읽기 실패',err));
   });
 }
 function stopOwnListener(){
   if(_ownTripsRefG){_ownTripsRefG.off();_ownTripsRefG=null;}
+  if(_trashRefG){_trashRefG.off();_trashRefG=null;}
 }
 function startCollabIndexListener(myUid){
   stopCollabListeners();
@@ -1011,7 +1122,7 @@ function toast(msg){
 function enterGuestMode(msg){
   const ls=document.getElementById('lockScreen');
   if(ls)ls.style.display='none';
-  renderStats();renderGrid();
+  renderStats();renderGrid();renderTrashBadge();
   if(msg)toast(msg);
 }
 function fmtNum(n){return (n||0).toLocaleString('ko-KR');}
@@ -1092,18 +1203,98 @@ function addTrip(){
 
 function deleteTrip(id,ev){
   if(ev)ev.stopPropagation();
-  if(!confirm('이 여행 계획을 삭제할까요?'))return;
-  const t=getTrip(id);
-  if(t)_pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id});
-  data.trips=data.trips.filter(t=>t.id!==id);
+  if(!confirm('이 여행 계획을 삭제할까요? (휴지통으로 이동해요)'))return;
+  const idx=data.trips.findIndex(t=>t.id===id);
+  if(idx===-1)return;
+  const t=data.trips[idx];
+  _pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id,bucket:'trips'});
+  data.trips.splice(idx,1);
+  t.deletedAt=Date.now();
+  data.trash.push(t);
   save();
-  toast('🗑️ 삭제했어요');
+  renderTrashBadge();
+  toast('🗑️ 휴지통으로 이동했어요');
 }
 function clearAll(){
   if(!data.trips.length)return;
-  if(!confirm('모든 여행 계획을 삭제할까요? 되돌릴 수 없어요.'))return;
-  data.trips.forEach(t=>_pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id}));
-  data.trips=[];save();toast('🗑️ 전체 삭제했어요');
+  if(!confirm('모든 여행 계획을 삭제할까요? (휴지통으로 이동해요)'))return;
+  data.trips.forEach(t=>{
+    _pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id,bucket:'trips'});
+    t.deletedAt=Date.now();
+    data.trash.push(t);
+  });
+  data.trips=[];save();
+  renderTrashBadge();
+  toast('🗑️ 전체 삭제했어요 (휴지통으로 이동)');
+}
+
+/* ---- 휴지통 ---- */
+function renderTrashBadge(){
+  const b=document.getElementById('trashBadge');
+  if(!b)return;
+  const n=(data.trash||[]).length;
+  b.textContent=n>0?n:'';
+  b.style.display=n>0?'':'none';
+}
+function openTrash(){
+  renderTrashList();
+  document.getElementById('trashModalBg').classList.add('show');
+}
+function closeTrash(){
+  document.getElementById('trashModalBg').classList.remove('show');
+}
+function renderTrashList(){
+  const box=document.getElementById('trashList');
+  if(!box)return;
+  const list=[...(data.trash||[])].sort((a,b)=>(b.deletedAt||0)-(a.deletedAt||0));
+  box.innerHTML=list.length?list.map(t=>{
+    const d=t.deletedAt?new Date(t.deletedAt):null;
+    const dLbl=d?`${d.getMonth()+1}/${d.getDate()} 삭제됨`:'';
+    return `<div class="tour-row">
+      <span style="font-size:22px">${t.flag||'🌍'}</span>
+      <div class="tour-body">
+        <div class="tour-name">${escapeHtml(t.cntry||'')} · ${escapeHtml(t.city||'')}</div>
+        <div class="tour-meta">${dLbl}</div>
+      </div>
+      <button class="btn-sm" onclick="restoreTrip('${t.id}')">↺ 복원</button>
+      <button class="chk-del" onclick="permanentlyDeleteTrash('${t.id}')">✕</button>
+    </div>`;
+  }).join(''):'<div class="empty" style="padding:2rem">휴지통이 비어있어요</div>';
+}
+function restoreTrip(id){
+  const idx=data.trash.findIndex(t=>t.id===id);
+  if(idx===-1)return;
+  const t=data.trash[idx];
+  data.trash.splice(idx,1);
+  delete t.deletedAt;
+  data.trips.push(t);
+  _pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id,bucket:'trash'});
+  save();
+  renderTrashBadge();
+  renderTrashList();
+  toast('↺ 복원했어요');
+}
+function permanentlyDeleteTrash(id){
+  if(!confirm('이 여행을 영구적으로 삭제할까요? 되돌릴 수 없어요.'))return;
+  const idx=data.trash.findIndex(t=>t.id===id);
+  if(idx===-1)return;
+  const t=data.trash[idx];
+  _pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id,bucket:'trash'});
+  data.trash.splice(idx,1);
+  save();
+  renderTrashBadge();
+  renderTrashList();
+  toast('🗑️ 영구적으로 삭제했어요');
+}
+function emptyTrash(){
+  if(!data.trash.length)return;
+  if(!confirm('휴지통을 완전히 비울까요? 되돌릴 수 없어요.'))return;
+  data.trash.forEach(t=>_pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id,bucket:'trash'}));
+  data.trash=[];
+  save();
+  renderTrashBadge();
+  renderTrashList();
+  toast('🗑️ 휴지통을 비웠어요');
 }
 
 function renderStats(){
@@ -1122,7 +1313,9 @@ function renderGrid(){
   const sorted=[...data.trips].sort((a,b)=>(a.df||'9999').localeCompare(b.df||'9999'));
   grid.innerHTML=sorted.map(t=>{
     const dateStr=t.df?(fmtD(t.df)+(t.dt&&t.dt!==t.df?' ~ '+fmtD(t.dt):'')):'날짜 미정';
-    const plannedSums=currencySumsForItems((t.days||[]).flatMap(d=>d.items));
+    const catSums=budgetCategories(t);
+    const plannedSums={};
+    catSums.forEach(c=>{Object.keys(c.sums).forEach(cur=>{plannedSums[cur]=(plannedSums[cur]||0)+c.sums[cur];});});
     const planned=plannedSums[t.currency]||0;
     const hasOtherCur=Object.keys(plannedSums).some(c=>c!==t.currency);
     const stars=t.stars?'⭐'.repeat(t.stars):'';
@@ -1185,6 +1378,9 @@ function renderDayPanel(){
         <select onchange="updateItem(${idx},'currency',this.value)">
           ${CURRENCY_OPTIONS.map(c=>`<option ${(it.currency||'KRW')===c?'selected':''}>${c}</option>`).join('')}
         </select>
+        <select class="cat-sel" onchange="updateItem(${idx},'category',this.value)">
+          ${CATEGORY_OPTIONS.map(c=>`<option ${(it.category||'기타')===c?'selected':''}>${c}</option>`).join('')}
+        </select>
       </div>
       <button class="item-del" onclick="removeItem(${idx})">✕</button>
     </div>`).join('');
@@ -1199,7 +1395,7 @@ function renderDayPanel(){
 }
 function addItem(){
   const t=getTrip(curTripId);
-  t.days[curDayIdx].items.push({time:'',title:'',memo:'',cost:'',currency:t.currency||'KRW'});
+  t.days[curDayIdx].items.push({time:'',title:'',memo:'',cost:'',currency:t.currency||'KRW',category:'기타'});
   save();renderDayPanel();
 }
 function updateItem(idx,field,val){
@@ -1228,27 +1424,70 @@ function fmtCurrencySums(sums){
   if(!keys.length)return '-';
   return keys.map(c=>fmtNum(sums[c])+' '+c).join(' · ');
 }
+function budgetCategories(t){
+  const cats=[];
+  const flightSum={};
+  [t.flightOut,t.flightIn].forEach(f=>{
+    if(f&&f.cost){const c=f.currency||'KRW';flightSum[c]=(flightSum[c]||0)+(Number(f.cost)||0);}
+  });
+  cats.push({icon:'✈️',label:'항공편',sums:flightSum});
+  const lgSum={};
+  if(t.lodging&&t.lodging.cost){const c=t.lodging.currency||'KRW';lgSum[c]=(lgSum[c]||0)+(Number(t.lodging.cost)||0);}
+  cats.push({icon:'🏨',label:'숙소',sums:lgSum});
+  const tourSum={};
+  (t.tours||[]).forEach(tr=>{if(tr.cost){const c=tr.currency||'KRW';tourSum[c]=(tourSum[c]||0)+(Number(tr.cost)||0);}});
+  cats.push({icon:'🎫',label:'투어',sums:tourSum});
+  const allItems=(t.days||[]).flatMap(d=>d.items);
+  const catDefs=[['식비','🍜'],['쇼핑','🛍️'],['교통','🚌'],['입장료','🎟️'],['기타','📦']];
+  catDefs.forEach(([label,icon])=>{
+    const sums=currencySumsForItems(allItems.filter(i=>(i.category||'기타')===label));
+    cats.push({icon,label,sums});
+  });
+  return cats;
+}
 function renderBudgetTab(){
   const t=getTrip(curTripId);
-  const allItems=t.days.flatMap(d=>d.items);
-  const sums=currencySumsForItems(allItems);
+  const cats=budgetCategories(t);
+  const grand={};
+  cats.forEach(c=>{Object.keys(c.sums).forEach(cur=>{grand[cur]=(grand[cur]||0)+c.sums[cur];});});
   const budget=t.cost||0;
-  const plannedMain=sums[t.currency]||0;
+  const plannedMain=grand[t.currency]||0;
   document.getElementById('bTotalBudget').textContent=fmtNum(budget)+' '+t.currency;
   const plannedEl=document.getElementById('bTotalPlanned');
-  plannedEl.textContent=fmtCurrencySums(sums);
-  plannedEl.classList.toggle('multi',Object.keys(sums).length>1);
+  plannedEl.textContent=fmtCurrencySums(grand);
+  plannedEl.classList.toggle('multi',Object.keys(grand).length>1);
   const diff=budget-plannedMain;
   const diffEl=document.getElementById('bDiff');
   diffEl.textContent=(diff<0?'-':'')+fmtNum(Math.abs(diff))+' '+t.currency;
   diffEl.parentElement.classList.toggle('over',diff<0);
-  document.getElementById('budgetByDay').innerHTML=t.days.map((d,i)=>{
-    const daySums=currencySumsForItems(d.items);
-    const lbl=d.date?fmtD(d.date):('Day '+(i+1));
-    return `<div class="bar-row" style="display:flex;justify-content:space-between;font-size:11px;padding:6px 4px;border-bottom:1px solid var(--brd)">
-      <span>${lbl}</span><b style="color:var(--accent)">${fmtCurrencySums(daySums)}</b>
-    </div>`;
-  }).join('');
+  document.getElementById('budgetByCategory').innerHTML=cats.map(c=>
+    `<div class="cat-row"><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.label}</span><span class="cat-amt">${fmtCurrencySums(c.sums)}</span></div>`
+  ).join('');
+  renderSplitCalc();
+}
+function renderSplitCalc(){
+  const t=getTrip(curTripId);
+  const sc=t.splitCalc||{amount:'',currency:'KRW',people:2};
+  const amtEl=document.getElementById('splitAmount');
+  const curEl=document.getElementById('splitCurrency');
+  const pplEl=document.getElementById('splitPeople');
+  if(!amtEl)return;
+  amtEl.value=sc.amount?Number(sc.amount).toLocaleString('en-US'):'';
+  curEl.value=sc.currency||'KRW';
+  pplEl.value=sc.people||2;
+  const amt=Number(sc.amount)||0;
+  const people=Number(sc.people)||1;
+  const per=people>0?Math.round(amt/people):0;
+  document.getElementById('splitResult').innerHTML=(amt&&people)?
+    `<div class="big">1인당 ${fmtNum(per)} ${sc.currency}</div><div class="sub">${fmtNum(amt)} ${sc.currency} ÷ ${people}명</div>`
+    :`<div class="sub">금액과 인원 수를 입력하면 1인당 금액을 계산해드려요</div>`;
+}
+function updateSplitCalc(field,val){
+  const t=getTrip(curTripId);
+  if(!t.splitCalc||typeof t.splitCalc!=='object')t.splitCalc={};
+  t.splitCalc[field]=val;
+  save();
+  renderSplitCalc();
 }
 
 function renderChecklist(){
@@ -1341,12 +1580,16 @@ function renderTravelTab(){
   document.getElementById('foDepTime').value=fo.depTime||'';
   document.getElementById('foArrTime').value=fo.arrTime||'';
   document.getElementById('foDuration').value=fo.duration||'';
+  document.getElementById('foCost').value=fo.cost?Number(fo.cost).toLocaleString('en-US'):'';
+  document.getElementById('foCurrency').value=fo.currency||'KRW';
   document.getElementById('foMemo').value=fo.memo||'';
   document.getElementById('fiAirline').value=fi.airline||'';
   document.getElementById('fiFlightNo').value=fi.flightNo||'';
   document.getElementById('fiDepTime').value=fi.depTime||'';
   document.getElementById('fiArrTime').value=fi.arrTime||'';
   document.getElementById('fiDuration').value=fi.duration||'';
+  document.getElementById('fiCost').value=fi.cost?Number(fi.cost).toLocaleString('en-US'):'';
+  document.getElementById('fiCurrency').value=fi.currency||'KRW';
   document.getElementById('fiMemo').value=fi.memo||'';
   document.getElementById('lgName').value=lg.name||'';
   document.getElementById('lgLocation').value=lg.location||'';
@@ -1355,6 +1598,8 @@ function renderTravelTab(){
   document.getElementById('lgCheckInTime').value=lg.checkInTime||'';
   document.getElementById('lgCheckOut').value=lg.checkOut||'';
   document.getElementById('lgCheckOutTime').value=lg.checkOutTime||'';
+  document.getElementById('lgCost').value=lg.cost?Number(lg.cost).toLocaleString('en-US'):'';
+  document.getElementById('lgCurrency').value=lg.currency||'KRW';
   document.getElementById('lgMemo').value=lg.memo||'';
 }
 function updateFlight(key,field,val){
@@ -1989,6 +2234,7 @@ function renderSharedView(container,t){
     if(f.airline||f.flightNo)parts.push([f.airline,f.flightNo].filter(Boolean).join(' '));
     if(f.depTime||f.arrTime)parts.push([f.depTime,f.arrTime].filter(Boolean).join(' → '));
     if(f.duration)parts.push('소요 '+f.duration);
+    if(f.cost)parts.push(fmtNum(f.cost)+' '+(f.currency||'KRW'));
     return parts.join(' · ');
   }
   function ticketsHtml(tickets){
@@ -2063,13 +2309,17 @@ function renderSharedView(container,t){
   });
   html+=`</div>`;
 
+  const catSumsShared=budgetCategories(t);
+  const grandShared={};
+  catSumsShared.forEach(c=>{Object.keys(c.sums).forEach(cur=>{grandShared[cur]=(grandShared[cur]||0)+c.sums[cur];});});
   html+=`<div class="shared-card"><h3>💰 예산</h3>
-    <div style="display:flex;justify-content:space-between;font-size:12px">
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">
       <span>예산</span><b>${t.cost?fmtNum(t.cost)+' '+t.currency:'미정'}</b>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
-      <span>일정표 합계</span><b style="color:var(--accent)">${fmtCurrencySums(plannedSums)}</b>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;border-bottom:1px dashed var(--brd);padding-bottom:8px">
+      <span>전체 합계</span><b style="color:var(--accent)">${fmtCurrencySums(grandShared)}</b>
     </div>
+    ${catSumsShared.map(c=>`<div class="cat-row"><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.label}</span><span class="cat-amt">${fmtCurrencySums(c.sums)}</span></div>`).join('')}
   </div>`;
 
   if(t.checklist&&t.checklist.length){
@@ -2166,6 +2416,7 @@ if(_shareId){
   load();
   renderStats();
   renderGrid();
+  renderTrashBadge();
 
   /* ===== Firebase: Google 로그인 + 계정별 클라우드 저장 + 협업자 초대 ===== */
   (function(){
@@ -2241,7 +2492,7 @@ if(_shareId){
     window._planLogout=async function(){
       if(!confirm('로그아웃 하시겠어요? (저장된 계획표는 클라우드에 그대로 남아있고, 이 기기의 임시 캐시만 정리돼요)'))return;
       try{localStorage.removeItem(LS_KEY);}catch(e){}
-      data={trips:[]};
+      data={trips:[],trash:[]};
       renderStats();renderGrid();
       await _auth.signOut();
     };
