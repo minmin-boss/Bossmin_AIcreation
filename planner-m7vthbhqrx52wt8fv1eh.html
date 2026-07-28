@@ -491,6 +491,14 @@ input[type=file]{display:none}
         <label class="fl">여행 상세 메모</label>
         <textarea id="mNote" oninput="onInfoEdit()" placeholder="숙소, 항공편, 예약 정보 등을 자유롭게 적어보세요"></textarea>
       </div>
+
+      <div class="sec-ttl" style="margin-top:14px">👥 함께 편집하는 사람 (각자 자기 구글 계정으로 로그인)</div>
+      <div id="collabList" style="margin-bottom:8px"></div>
+      <div class="row-btn" id="collabAddRow">
+        <input type="email" id="inviteEmail" placeholder="초대할 사람의 Google 이메일"/>
+        <button class="btn-add" onclick="inviteCollaborator()">초대</button>
+      </div>
+      <div style="font-size:10px;color:var(--text2);margin-top:4px">* 상대방이 이 사이트에 한 번 이상 로그인한 적이 있어야 초대할 수 있어요. 초대하면 상대방이 자기 계정으로 로그인했을 때 이 여행이 자동으로 보여요.</div>
     </div>
 
     <button class="modal-map-btn" onclick="exportOneToMap()">🗺️ 이 여행을 지도로 보내기</button>
@@ -715,6 +723,7 @@ function sanitizeTrip(t){
   if(typeof t.note!=='string')t.note=t.note||'';
   if(typeof t.memo!=='string')t.memo=t.memo||'';
   if(typeof t.shareId!=='string')t.shareId=t.shareId||'';
+  if(!t.collaborators||typeof t.collaborators!=='object')t.collaborators={};
   t.flightOut=sanitizeFlight(t.flightOut,t.flightOutImg);
   t.flightIn=sanitizeFlight(t.flightIn,t.flightInImg);
   t.lodging=sanitizeLodging(t.lodging);
@@ -735,6 +744,251 @@ function sanitizeTrip(t){
 function sanitizeData(){
   if(!data||!Array.isArray(data.trips))data.trips=[];
   data.trips=data.trips.map(sanitizeTrip);
+}
+
+/* ===== 클라우드 동기화 (트립별 개별 저장 + 협업자 실시간 공동편집) ===== */
+let _ownTripsRefG=null;
+let _collabIndexRefG=null;
+let _collabListeners={}; // key `${ownerUid}:${tripId}` -> ref
+let _shareBridges={};
+let _pendingDeletes=[]; // {ownerUid,tripId}
+let _saveTimerG=null;
+
+function tripCloudPayload(t){
+  const c=Object.assign({},t);
+  delete c._sharedFrom;
+  return c;
+}
+function ownerUidOf(t){
+  return t._sharedFrom||(window._planUser&&window._planUser.uid);
+}
+function refreshOpenModalIfNeeded(){
+  const mb=document.getElementById('modalBg');
+  if(mb&&mb.classList.contains('show')&&curTripId){
+    const t=getTrip(curTripId);
+    if(t){
+      renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();
+      renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');
+      renderTours();renderCollaborators();
+    }
+  }
+}
+function mergeOwnTripsSnapshot(val){
+  const ids=new Set(Object.keys(val||{}));
+  data.trips=data.trips.filter(t=>t._sharedFrom||ids.has(t.id));
+  Object.keys(val||{}).forEach(id=>{
+    const raw=val[id];
+    if(!raw||typeof raw!=='object')return;
+    const t=sanitizeTrip(raw);
+    delete t._sharedFrom;
+    const idx=data.trips.findIndex(x=>x.id===id&&!x._sharedFrom);
+    if(idx>-1)data.trips[idx]=t;else data.trips.push(t);
+  });
+}
+function upsertCollabTrip(ownerUid,tripId,raw){
+  if(!raw){
+    data.trips=data.trips.filter(t=>!(t._sharedFrom===ownerUid&&t.id===tripId));
+    return;
+  }
+  const t=sanitizeTrip(raw);
+  t._sharedFrom=ownerUid;
+  const idx=data.trips.findIndex(x=>x.id===tripId&&x._sharedFrom===ownerUid);
+  if(idx>-1)data.trips[idx]=t;else data.trips.push(t);
+}
+
+async function pushTripToCloud(t){
+  if(typeof firebase==='undefined'||!window._planUser)return;
+  try{
+    await firebase.database().ref('travel_plans/'+ownerUidOf(t)+'/trips/'+t.id).set(tripCloudPayload(t));
+  }catch(e){console.error('[plan] 트립 저장 실패',t.id,e);}
+}
+function mirrorToShares(){
+  if(typeof firebase==='undefined')return;
+  data.trips.forEach(t=>{
+    if(t.shareId){
+      firebase.database().ref('shared_plans/'+t.shareId+'/trip').set(t).catch(e=>console.error('[share-mirror] 반영 실패',e));
+    }
+  });
+}
+async function pushAllToCloud(){
+  if(typeof firebase==='undefined'||!window._planUser)return;
+  try{
+    await Promise.all(data.trips.map(pushTripToCloud));
+    const dels=_pendingDeletes;_pendingDeletes=[];
+    await Promise.all(dels.map(d=>firebase.database().ref('travel_plans/'+d.ownerUid+'/trips/'+d.tripId).remove().catch(e=>console.error('[plan] 삭제 실패',e))));
+    _localDirty=false;
+    mirrorToShares();
+  }catch(e){console.error('[plan] 저장 실패',e);}
+}
+function scheduleCloudSaveTop(){
+  clearTimeout(_saveTimerG);
+  _saveTimerG=setTimeout(()=>{
+    pushAllToCloud();
+    // 안전장치: 어떤 이유로든 응답이 없어도 몇 초 후에는 강제로 풀어서
+    // 다른 기기의 실시간 반영이 영구히 막히지 않도록 함
+    clearTimeout(window._dirtyFailsafe);
+    window._dirtyFailsafe=setTimeout(()=>{_localDirty=false;},5000);
+  },800);
+}
+_cloudSaveFn=scheduleCloudSaveTop;
+
+function attachShareBridge(shareId){
+  const ref=firebase.database().ref('shared_plans/'+shareId+'/trip');
+  ref.on('value',snap=>{
+    const cloudTrip=snap.val();
+    if(!cloudTrip)return;
+    const idx=data.trips.findIndex(t=>t.shareId===shareId);
+    if(idx===-1)return;
+    const incoming=sanitizeTrip(cloudTrip);
+    incoming.shareId=shareId;
+    if(JSON.stringify(incoming)===JSON.stringify(data.trips[idx]))return;
+    data.trips[idx]=incoming;
+    save();
+    refreshOpenModalIfNeeded();
+    toast('🔄 함께 편집 중인 내용이 반영됐어요');
+  },err=>console.error('[share-bridge] 읽기 실패',err));
+  _shareBridges[shareId]=ref;
+}
+function syncShareBridges(){
+  if(typeof firebase==='undefined')return;
+  const activeIds=new Set();
+  data.trips.forEach(t=>{
+    if(t.shareId){
+      activeIds.add(t.shareId);
+      if(!_shareBridges[t.shareId])attachShareBridge(t.shareId);
+    }
+  });
+  Object.keys(_shareBridges).forEach(id=>{
+    if(!activeIds.has(id)){
+      _shareBridges[id].off();
+      delete _shareBridges[id];
+    }
+  });
+}
+
+async function migrateOwnTripsIfNeeded(uid){
+  const ref=firebase.database().ref('travel_plans/'+uid+'/trips');
+  try{
+    const snap=await ref.once('value');
+    const val=snap.val();
+    if(Array.isArray(val)){
+      const map={};
+      val.forEach(t=>{if(t&&t.id)map[t.id]=t;});
+      await ref.set(map);
+    }
+  }catch(e){console.error('[plan] 마이그레이션 실패',e);}
+}
+function startListenOwn(uid){
+  stopOwnListener();
+  migrateOwnTripsIfNeeded(uid).then(()=>{
+    _ownTripsRefG=firebase.database().ref('travel_plans/'+uid+'/trips');
+    _ownTripsRefG.on('value',snap=>{
+      if(_localDirty)return; // 아직 클라우드에 못 올린 로컬 변경이 있으면 덮어쓰지 않음
+      mergeOwnTripsSnapshot(snap.val());
+      sanitizeData();
+      renderStats();renderGrid();
+      refreshOpenModalIfNeeded();
+      syncShareBridges();
+    },err=>{console.error('[plan] 읽기 실패',err);toast('⚠️ 클라우드 연결에 문제가 있어요');});
+  });
+}
+function stopOwnListener(){
+  if(_ownTripsRefG){_ownTripsRefG.off();_ownTripsRefG=null;}
+}
+function startCollabIndexListener(myUid){
+  stopCollabListeners();
+  _collabIndexRefG=firebase.database().ref('collab_index/'+myUid);
+  _collabIndexRefG.on('value',snap=>{
+    const val=snap.val()||{};
+    const wanted={};
+    Object.values(val).forEach(entry=>{
+      if(entry&&entry.ownerUid&&entry.tripId)wanted[entry.ownerUid+':'+entry.tripId]=entry;
+    });
+    Object.keys(_collabListeners).forEach(key=>{
+      if(!wanted[key]){
+        _collabListeners[key].off();
+        delete _collabListeners[key];
+        const parts=key.split(':');
+        upsertCollabTrip(parts[0],parts[1],null);
+      }
+    });
+    Object.keys(wanted).forEach(key=>{
+      if(_collabListeners[key])return;
+      const entry=wanted[key];
+      const ref=firebase.database().ref('travel_plans/'+entry.ownerUid+'/trips/'+entry.tripId);
+      ref.on('value',snap2=>{
+        if(_localDirty)return;
+        upsertCollabTrip(entry.ownerUid,entry.tripId,snap2.val());
+        sanitizeData();
+        renderStats();renderGrid();
+        refreshOpenModalIfNeeded();
+      },err=>console.error('[collab] 읽기 실패',err));
+      _collabListeners[key]=ref;
+    });
+    renderStats();renderGrid();
+  },err=>console.error('[collab-index] 읽기 실패',err));
+}
+function stopCollabListeners(){
+  if(_collabIndexRefG){_collabIndexRefG.off();_collabIndexRefG=null;}
+  Object.values(_collabListeners).forEach(ref=>ref.off());
+  _collabListeners={};
+}
+
+/* ---- 협업자 초대 ---- */
+function renderCollaborators(){
+  const t=getTrip(curTripId);
+  if(!t)return;
+  const box=document.getElementById('collabList');
+  const addRow=document.getElementById('collabAddRow');
+  if(!box)return;
+  if(t._sharedFrom){
+    if(addRow)addRow.style.display='none';
+    box.innerHTML='<div style="font-size:11px;color:var(--text2)">🔗 다른 사람이 초대해준 여행이에요. 자유롭게 함께 수정해보세요.</div>';
+    return;
+  }
+  if(addRow)addRow.style.display='';
+  const collabs=Object.entries(t.collaborators||{});
+  box.innerHTML=collabs.length?collabs.map(([uid,info])=>`
+    <div class="chk-row"><span>👤 ${escapeHtml((info&&(info.name||info.email))||uid)}</span>
+      <button class="chk-del" onclick="removeCollaborator('${uid}')">✕</button>
+    </div>`).join(''):'<div style="font-size:11px;color:var(--text3)">아직 초대한 사람이 없어요</div>';
+}
+async function inviteCollaborator(){
+  const emailEl=document.getElementById('inviteEmail');
+  const email=emailEl.value.trim().toLowerCase();
+  if(!email){toast('📧 이메일을 입력해주세요');return;}
+  if(typeof firebase==='undefined'){toast('⚠️ 네트워크 연결을 확인해주세요');return;}
+  const t=getTrip(curTripId);
+  if(!t)return;
+  if(t._sharedFrom){toast('⚠️ 공유받은 여행에는 초대를 추가할 수 없어요');return;}
+  if(window._planUser&&email===(window._planUser.email||'').toLowerCase()){toast('🙂 이미 내 여행이에요');return;}
+  const emailKey=email.replace(/\./g,',');
+  try{
+    const snap=await firebase.database().ref('directory/'+emailKey).once('value');
+    const entry=snap.val();
+    if(!entry||!entry.uid){toast('⚠️ 그 계정이 아직 로그인한 적이 없어요. 먼저 한 번 로그인해달라고 부탁해주세요.');return;}
+    if(!t.collaborators||typeof t.collaborators!=='object')t.collaborators={};
+    t.collaborators[entry.uid]={email,name:entry.name||'',addedAt:Date.now()};
+    save();
+    await firebase.database().ref('collab_index/'+entry.uid+'/'+t.id).set({ownerUid:window._planUser.uid,tripId:t.id});
+    toast('👥 '+(entry.name||email)+'님을 초대했어요');
+    emailEl.value='';
+    renderCollaborators();
+  }catch(e){
+    console.error('[invite] 실패',e);
+    toast('⚠️ 초대에 실패했어요');
+  }
+}
+async function removeCollaborator(uid){
+  if(!confirm('이 사람을 제외할까요?'))return;
+  const t=getTrip(curTripId);
+  if(!t)return;
+  if(t.collaborators)delete t.collaborators[uid];
+  save();
+  renderCollaborators();
+  if(typeof firebase!=='undefined'){
+    firebase.database().ref('collab_index/'+uid+'/'+t.id).remove().catch(e=>console.error('[invite] 제거 실패',e));
+  }
 }
 
 function load(){
@@ -839,6 +1093,8 @@ function addTrip(){
 function deleteTrip(id,ev){
   if(ev)ev.stopPropagation();
   if(!confirm('이 여행 계획을 삭제할까요?'))return;
+  const t=getTrip(id);
+  if(t)_pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id});
   data.trips=data.trips.filter(t=>t.id!==id);
   save();
   toast('🗑️ 삭제했어요');
@@ -846,6 +1102,7 @@ function deleteTrip(id,ev){
 function clearAll(){
   if(!data.trips.length)return;
   if(!confirm('모든 여행 계획을 삭제할까요? 되돌릴 수 없어요.'))return;
+  data.trips.forEach(t=>_pendingDeletes.push({ownerUid:ownerUidOf(t),tripId:t.id}));
   data.trips=[];save();toast('🗑️ 전체 삭제했어요');
 }
 
@@ -872,7 +1129,7 @@ function renderGrid(){
     return `<div class="tc" onclick="openTrip('${t.id}')">
       <button class="cdel" onclick="deleteTrip('${t.id}',event)">✕</button>
       <div class="ct"><span class="cflag">${t.flag}</span>
-        <div><div class="cn">${t.cntry} · ${t.city}</div><div class="cc">${t.continent||''}</div></div>
+        <div><div class="cn">${t.cntry} · ${t.city}${t._sharedFrom?' <span style="font-size:10px;color:var(--accent)">🤝공유</span>':''}</div><div class="cc">${t.continent||''}</div></div>
       </div>
       <div class="cd">📅 ${dateStr}</div>
       ${t.memo?`<div class="cm">👥 ${escapeHtml(t.memo)}</div>`:''}
@@ -888,8 +1145,8 @@ function getTrip(id){return data.trips.find(t=>t.id===id);}
 function openTrip(id){
   curTripId=id;curDayIdx=0;curTab='plan';essentialsOpen=false;
   const t=getTrip(id);
-  document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획`;
-  renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();
+  document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획${t._sharedFrom?' 🤝':''}`;
+  renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();renderCollaborators();
   switchTab('plan');
   document.getElementById('modalBg').classList.add('show');
 }
@@ -1692,7 +1949,7 @@ async function createShareLink(permission){
     await firebase.database().ref('shared_plans/'+shareId).set({permission,trip:snapshot});
     if(permission==='edit'){
       save(); // 내 계획표에도 shareId를 저장해서, 이후 공유본 변경이 내 계정에도 반영되도록 연결
-      if(window._syncShareBridges)window._syncShareBridges();
+      if(typeof syncShareBridges==='function')syncShareBridges();
     }
     const url=location.origin+location.pathname+'?share='+shareId;
     const label=permission==='edit'?'✏️ 함께 편집할 수 있는':'👀 보기 전용';
@@ -1910,7 +2167,7 @@ if(_shareId){
   renderStats();
   renderGrid();
 
-  /* ===== Firebase: Google 로그인 + 계정별 클라우드 저장 ===== */
+  /* ===== Firebase: Google 로그인 + 계정별 클라우드 저장 + 협업자 초대 ===== */
   (function(){
     if(typeof firebase==='undefined'){
       console.error('[Firebase] SDK 로드 실패 — 스크립트 태그를 불러오지 못했어요 (네트워크/차단 프로그램 확인)');
@@ -1918,142 +2175,76 @@ if(_shareId){
       return;
     }
     // 여행지도와 같은 Firebase 프로젝트/같은 Google 계정을 사용해요.
-    // 계획표 데이터는 지도의 방문 기록과 겹치지 않게 'travel_plans/{uid}' 경로에 따로 저장돼요.
+    // 계획표 데이터는 지도의 방문 기록과 겹치지 않게 'travel_plans/{uid}/trips/{tripId}' 경로에 트립별로 따로 저장돼요.
     const _FC=FIREBASE_CONFIG;
 
     firebase.initializeApp(_FC);
     const _auth=firebase.auth();
-    const _rtdb=firebase.database();
     const _gp=new firebase.auth.GoogleAuthProvider();
     try{_auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(e){}
 
-  let _unsubRef=null;
-  let _saveTimer=null;
-  const _shareBridges={};
-
-  function planRef(uid){return _rtdb.ref('travel_plans/'+uid);}
-
-  function mirrorToShares(){
-    data.trips.forEach(t=>{
-      if(t.shareId){
-        _rtdb.ref('shared_plans/'+t.shareId+'/trip').set(t).catch(e=>console.error('[share-mirror] 반영 실패',e));
-      }
-    });
-  }
-  function attachShareBridge(shareId){
-    const ref=_rtdb.ref('shared_plans/'+shareId+'/trip');
-    ref.on('value',snap=>{
-      const cloudTrip=snap.val();
-      if(!cloudTrip)return;
-      const idx=data.trips.findIndex(t=>t.shareId===shareId);
-      if(idx===-1)return;
-      const incoming=sanitizeTrip(cloudTrip);
-      incoming.shareId=shareId;
-      if(JSON.stringify(incoming)===JSON.stringify(data.trips[idx]))return;
-      data.trips[idx]=incoming;
-      save();
-      if(curTripId===incoming.id&&document.getElementById('modalBg').classList.contains('show')){
-        renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();
-      }
-      toast('🔄 함께 편집 중인 내용이 반영됐어요');
-    },err=>console.error('[share-bridge] 읽기 실패',err));
-    _shareBridges[shareId]=ref;
-  }
-  function syncShareBridges(){
-    const activeIds=new Set();
-    data.trips.forEach(t=>{
-      if(t.shareId){
-        activeIds.add(t.shareId);
-        if(!_shareBridges[t.shareId])attachShareBridge(t.shareId);
-      }
-    });
-    Object.keys(_shareBridges).forEach(id=>{
-      if(!activeIds.has(id)){
-        _shareBridges[id].off();
-        delete _shareBridges[id];
-      }
-    });
-  }
-  window._mirrorToShares=mirrorToShares;
-  window._syncShareBridges=syncShareBridges;
-
-  async function pushToCloud(){
-    if(!window._planUser)return;
-    try{
-      await planRef(window._planUser.uid).set(data);
-      _localDirty=false;
-      mirrorToShares();
-    }catch(e){console.error('[plan] 저장 실패',e);}
-  }
-  function scheduleCloudSave(){
-    clearTimeout(_saveTimer);
-    _saveTimer=setTimeout(pushToCloud,800);
-  }
-  _cloudSaveFn=scheduleCloudSave;
-
-  function startListen(uid){
-    if(_unsubRef){_unsubRef.off();_unsubRef=null;}
-    _unsubRef=planRef(uid);
-    _unsubRef.on('value',snap=>{
-      const cloud=snap.val();
-      if(_localDirty)return; // 아직 클라우드에 못 올린 로컬 변경이 있으면 덮어쓰지 않음
-      if(cloud&&Array.isArray(cloud.trips)){
-        data.trips=cloud.trips;
-        sanitizeData(); // Firebase는 빈 배열([])을 저장하지 않아서 누락된 필드를 채워줌
-        renderStats();renderGrid();
-        pushToCloud(); // 보정된 형태를 클라우드에도 다시 반영
-        syncShareBridges();
-      }else if(data.trips&&data.trips.length){
-        // 클라우드에 데이터가 없고 로그인 전 로컬에 만든 계획이 있으면 자동으로 올려줌
-        pushToCloud();
-        syncShareBridges();
-      }
-    },err=>{console.error('[plan] 읽기 실패',err);toast('⚠️ 클라우드 연결에 문제가 있어요');});
-  }
-
-  function updateUserUI(user){
-    const badge=document.getElementById('userInfo');
-    if(!badge)return;
-    badge.style.display='flex';
-    const av=document.getElementById('userAvatar');
-    if(av)av.src=user.photoURL||'';
-    const nm=document.getElementById('userName');
-    if(nm)nm.textContent=user.displayName||user.email||'';
-  }
-
-  _auth.onAuthStateChanged(user=>{
-    if(user){
-      window._planUser=user;
-      const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
-      updateUserUI(user);
-      startListen(user.uid);
-    }else{
-      window._planUser=null;
-      const ls=document.getElementById('lockScreen');if(ls)ls.style.display='flex';
-      const badge=document.getElementById('userInfo');if(badge)badge.style.display='none';
-      if(_unsubRef){_unsubRef.off();_unsubRef=null;}
+    function updateUserUI(user){
+      const badge=document.getElementById('userInfo');
+      if(!badge)return;
+      badge.style.display='flex';
+      const av=document.getElementById('userAvatar');
+      if(av)av.src=user.photoURL||'';
+      const nm=document.getElementById('userName');
+      if(nm)nm.textContent=user.displayName||user.email||'';
     }
-  });
-
-  window._planGoogleLogin=async function(){
-    const btn=document.getElementById('googleBtn');
-    if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
-    try{
-      await _auth.signInWithPopup(_gp);
-    }catch(e){
-      const err=document.getElementById('lockErr');
-      if(err)err.textContent=e.code==='auth/popup-closed-by-user'?'로그인 창이 닫혔어요.':('로그인 실패: '+e.message);
-    }finally{
-      if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:16px">🔐</span> Google로 로그인';}
+    function registerDirectory(user){
+      if(!user.email)return;
+      const emailKey=user.email.toLowerCase().replace(/\./g,',');
+      firebase.database().ref('directory/'+emailKey).set({
+        uid:user.uid,name:user.displayName||'',email:user.email
+      }).catch(e=>console.error('[directory] 등록 실패',e));
     }
-  };
-  window._planLogout=async function(){
-    if(!confirm('로그아웃 하시겠어요? (저장된 계획표는 클라우드에 그대로 남아있고, 이 기기의 임시 캐시만 정리돼요)'))return;
-    try{localStorage.removeItem(LS_KEY);}catch(e){}
-    data={trips:[]};
-    renderStats();renderGrid();
-    await _auth.signOut();
-  };
+
+    _auth.getRedirectResult().catch(e=>{
+      if(e&&e.code&&e.code!=='auth/no-auth-event')console.error('[auth] 리다이렉트 로그인 처리 실패',e);
+    });
+
+    _auth.onAuthStateChanged(user=>{
+      if(user){
+        window._planUser=user;
+        const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
+        updateUserUI(user);
+        registerDirectory(user);
+        startListenOwn(user.uid);
+        startCollabIndexListener(user.uid);
+      }else{
+        window._planUser=null;
+        const ls=document.getElementById('lockScreen');if(ls)ls.style.display='flex';
+        const badge=document.getElementById('userInfo');if(badge)badge.style.display='none';
+        stopOwnListener();
+        stopCollabListeners();
+      }
+    });
+
+    window._planGoogleLogin=async function(){
+      const btn=document.getElementById('googleBtn');
+      if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
+      const isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      try{
+        if(isMobile){
+          await _auth.signInWithRedirect(_gp);
+          return; // 페이지가 이동하므로 이후 코드는 실행되지 않음
+        }
+        await _auth.signInWithPopup(_gp);
+      }catch(e){
+        const err=document.getElementById('lockErr');
+        if(err)err.textContent=e.code==='auth/popup-closed-by-user'?'로그인 창이 닫혔어요.':('로그인 실패: '+e.message);
+      }finally{
+        if(btn){btn.disabled=false;btn.innerHTML='<span style="font-size:16px">🔐</span> Google로 로그인';}
+      }
+    };
+    window._planLogout=async function(){
+      if(!confirm('로그아웃 하시겠어요? (저장된 계획표는 클라우드에 그대로 남아있고, 이 기기의 임시 캐시만 정리돼요)'))return;
+      try{localStorage.removeItem(LS_KEY);}catch(e){}
+      data={trips:[]};
+      renderStats();renderGrid();
+      await _auth.signOut();
+    };
   })();
 }
 </script>
