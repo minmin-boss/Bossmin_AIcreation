@@ -127,18 +127,22 @@ textarea.ta-lg{height:84px}
 .dtab:hover{border-color:var(--accent);color:var(--accent)}
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,123,213,.3)}
 .day-panel{background:var(--bg2);border-radius:12px;padding:12px;margin-bottom:1rem}
-.item-row{display:grid;grid-template-columns:112px 1.3fr 1fr 90px 30px;gap:6px;margin-bottom:6px;align-items:center}
+.item-row{display:grid;grid-template-columns:112px 1.2fr 1fr 128px 30px;gap:6px;margin-bottom:6px;align-items:center}
 .item-row input{height:32px;font-size:11.5px}
+.cost-cell{display:flex;gap:3px;min-width:0}
+.cost-cell input{flex:1.3;min-width:0}
+.cost-cell select{flex:1;min-width:48px;height:32px;font-size:10px;padding:0 2px}
 .item-del{width:30px;height:30px;background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;border-radius:6px}
 .item-del:hover{color:#fff;background:var(--pin)}
-.item-hdr{display:grid;grid-template-columns:112px 1.3fr 1fr 90px 30px;gap:6px;margin-bottom:6px;font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 2px}
+.item-hdr{display:grid;grid-template-columns:112px 1.2fr 1fr 128px 30px;gap:6px;margin-bottom:6px;font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.05em;padding:0 2px}
 .add-item-btn{width:100%;margin-top:4px;height:32px;background:var(--surf);border:1.5px dashed var(--brd2);border-radius:8px;color:var(--text2);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f)}
 .add-item-btn:hover{border-color:var(--accent);color:var(--accent)}
 .day-total{text-align:right;font-size:11px;color:var(--text2);margin-top:6px;font-weight:700}
 .day-total b{color:var(--accent)}
 .budget-sum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1rem}
 .bsum-box{background:var(--surf);border:1.5px solid var(--brd);border-radius:12px;padding:12px 14px;text-align:center}
-.bsum-box .v{font-size:18px;font-weight:800;color:var(--accent)}
+.bsum-box .v{font-size:18px;font-weight:800;color:var(--accent);word-break:break-word}
+.bsum-box .v.multi{font-size:12px;line-height:1.5}
 .bsum-box.over .v{color:var(--pin)}
 .bsum-box .l{font-size:9px;color:var(--text2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
 .chk-list{display:flex;flex-direction:column;gap:6px;margin-bottom:.8rem}
@@ -163,6 +167,9 @@ textarea.ta-lg{height:84px}
 .modal-save-btn:hover{background:var(--accent2)}
 .modal-map-btn{width:100%;background:#fff;color:var(--accent);border:1.5px solid var(--accent);border-radius:9px;padding:10px;font-size:12.5px;font-weight:800;cursor:pointer;font-family:var(--f);margin-top:.6rem}
 .modal-map-btn:hover{background:var(--acl)}
+.share-btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:.6rem}
+.share-btn-row .modal-map-btn{margin-top:0}
+.modal-map-btn.edit{background:var(--acl);border-color:var(--accent)}
 #toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(120px);background:var(--accent);color:white;font-family:var(--f);font-size:12px;font-weight:800;padding:10px 20px;border-radius:9px;z-index:600;transition:transform .3s cubic-bezier(.34,1.56,.64,1);pointer-events:none;box-shadow:0 4px 16px rgba(58,123,213,.4);max-width:90vw;text-align:center}
 #toast.show{transform:translateX(-50%) translateY(0)}
 input[type=file]{display:none}
@@ -205,8 +212,9 @@ input[type=file]{display:none}
 .stats{gap:.5rem;flex-wrap:wrap}
 .stat{padding:5px 10px}
 .sv{font-size:18px}
-.item-row,.item-hdr{grid-template-columns:70px 1fr 1fr 30px;}
-.item-row input:nth-child(4),.item-hdr span:nth-child(4){display:none}
+.item-row,.item-hdr{grid-template-columns:60px 1fr 106px 26px;}
+.item-row input:nth-child(3),.item-hdr span:nth-child(3){display:none}
+.cost-cell select{min-width:40px;font-size:9px}
 .budget-sum{grid-template-columns:1fr}
 .modal-box{padding:1rem}
 }
@@ -296,7 +304,7 @@ input[type=file]{display:none}
       <div class="fg">
         <label class="fl">여행 경비(예산)</label>
         <div style="display:flex;gap:6px">
-          <input type="text" id="costIn" placeholder="0" style="flex:1.4" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+          <input type="text" id="costIn" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)"/>
           <select id="currIn" style="flex:1;min-width:64px">
             <option>KRW</option><option>USD</option><option>JPY</option>
             <option>EUR</option><option>CNY</option><option>THB</option>
@@ -450,7 +458,15 @@ input[type=file]{display:none}
         </div>
         <div class="row3">
           <div class="fg"><label class="fl">날짜</label><input type="date" id="tourDate"/></div>
-          <div class="fg"><label class="fl">비용</label><input id="tourCost" placeholder="0" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/></div>
+          <div class="fg"><label class="fl">비용</label>
+            <div style="display:flex;gap:6px">
+              <input id="tourCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)"/>
+              <select id="tourCurrency" style="flex:1;min-width:64px">
+                <option>KRW</option><option>USD</option><option>JPY</option>
+                <option>EUR</option><option>CNY</option><option>THB</option>
+              </select>
+            </div>
+          </div>
           <div class="fg"><label class="fl">메모</label><input id="tourMemo" placeholder="시간, 인원 등"/></div>
         </div>
         <div class="tour-attach-row">
@@ -478,7 +494,10 @@ input[type=file]{display:none}
     </div>
 
     <button class="modal-map-btn" onclick="exportOneToMap()">🗺️ 이 여행을 지도로 보내기</button>
-    <button class="modal-map-btn" onclick="createShareLink()">🔗 일행에게 공유 링크 만들기</button>
+    <div class="share-btn-row">
+      <button class="modal-map-btn" onclick="createShareLink('view')">👀 보기 전용 링크</button>
+      <button class="modal-map-btn edit" onclick="createShareLink('edit')">✏️ 함께 편집 링크</button>
+    </div>
     <button class="modal-save-btn" onclick="closeModal()">✔ 완료</button>
   </div>
 </div>
@@ -562,7 +581,7 @@ input[type=file]{display:none}
         <div class="fg"><label class="fl">도시</label><input id="impCity" placeholder="예: 오사카"/></div>
         <div class="fg"><label class="fl">예산</label>
           <div style="display:flex;gap:6px">
-            <input id="impCost" placeholder="0" style="flex:1.4" oninput="this.value=this.value.replace(/[^0-9]/g,'')"/>
+            <input id="impCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)"/>
             <select id="impCurr" style="flex:1;min-width:64px"><option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option></select>
           </div>
         </div>
@@ -630,6 +649,7 @@ const COUNTRIES=[
 {name:"뉴질랜드",en:"New Zealand",flag:"🇳🇿",continent:"오세아니아"},
 ];
 const ESSENTIAL_ITEMS=["여권/신분증","충전기/보조배터리","상비약","세면도구","카메라","현금/카드","우산/우비","기내용 파우치"];
+const CURRENCY_OPTIONS=["KRW","USD","JPY","EUR","CNY","THB"];
 
 let data={trips:[]};
 let curTripId=null;
@@ -674,6 +694,7 @@ function sanitizeLodging(l){
 }
 function sanitizeTrip(t){
   t=t||{};
+  const defCur=t.currency||'KRW';
   if(!Array.isArray(t.days)||!t.days.length){
     t.days=genDays(t.df,t.dt);
   }else{
@@ -683,7 +704,8 @@ function sanitizeTrip(t){
         time:(i&&i.time)||'',
         title:(i&&i.title)||'',
         memo:(i&&i.memo)||'',
-        cost:(i&&i.cost!=null)?i.cost:''
+        cost:(i&&i.cost!=null)?i.cost:'',
+        currency:(i&&i.currency)||defCur
       })):[]
     }));
   }
@@ -692,6 +714,7 @@ function sanitizeTrip(t){
   if(typeof t.stars!=='number')t.stars=0;
   if(typeof t.note!=='string')t.note=t.note||'';
   if(typeof t.memo!=='string')t.memo=t.memo||'';
+  if(typeof t.shareId!=='string')t.shareId=t.shareId||'';
   t.flightOut=sanitizeFlight(t.flightOut,t.flightOutImg);
   t.flightIn=sanitizeFlight(t.flightIn,t.flightInImg);
   t.lodging=sanitizeLodging(t.lodging);
@@ -703,6 +726,7 @@ function sanitizeTrip(t){
     agency:(tr&&tr.agency)||'',
     date:(tr&&tr.date)||'',
     cost:(tr&&tr.cost!=null)?tr.cost:'',
+    currency:(tr&&tr.currency)||'KRW',
     memo:(tr&&tr.memo)||'',
     attach:(tr&&tr.attach&&tr.attach.value)?{type:tr.attach.type==='link'?'link':'image',value:tr.attach.value}:null
   })).filter(tr=>tr.name);
@@ -737,6 +761,11 @@ function enterGuestMode(msg){
   if(msg)toast(msg);
 }
 function fmtNum(n){return (n||0).toLocaleString('ko-KR');}
+function formatNumInput(el){
+  const raw=el.value.replace(/[^0-9]/g,'');
+  el.value=raw?Number(raw).toLocaleString('en-US'):'';
+}
+function stripComma(v){return (v||'').toString().replace(/,/g,'').trim();}
 function fmtD(d){return d?d.replace(/-/g,'.'):null;}
 function seasonOf(dstr){
   if(!dstr)return'';
@@ -784,7 +813,7 @@ function addTrip(){
   if(!city){toast('🏙️ 도시를 입력해주세요');document.getElementById('cityIn').focus();return;}
   const df=document.getElementById('dfIn').value;
   const dt=document.getElementById('dtIn').value;
-  const cost=document.getElementById('costIn').value.trim();
+  const cost=stripComma(document.getElementById('costIn').value);
   const currency=document.getElementById('currIn').value;
   const memo=document.getElementById('memoIn').value.trim();
   const cont=document.getElementById('contSel').value;
@@ -836,7 +865,9 @@ function renderGrid(){
   const sorted=[...data.trips].sort((a,b)=>(a.df||'9999').localeCompare(b.df||'9999'));
   grid.innerHTML=sorted.map(t=>{
     const dateStr=t.df?(fmtD(t.df)+(t.dt&&t.dt!==t.df?' ~ '+fmtD(t.dt):'')):'날짜 미정';
-    const planned=(t.days||[]).reduce((s,d)=>s+d.items.reduce((s2,i)=>s2+(Number(i.cost)||0),0),0);
+    const plannedSums=currencySumsForItems((t.days||[]).flatMap(d=>d.items));
+    const planned=plannedSums[t.currency]||0;
+    const hasOtherCur=Object.keys(plannedSums).some(c=>c!==t.currency);
     const stars=t.stars?'⭐'.repeat(t.stars):'';
     return `<div class="tc" onclick="openTrip('${t.id}')">
       <button class="cdel" onclick="deleteTrip('${t.id}',event)">✕</button>
@@ -846,7 +877,7 @@ function renderGrid(){
       <div class="cd">📅 ${dateStr}</div>
       ${t.memo?`<div class="cm">👥 ${escapeHtml(t.memo)}</div>`:''}
       ${stars?`<div class="cm">${stars}</div>`:''}
-      <div class="cbudget"><span>예산 ${t.cost?fmtNum(t.cost)+' '+t.currency:'미정'}</span><b>계획 ${fmtNum(planned)}</b></div>
+      <div class="cbudget"><span>예산 ${t.cost?fmtNum(t.cost)+' '+t.currency:'미정'}</span><b>계획 ${fmtNum(planned)}${hasOtherCur?' +':''}</b></div>
     </div>`;
   }).join('');
 }
@@ -892,21 +923,26 @@ function renderDayPanel(){
       <input type="text" placeholder="예: 06:15 - 09:05" value="${escapeHtml(it.time||'')}" onchange="updateItem(${idx},'time',this.value)"/>
       <input type="text" placeholder="활동 / 장소" value="${escapeHtml(it.title||'')}" onchange="updateItem(${idx},'title',this.value)"/>
       <input type="text" placeholder="메모" value="${escapeHtml(it.memo||'')}" onchange="updateItem(${idx},'memo',this.value)"/>
-      <input type="text" placeholder="비용" value="${it.cost||''}" oninput="this.value=this.value.replace(/[^0-9]/g,'')" onchange="updateItem(${idx},'cost',this.value)"/>
+      <div class="cost-cell">
+        <input type="text" placeholder="비용" value="${it.cost?Number(it.cost).toLocaleString('en-US'):''}" oninput="formatNumInput(this)" onchange="updateItem(${idx},'cost',stripComma(this.value))"/>
+        <select onchange="updateItem(${idx},'currency',this.value)">
+          ${CURRENCY_OPTIONS.map(c=>`<option ${(it.currency||'KRW')===c?'selected':''}>${c}</option>`).join('')}
+        </select>
+      </div>
       <button class="item-del" onclick="removeItem(${idx})">✕</button>
     </div>`).join('');
-  const total=d.items.reduce((s,i)=>s+(Number(i.cost)||0),0);
+  const sums=currencySumsForItems(d.items);
   document.getElementById('dayPanels').innerHTML=`
     <div class="day-panel">
       <div class="item-hdr"><span>시간</span><span>활동/장소</span><span>메모</span><span>비용</span><span></span></div>
       ${rows||'<div style="font-size:11px;color:var(--text3);padding:6px 2px">아직 일정이 없어요. 아래에서 추가해보세요.</div>'}
       <button class="add-item-btn" onclick="addItem()">+ 일정 추가</button>
-      <div class="day-total">이 날 지출 계획: <b>${fmtNum(total)}</b></div>
+      <div class="day-total">이 날 지출 계획: <b>${fmtCurrencySums(sums)}</b></div>
     </div>`;
 }
 function addItem(){
   const t=getTrip(curTripId);
-  t.days[curDayIdx].items.push({time:'',title:'',memo:'',cost:''});
+  t.days[curDayIdx].items.push({time:'',title:'',memo:'',cost:'',currency:t.currency||'KRW'});
   save();renderDayPanel();
 }
 function updateItem(idx,field,val){
@@ -921,21 +957,39 @@ function removeItem(idx){
   save();renderDayPanel();
 }
 
+function currencySumsForItems(items){
+  const sums={};
+  (items||[]).forEach(i=>{
+    const c=i.currency||'KRW';
+    const amt=Number(i.cost)||0;
+    if(amt)sums[c]=(sums[c]||0)+amt;
+  });
+  return sums;
+}
+function fmtCurrencySums(sums){
+  const keys=Object.keys(sums);
+  if(!keys.length)return '-';
+  return keys.map(c=>fmtNum(sums[c])+' '+c).join(' · ');
+}
 function renderBudgetTab(){
   const t=getTrip(curTripId);
-  const planned=t.days.reduce((s,d)=>s+d.items.reduce((s2,i)=>s2+(Number(i.cost)||0),0),0);
+  const allItems=t.days.flatMap(d=>d.items);
+  const sums=currencySumsForItems(allItems);
   const budget=t.cost||0;
+  const plannedMain=sums[t.currency]||0;
   document.getElementById('bTotalBudget').textContent=fmtNum(budget)+' '+t.currency;
-  document.getElementById('bTotalPlanned').textContent=fmtNum(planned);
-  const diff=budget-planned;
+  const plannedEl=document.getElementById('bTotalPlanned');
+  plannedEl.textContent=fmtCurrencySums(sums);
+  plannedEl.classList.toggle('multi',Object.keys(sums).length>1);
+  const diff=budget-plannedMain;
   const diffEl=document.getElementById('bDiff');
-  diffEl.textContent=(diff<0?'-':'')+fmtNum(Math.abs(diff));
+  diffEl.textContent=(diff<0?'-':'')+fmtNum(Math.abs(diff))+' '+t.currency;
   diffEl.parentElement.classList.toggle('over',diff<0);
   document.getElementById('budgetByDay').innerHTML=t.days.map((d,i)=>{
-    const sum=d.items.reduce((s,it)=>s+(Number(it.cost)||0),0);
+    const daySums=currencySumsForItems(d.items);
     const lbl=d.date?fmtD(d.date):('Day '+(i+1));
     return `<div class="bar-row" style="display:flex;justify-content:space-between;font-size:11px;padding:6px 4px;border-bottom:1px solid var(--brd)">
-      <span>${lbl}</span><b style="color:var(--accent)">${fmtNum(sum)}</b>
+      <span>${lbl}</span><b style="color:var(--accent)">${fmtCurrencySums(daySums)}</b>
     </div>`;
   }).join('');
 }
@@ -1144,6 +1198,7 @@ async function addTour(){
   const agencyEl=document.getElementById('tourAgency');
   const dateEl=document.getElementById('tourDate');
   const costEl=document.getElementById('tourCost');
+  const currEl=document.getElementById('tourCurrency');
   const memoEl=document.getElementById('tourMemo');
   const urlEl=document.getElementById('tourUrl');
   const fileEl=document.getElementById('tourFile');
@@ -1156,7 +1211,8 @@ async function addTour(){
     name,
     agency:agencyEl.value.trim(),
     date:dateEl.value,
-    cost:costEl.value.trim(),
+    cost:stripComma(costEl.value),
+    currency:currEl.value,
     memo:memoEl.value.trim(),
     attach:null
   };
@@ -1174,6 +1230,7 @@ async function addTour(){
   save();
   renderTours();
   [nameEl,agencyEl,dateEl,costEl,memoEl,urlEl].forEach(el=>el.value='');
+  currEl.value='KRW';
   fileEl.value='';
   toast('🎫 투어를 추가했어요');
 }
@@ -1194,7 +1251,7 @@ function renderTours(){
     const attach=tr.attach?(tr.attach.type==='image'
       ?`<img class="ticket-thumb" src="${tr.attach.value}" onclick="openLightboxUrl('${tr.attach.value}')"/>`
       :`<a class="ticket-link" href="${tr.attach.value}" target="_blank" rel="noopener">🔗</a>`):'';
-    const meta=[tr.agency,tr.date?fmtD(tr.date):'',tr.cost?fmtNum(tr.cost):''].filter(Boolean).join(' · ');
+    const meta=[tr.agency,tr.date?fmtD(tr.date):'',tr.cost?fmtNum(tr.cost)+' '+(tr.currency||'KRW'):''].filter(Boolean).join(' · ');
     return `<div class="tour-row">
       ${attach}
       <div class="tour-body">
@@ -1535,7 +1592,7 @@ function buildFromItems(parsedItems){
     const cntry=document.getElementById('impCntry').value.trim();
     const city=document.getElementById('impCity').value.trim();
     if(!cntry||!city){toast('🌍 국가와 도시를 입력해주세요');return;}
-    const cost=document.getElementById('impCost').value.trim();
+    const cost=stripComma(document.getElementById('impCost').value);
     const currency=document.getElementById('impCurr').value;
     const c=COUNTRIES.find(x=>x.name===cntry);
     const df=dates[0]||'';const dt=dates[dates.length-1]||df;
@@ -1622,22 +1679,28 @@ const FIREBASE_CONFIG={
   appId:"1:157327971618:web:b5eca73698db54034b817b"
 };
 
-/* ===== 공유 링크(읽기 전용) ===== */
-async function createShareLink(){
+/* ===== 공유 링크(보기전용 / 함께편집) ===== */
+async function createShareLink(permission){
   if(typeof firebase==='undefined'){toast('⚠️ 공유 기능을 사용할 수 없어요 (네트워크 확인)');return;}
   if(!window._planUser){toast('⚠️ 로그인 후 이용해주세요');return;}
   const t=getTrip(curTripId);
   if(!t)return;
   const shareId='s'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+  if(permission==='edit')t.shareId=shareId;
   const snapshot=sanitizeTrip(JSON.parse(JSON.stringify(t)));
   try{
-    await firebase.database().ref('shared_plans/'+shareId).set(snapshot);
+    await firebase.database().ref('shared_plans/'+shareId).set({permission,trip:snapshot});
+    if(permission==='edit'){
+      save(); // 내 계획표에도 shareId를 저장해서, 이후 공유본 변경이 내 계정에도 반영되도록 연결
+      if(window._syncShareBridges)window._syncShareBridges();
+    }
     const url=location.origin+location.pathname+'?share='+shareId;
+    const label=permission==='edit'?'✏️ 함께 편집할 수 있는':'👀 보기 전용';
     try{
       await navigator.clipboard.writeText(url);
-      toast('🔗 공유 링크를 복사했어요!');
+      toast(label+' 링크를 복사했어요!');
     }catch(e){
-      window.prompt('아래 링크를 복사해서 전달해주세요:',url);
+      window.prompt(label+' 링크를 복사해서 전달해주세요:',url);
     }
   }catch(e){
     console.error('[share] 생성 실패',e);
@@ -1647,7 +1710,7 @@ async function createShareLink(){
 
 function renderSharedView(container,t){
   const dateStr=t.df?(fmtD(t.df)+(t.dt&&t.dt!==t.df?' ~ '+fmtD(t.dt):'')):'날짜 미정';
-  const planned=t.days.reduce((s,d)=>s+d.items.reduce((s2,i)=>s2+(Number(i.cost)||0),0),0);
+  const plannedSums=currencySumsForItems(t.days.flatMap(d=>d.items));
   const stars=t.stars?'⭐'.repeat(t.stars):'';
 
   let html=`<div class="shared-wrap">
@@ -1712,7 +1775,7 @@ function renderSharedView(container,t){
       const attach=tr.attach?(tr.attach.type==='image'
         ?`<img class="ticket-thumb" src="${tr.attach.value}" onclick="openLightboxUrl('${tr.attach.value}')"/>`
         :`<a class="ticket-link" href="${tr.attach.value}" target="_blank" rel="noopener">🔗</a>`):'';
-      const meta=[tr.agency,tr.date?fmtD(tr.date):'',tr.cost?fmtNum(tr.cost):''].filter(Boolean).join(' · ');
+      const meta=[tr.agency,tr.date?fmtD(tr.date):'',tr.cost?fmtNum(tr.cost)+' '+(tr.currency||'KRW'):''].filter(Boolean).join(' · ');
       html+=`<div class="tour-row">
         ${attach}
         <div class="tour-body">
@@ -1736,7 +1799,7 @@ function renderSharedView(container,t){
         html+=`<div class="shared-item">
           <div class="time">${escapeHtml(it.time||'')}</div>
           <div class="body">${escapeHtml(it.title||'')}${it.memo?`<div class="memo">${escapeHtml(it.memo)}</div>`:''}</div>
-          <div class="cost">${it.cost?fmtNum(it.cost):''}</div>
+          <div class="cost">${it.cost?fmtNum(it.cost)+' '+(it.currency||'KRW'):''}</div>
         </div>`;
       });
     }
@@ -1748,7 +1811,7 @@ function renderSharedView(container,t){
       <span>예산</span><b>${t.cost?fmtNum(t.cost)+' '+t.currency:'미정'}</b>
     </div>
     <div style="display:flex;justify-content:space-between;font-size:12px;margin-top:4px">
-      <span>일정표 합계</span><b style="color:var(--accent)">${fmtNum(planned)}</b>
+      <span>일정표 합계</span><b style="color:var(--accent)">${fmtCurrencySums(plannedSums)}</b>
     </div>
   </div>`;
 
@@ -1771,31 +1834,77 @@ function renderSharedView(container,t){
   container.innerHTML=html;
 }
 
-function initSharedView(shareId){
+function initShareEntry(shareId){
   const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
-  const wrapEl=document.querySelector('.wrap');if(wrapEl)wrapEl.style.display='none';
-  const sw=document.getElementById('sharedWrap');
-  sw.style.display='';
-  sw.innerHTML='<div class="shared-msg">불러오는 중...</div>';
   if(typeof firebase==='undefined'){
+    const wrapEl=document.querySelector('.wrap');if(wrapEl)wrapEl.style.display='none';
+    const sw=document.getElementById('sharedWrap');
+    sw.style.display='';
     sw.innerHTML='<div class="shared-msg">이 페이지를 열 수 없어요. 네트워크 상태를 확인해주세요.</div>';
     return;
   }
   try{if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);}catch(e){}
   firebase.database().ref('shared_plans/'+shareId).once('value').then(snap=>{
     const raw=snap.val();
-    if(!raw){sw.innerHTML='<div class="shared-msg">존재하지 않거나 삭제된 공유 링크예요.</div>';return;}
-    const t=sanitizeTrip(raw);
-    renderSharedView(sw,t);
+    if(!raw){
+      const wrapEl=document.querySelector('.wrap');if(wrapEl)wrapEl.style.display='none';
+      const sw=document.getElementById('sharedWrap');
+      sw.style.display='';
+      sw.innerHTML='<div class="shared-msg">존재하지 않거나 삭제된 공유 링크예요.</div>';
+      return;
+    }
+    if(raw.permission==='edit'){
+      initSharedEditMode(shareId,raw.trip);
+    }else{
+      const wrapEl=document.querySelector('.wrap');if(wrapEl)wrapEl.style.display='none';
+      const sw=document.getElementById('sharedWrap');
+      sw.style.display='';
+      renderSharedView(sw,sanitizeTrip(raw.trip||raw));
+    }
   }).catch(err=>{
     console.error('[shared] 읽기 실패',err);
-    sw.innerHTML='<div class="shared-msg">불러오는 중 문제가 발생했어요.</div>';
+    const sw=document.getElementById('sharedWrap');
+    if(sw){sw.style.display='';sw.innerHTML='<div class="shared-msg">불러오는 중 문제가 발생했어요.</div>';}
   });
+}
+
+function initSharedEditMode(shareId,tripRaw){
+  const trip=sanitizeTrip(tripRaw||{});
+  data={trips:[trip]};
+  const formBox=document.querySelector('.form-box');if(formBox)formBox.style.display='none';
+  const listHdr=document.querySelector('.list-hdr');if(listHdr)listHdr.style.display='none';
+  const grid=document.getElementById('tripGrid');if(grid)grid.style.display='none';
+  const wrapEl=document.querySelector('.wrap');
+  if(wrapEl&&formBox){
+    const banner=document.createElement('div');
+    banner.className='notice';
+    banner.innerHTML='<span>✏️</span><div><b>함께 편집 중인 여행</b> — 이 링크로 들어온 누구나 실시간으로 함께 수정할 수 있어요. 창을 닫아도 아래 버튼으로 다시 열 수 있어요.<br><button class="btn-add" style="margin-top:8px" onclick="openTrip(\''+trip.id+'\')">📝 편집창 열기</button></div>';
+    wrapEl.insertBefore(banner,formBox);
+  }
+  const ref=firebase.database().ref('shared_plans/'+shareId+'/trip');
+  _cloudSaveFn=function(){
+    clearTimeout(window._shareSaveTimer);
+    window._shareSaveTimer=setTimeout(()=>{
+      ref.set(data.trips[0]).then(()=>{_localDirty=false;}).catch(e=>console.error('[share-edit] 저장 실패',e));
+    },800);
+  };
+  ref.on('value',snap=>{
+    if(_localDirty)return;
+    const cloudTrip=snap.val();
+    if(!cloudTrip)return;
+    data.trips[0]=sanitizeTrip(cloudTrip);
+    renderStats();
+    if(document.getElementById('modalBg').classList.contains('show')){
+      renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();
+    }
+  });
+  renderStats();
+  openTrip(trip.id);
 }
 
 const _shareId=new URLSearchParams(location.search).get('share');
 if(_shareId){
-  initSharedView(_shareId);
+  initShareEntry(_shareId);
 }else{
   load();
   renderStats();
@@ -1820,14 +1929,60 @@ if(_shareId){
 
   let _unsubRef=null;
   let _saveTimer=null;
+  const _shareBridges={};
 
   function planRef(uid){return _rtdb.ref('travel_plans/'+uid);}
+
+  function mirrorToShares(){
+    data.trips.forEach(t=>{
+      if(t.shareId){
+        _rtdb.ref('shared_plans/'+t.shareId+'/trip').set(t).catch(e=>console.error('[share-mirror] 반영 실패',e));
+      }
+    });
+  }
+  function attachShareBridge(shareId){
+    const ref=_rtdb.ref('shared_plans/'+shareId+'/trip');
+    ref.on('value',snap=>{
+      const cloudTrip=snap.val();
+      if(!cloudTrip)return;
+      const idx=data.trips.findIndex(t=>t.shareId===shareId);
+      if(idx===-1)return;
+      const incoming=sanitizeTrip(cloudTrip);
+      incoming.shareId=shareId;
+      if(JSON.stringify(incoming)===JSON.stringify(data.trips[idx]))return;
+      data.trips[idx]=incoming;
+      save();
+      if(curTripId===incoming.id&&document.getElementById('modalBg').classList.contains('show')){
+        renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();
+      }
+      toast('🔄 함께 편집 중인 내용이 반영됐어요');
+    },err=>console.error('[share-bridge] 읽기 실패',err));
+    _shareBridges[shareId]=ref;
+  }
+  function syncShareBridges(){
+    const activeIds=new Set();
+    data.trips.forEach(t=>{
+      if(t.shareId){
+        activeIds.add(t.shareId);
+        if(!_shareBridges[t.shareId])attachShareBridge(t.shareId);
+      }
+    });
+    Object.keys(_shareBridges).forEach(id=>{
+      if(!activeIds.has(id)){
+        _shareBridges[id].off();
+        delete _shareBridges[id];
+      }
+    });
+  }
+  window._mirrorToShares=mirrorToShares;
+  window._syncShareBridges=syncShareBridges;
 
   async function pushToCloud(){
     if(!window._planUser)return;
     try{
       await planRef(window._planUser.uid).set(data);
       _localDirty=false;
+      mirrorToShares();
     }catch(e){console.error('[plan] 저장 실패',e);}
   }
   function scheduleCloudSave(){
@@ -1847,9 +2002,11 @@ if(_shareId){
         sanitizeData(); // Firebase는 빈 배열([])을 저장하지 않아서 누락된 필드를 채워줌
         renderStats();renderGrid();
         pushToCloud(); // 보정된 형태를 클라우드에도 다시 반영
+        syncShareBridges();
       }else if(data.trips&&data.trips.length){
         // 클라우드에 데이터가 없고 로그인 전 로컬에 만든 계획이 있으면 자동으로 올려줌
         pushToCloud();
+        syncShareBridges();
       }
     },err=>{console.error('[plan] 읽기 실패',err);toast('⚠️ 클라우드 연결에 문제가 있어요');});
   }
