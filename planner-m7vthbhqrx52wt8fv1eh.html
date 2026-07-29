@@ -788,7 +788,7 @@ function sanitizeTrip(t){
             amount:(c&&c.amount!=null)?c.amount:'',
             currency:(c&&c.currency)||defCur,
             category:(c&&c.category)||'기타'
-          })).filter(c=>c.amount!=='');
+          }));
         }else if(i.cost!=null&&i.cost!==''){
           // 예전 단일 비용 필드를 costs 배열로 이전
           costs=[{amount:i.cost,currency:i.currency||defCur,category:i.category||'기타'}];
