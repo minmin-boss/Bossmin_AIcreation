@@ -129,6 +129,10 @@ textarea.ta-lg{height:84px}
 .dtab:hover{border-color:var(--accent);color:var(--accent)}
 .dtab.on{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 2px 8px rgba(58,123,213,.3)}
 .day-panel{background:var(--bg2);border-radius:12px;padding:12px;margin-bottom:1rem}
+.day-toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.day-toolbar input[type=file]{display:none}
+.day-photo-thumb{margin-bottom:10px}
+.day-photo-thumb img{width:100%;max-height:160px;object-fit:cover;border-radius:10px;cursor:pointer;display:block;margin-bottom:6px}
 .item-card{background:var(--surf);border:1.5px solid var(--brd);border-radius:10px;padding:9px;margin-bottom:8px}
 .item-row-top{display:grid;grid-template-columns:100px 1.3fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px}
 .item-row-top input{height:32px;font-size:11.5px}
@@ -223,12 +227,42 @@ input[type=file]{display:none}
 .stats{gap:.5rem;flex-wrap:wrap}
 .stat{padding:5px 10px}
 .sv{font-size:18px}
+.hbtns{gap:6px}
+.hbtn.pri{padding:6px 12px}
 .item-row-top{grid-template-columns:56px 1fr 24px;}
 .item-row-top input:nth-child(3){display:none}
 .cost-line{grid-template-columns:1fr 56px 66px 20px}
 .cost-line input,.cost-line select{font-size:9.5px}
 .budget-sum{grid-template-columns:1fr}
-.modal-box{padding:1rem}
+.modal-box,.imp-box{padding:1rem;max-height:88vh}
+.page-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.page-tab{padding:8px 6px;font-size:11px;white-space:nowrap}
+.ticket-add{grid-template-columns:1fr 1fr;gap:6px}
+.ticket-add input[type=text]{grid-column:1/3}
+.tour-attach-row{grid-template-columns:1fr;gap:6px}
+.share-btn-row{grid-template-columns:1fr;gap:6px}
+.day-tabs{overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+.dtab{white-space:nowrap}
+.cat-row{padding:8px 10px;font-size:11px}
+.cat-row .cat-name{font-size:11px}
+.cat-row .cat-amt{font-size:11px}
+.split-result .big{font-size:17px}
+.tour-row,.chk-row,.ticket-row{padding:8px 9px}
+.star{font-size:22px}
+.mode-btn{font-size:11px;padding:8px 4px}
+.imp-src{grid-template-columns:1fr;gap:6px}
+.imp-src .btn-add{width:100%}
+}
+@media(max-width:420px){
+.cost-line{grid-template-columns:1fr 1fr;grid-template-rows:auto auto}
+.cost-line input,.cost-line select{font-size:11px;height:34px}
+.item-row-top{grid-template-columns:52px 1fr 26px}
+.hl span{font-size:22px}
+.hl h1{font-size:15.5px}
+.hl p{font-size:10px}
+.stat{padding:4px 8px}
+.sv{font-size:16px}
+.sl{font-size:8px}
 }
 </style>
 </head>
@@ -318,8 +352,8 @@ input[type=file]{display:none}
         <div style="display:flex;gap:6px">
           <input type="text" id="costIn" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)"/>
           <select id="currIn" style="flex:1;min-width:64px">
-            <option>KRW</option><option>USD</option><option>JPY</option>
-            <option>EUR</option><option>CNY</option><option>THB</option>
+            <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option>
+            <option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
           </select>
         </div>
       </div>
@@ -377,9 +411,7 @@ input[type=file]{display:none}
 
     <div id="tab-budget" style="display:none">
       <div class="budget-sum">
-        <div class="bsum-box"><div class="v" id="bTotalBudget">0</div><div class="l">계획 예산</div></div>
-        <div class="bsum-box" id="bPlannedBox"><div class="v" id="bTotalPlanned">0</div><div class="l">전체 합계</div></div>
-        <div class="bsum-box"><div class="v" id="bDiff">0</div><div class="l">차액</div></div>
+        <div class="bsum-box" id="bPlannedBox" style="grid-column:1/-1"><div class="v" id="bTotalPlanned">0</div><div class="l">전체 합계</div></div>
       </div>
 
       <div class="sec-ttl">카테고리별 지출</div>
@@ -390,7 +422,7 @@ input[type=file]{display:none}
         <div class="fg"><label class="fl">총 금액</label><input id="splitAmount" placeholder="0" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateSplitCalc('amount',stripComma(this.value))"/></div>
         <div class="fg"><label class="fl">통화</label>
           <select id="splitCurrency" onchange="updateSplitCalc('currency',this.value)">
-            <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
+            <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
           </select>
         </div>
         <div class="fg"><label class="fl">인원 수</label><input type="number" min="1" id="splitPeople" onchange="updateSplitCalc('people',this.value)"/></div>
@@ -429,7 +461,7 @@ input[type=file]{display:none}
           <div style="display:flex;gap:6px">
             <input id="foCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateFlight('flightOut','cost',stripComma(this.value))"/>
             <select id="foCurrency" style="flex:1;min-width:64px" onchange="updateFlight('flightOut','currency',this.value)">
-              <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
+              <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
             </select>
           </div>
         </div>
@@ -462,7 +494,7 @@ input[type=file]{display:none}
           <div style="display:flex;gap:6px">
             <input id="fiCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateFlight('flightIn','cost',stripComma(this.value))"/>
             <select id="fiCurrency" style="flex:1;min-width:64px" onchange="updateFlight('flightIn','currency',this.value)">
-              <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
+              <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
             </select>
           </div>
         </div>
@@ -507,7 +539,7 @@ input[type=file]{display:none}
           <div style="display:flex;gap:6px">
             <input id="lgCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateLodging('cost',stripComma(this.value))"/>
             <select id="lgCurrency" style="flex:1;min-width:64px" onchange="updateLodging('currency',this.value)">
-              <option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option>
+              <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
             </select>
           </div>
         </div>
@@ -529,8 +561,8 @@ input[type=file]{display:none}
             <div style="display:flex;gap:6px">
               <input id="tourCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)"/>
               <select id="tourCurrency" style="flex:1;min-width:64px">
-                <option>KRW</option><option>USD</option><option>JPY</option>
-                <option>EUR</option><option>CNY</option><option>THB</option>
+                <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option>
+                <option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
               </select>
             </div>
           </div>
@@ -657,7 +689,7 @@ input[type=file]{display:none}
         <div class="fg"><label class="fl">예산</label>
           <div style="display:flex;gap:6px">
             <input id="impCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)"/>
-            <select id="impCurr" style="flex:1;min-width:64px"><option>KRW</option><option>USD</option><option>JPY</option><option>EUR</option><option>CNY</option><option>THB</option></select>
+            <select id="impCurr" style="flex:1;min-width:64px"><option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option></select>
           </div>
         </div>
       </div>
@@ -724,7 +756,7 @@ const COUNTRIES=[
 {name:"뉴질랜드",en:"New Zealand",flag:"🇳🇿",continent:"오세아니아"},
 ];
 const ESSENTIAL_ITEMS=["여권/신분증","충전기/보조배터리","상비약","세면도구","카메라","현금/카드","우산/우비","기내용 파우치"];
-const CURRENCY_OPTIONS=["KRW","USD","JPY","EUR","CNY","THB"];
+const CURRENCY_OPTIONS=["KRW","USD","JPY","VND","THB","PHP","TWD","HKD","SGD","CNY","IDR","EUR"];
 const CATEGORY_OPTIONS=["식비","쇼핑","교통","입장료","기타"];
 
 let data={trips:[],trash:[]};
@@ -780,6 +812,7 @@ function sanitizeTrip(t){
   }else{
     t.days=t.days.map(d=>({
       date:(d&&d.date)?d.date:null,
+      photo:(d&&typeof d.photo==='string')?d.photo:'',
       items:Array.isArray(d&&d.items)?d.items.map(i=>{
         i=i||{};
         let costs;
@@ -1195,18 +1228,18 @@ fillCountryOptions();
 
 function genDays(df,dt){
   const days=[];
-  if(!df){return[{date:null,items:[]}];}
+  if(!df){return[{date:null,items:[],photo:''}];}
   const start=new Date(df);
   const end=dt?new Date(dt):start;
-  if(end<start)return[{date:df,items:[]}];
+  if(end<start)return[{date:df,items:[],photo:''}];
   let cur=new Date(start);
   let guard=0;
   while(cur<=end&&guard<60){
-    days.push({date:cur.toISOString().slice(0,10),items:[]});
+    days.push({date:cur.toISOString().slice(0,10),items:[],photo:''});
     cur.setDate(cur.getDate()+1);
     guard++;
   }
-  return days.length?days:[{date:df,items:[]}];
+  return days.length?days:[{date:df,items:[],photo:''}];
 }
 
 function addTrip(){
@@ -1433,12 +1466,51 @@ function renderDayPanel(){
     </div>`).join('');
   const allCosts=d.items.flatMap(i=>i.costs||[]);
   const sums=currencySumsForCosts(allCosts);
+  const photoHtml=d.photo
+    ?`<div class="day-photo-thumb"><img src="${d.photo}" onclick="openLightboxUrl('${d.photo}')"/><button class="chk-del" onclick="removeDayPhoto()">✕ 사진 삭제</button></div>`
+    :'';
   document.getElementById('dayPanels').innerHTML=`
     <div class="day-panel">
+      <div class="day-toolbar">
+        <input type="file" id="dayPhotoFile" accept="image/*" onchange="handleDayPhoto(event)"/>
+        <button class="btn-sm" onclick="document.getElementById('dayPhotoFile').click()">📷 이 날 사진 추가</button>
+        <button class="btn-sm" onclick="openDayMap()">🗺️ 지도에서 보기</button>
+      </div>
+      ${photoHtml}
       ${rows||'<div style="font-size:11px;color:var(--text3);padding:6px 2px">아직 일정이 없어요. 아래에서 추가해보세요.</div>'}
       <button class="add-item-btn" onclick="addItem()">+ 일정 추가</button>
       <div class="day-total">이 날 지출 계획: <b>${fmtCurrencySums(sums)}</b></div>
     </div>`;
+}
+async function handleDayPhoto(ev){
+  const file=ev.target.files[0];
+  if(!file)return;
+  try{
+    const dataUrl=await resizeImageFile(file,1000,0.75);
+    const t=getTrip(curTripId);
+    t.days[curDayIdx].photo=dataUrl;
+    save();
+    renderDayPanel();
+    toast('📷 사진을 추가했어요');
+  }catch(e){
+    toast('⚠️ 이미지를 처리하지 못했어요');
+  }
+  ev.target.value='';
+}
+function removeDayPhoto(){
+  if(!confirm('이 날 사진을 삭제할까요?'))return;
+  const t=getTrip(curTripId);
+  t.days[curDayIdx].photo='';
+  save();
+  renderDayPanel();
+}
+function openDayMap(){
+  const t=getTrip(curTripId);
+  const d=t.days[curDayIdx];
+  const firstPlace=(d.items.find(i=>i.title&&i.title.trim())||{}).title||'';
+  const q=[t.cntry,t.city,firstPlace].filter(Boolean).join(' ');
+  if(!q){toast('🗺️ 국가/도시 정보를 먼저 입력해주세요');return;}
+  window.open('https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(q),'_blank');
 }
 function addItem(){
   const t=getTrip(curTripId);
@@ -1527,16 +1599,9 @@ function renderBudgetTab(){
   const cats=budgetCategories(t);
   const grand={};
   cats.forEach(c=>{Object.keys(c.sums).forEach(cur=>{grand[cur]=(grand[cur]||0)+c.sums[cur];});});
-  const budget=t.cost||0;
-  const plannedMain=grand[t.currency]||0;
-  document.getElementById('bTotalBudget').textContent=fmtNum(budget)+' '+t.currency;
   const plannedEl=document.getElementById('bTotalPlanned');
   plannedEl.textContent=fmtCurrencySums(grand);
   plannedEl.classList.toggle('multi',Object.keys(grand).length>1);
-  const diff=budget-plannedMain;
-  const diffEl=document.getElementById('bDiff');
-  diffEl.textContent=(diff<0?'-':'')+fmtNum(Math.abs(diff))+' '+t.currency;
-  diffEl.parentElement.classList.toggle('over',diff<0);
   document.getElementById('budgetByCategory').innerHTML=cats.map(c=>
     `<div class="cat-row"><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.label}</span><span class="cat-amt">${fmtCurrencySums(c.sums)}</span></div>`
   ).join('');
@@ -2371,6 +2436,7 @@ function renderSharedView(container,t){
   t.days.forEach((d,i)=>{
     const lbl=d.date?(new Date(d.date).getMonth()+1)+'/'+new Date(d.date).getDate()+'일차':('Day '+(i+1));
     html+=`<div class="shared-day-ttl">${i+1}. ${lbl}</div>`;
+    if(d.photo)html+=`<div class="day-photo-thumb"><img src="${d.photo}" onclick="openLightboxUrl('${d.photo}')" style="margin-bottom:8px"/></div>`;
     if(!d.items.length){
       html+=`<div style="font-size:11px;color:var(--text3);padding:4px 0">일정 없음</div>`;
     }else{
@@ -2389,10 +2455,7 @@ function renderSharedView(container,t){
   const catSumsShared=budgetCategories(t);
   const grandShared={};
   catSumsShared.forEach(c=>{Object.keys(c.sums).forEach(cur=>{grandShared[cur]=(grandShared[cur]||0)+c.sums[cur];});});
-  html+=`<div class="shared-card"><h3>💰 예산</h3>
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">
-      <span>예산</span><b>${t.cost?fmtNum(t.cost)+' '+t.currency:'미정'}</b>
-    </div>
+  html+=`<div class="shared-card"><h3>💰 지출 합계</h3>
     <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;border-bottom:1px dashed var(--brd);padding-bottom:8px">
       <span>전체 합계</span><b style="color:var(--accent)">${fmtCurrencySums(grandShared)}</b>
     </div>
