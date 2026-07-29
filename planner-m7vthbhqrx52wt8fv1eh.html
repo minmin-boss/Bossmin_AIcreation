@@ -888,18 +888,14 @@ let _collabIndexRefG=null;
 let _collabListeners={}; // key `${ownerUid}:${tripId}` -> ref
 let _shareBridges={};
 let _pendingDeletes=[]; // {ownerUid,tripId,bucket:'trips'|'trash'}
-let _lastSyncedJSON={}; // 동기화 키 -> 마지막으로 확인된 트립 JSON (실시간 변경 알림용)
+let _lastActivityAt={}; // 동기화 키 -> 이미 화면에 띄운 마지막 활동 시각 (중복 알림 방지)
 function syncKeyFor(t){return t._sharedFrom?t._sharedFrom+':'+t.id:t.id;}
-function notifyChangeFor(key,tripObj){
-  const cur=JSON.stringify(tripObj);
-  const prev=_lastSyncedJSON[key];
-  _lastSyncedJSON[key]=cur;
-  if(prev===undefined||prev===cur)return; // 최초 로드 시엔 기준선만 저장, 알림 없음
-  try{
-    const before=JSON.parse(prev);
-    const changes=diffTripSections(before,tripObj);
-    if(changes.length)toast('✔ 저장됨: '+changes.join(', '));
-  }catch(e){}
+function checkActivity(key,tripObj){
+  const act=tripObj&&tripObj.lastActivity;
+  if(!act||!act.at)return;
+  if(_lastActivityAt[key]===act.at)return; // 이미 본 알림이면 다시 안 띄움
+  _lastActivityAt[key]=act.at;
+  if(act.changes&&act.changes.length)toast('✔ '+(act.byName||'상대방')+'님이 저장함: '+act.changes.join(', '));
 }
 let _saveTimerG=null;
 
@@ -932,7 +928,7 @@ function mergeOwnTripsSnapshot(val){
     delete t._sharedFrom;
     const idx=data.trips.findIndex(x=>x.id===id&&!x._sharedFrom);
     if(idx>-1)data.trips[idx]=t;else data.trips.push(t);
-    notifyChangeFor(id,t);
+    checkActivity(id,t);
   });
 }
 function mergeTrashSnapshot(val){
@@ -962,7 +958,6 @@ async function pushTripToCloud(t){
   if(typeof firebase==='undefined'||!window._planUser)return;
   try{
     await firebase.database().ref('travel_plans/'+ownerUidOf(t)+'/trips/'+t.id).set(tripCloudPayload(t));
-    notifyChangeFor(syncKeyFor(t),t);
   }catch(e){console.error('[plan] 트립 저장 실패',t.id,e);}
 }
 async function pushTrashToCloud(t){
@@ -1116,7 +1111,7 @@ function startCollabIndexListener(myUid){
         sanitizeData();
         const afterObj=data.trips.find(t=>t.id===entry.tripId&&t._sharedFrom===entry.ownerUid)||null;
         const after=JSON.stringify(afterObj);
-        if(afterObj)notifyChangeFor(entry.ownerUid+':'+entry.tripId,afterObj);
+        if(afterObj)checkActivity(entry.ownerUid+':'+entry.tripId,afterObj);
         if(before===after)return; // 에코 → 재렌더링 생략
         renderStats();renderGrid();
         refreshOpenModalIfNeeded();
@@ -1423,9 +1418,11 @@ function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 
 function getTrip(id){return data.trips.find(t=>t.id===id);}
 
+let _tripOpenSnapshot=null;
 function openTrip(id){
   curTripId=id;curDayIdx=0;curTab='plan';essentialsOpen=false;
   const t=getTrip(id);
+  _tripOpenSnapshot=JSON.stringify(t);
   document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획${(t._sharedFrom||(t.collaborators&&Object.keys(t.collaborators).length))?' 🤝':''}`;
   renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();renderCollaborators();
   switchTab('plan');
@@ -1442,6 +1439,21 @@ function diffTripSections(before,after){
   return changes;
 }
 function closeModal(){
+  const t=getTrip(curTripId);
+  if(t&&_tripOpenSnapshot){
+    try{
+      const before=JSON.parse(_tripOpenSnapshot);
+      const changes=diffTripSections(before,t);
+      if(changes.length){
+        const byName=(window._planUser&&(window._planUser.displayName||window._planUser.email))||'게스트';
+        const at=Date.now();
+        t.lastActivity={changes,byName,at};
+        _lastActivityAt[syncKeyFor(t)]=at; // 내 화면은 지금 바로 띄우니, 나중에 되돌아오는 에코에서는 중복으로 안 뜨게 미리 기준 갱신
+        toast('✔ '+byName+'님이 저장함: '+changes.join(', '));
+      }
+    }catch(e){}
+  }
+  _tripOpenSnapshot=null;
   document.getElementById('modalBg').classList.remove('show');
   save();
 }
@@ -2559,7 +2571,7 @@ function initSharedEditMode(shareId,tripRaw){
   _cloudSaveFn=function(){
     clearTimeout(window._shareSaveTimer);
     window._shareSaveTimer=setTimeout(()=>{
-      ref.set(data.trips[0]).then(()=>{_localDirty=false;notifyChangeFor('share:'+shareId,data.trips[0]);}).catch(e=>console.error('[share-edit] 저장 실패',e));
+      ref.set(data.trips[0]).then(()=>{_localDirty=false;}).catch(e=>console.error('[share-edit] 저장 실패',e));
     },800);
   };
   ref.on('value',snap=>{
@@ -2569,7 +2581,7 @@ function initSharedEditMode(shareId,tripRaw){
     const before=JSON.stringify(data.trips[0]);
     const incoming=sanitizeTrip(cloudTrip);
     const after=JSON.stringify(incoming);
-    notifyChangeFor('share:'+shareId,incoming);
+    checkActivity('share:'+shareId,incoming);
     if(before===after)return; // 내가 방금 보낸 내용이 그대로 되돌아온 에코 → 재렌더링(깜빡임) 생략
     data.trips[0]=incoming;
     renderStats();
