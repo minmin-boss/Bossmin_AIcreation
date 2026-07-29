@@ -65,7 +65,7 @@ textarea.ta-lg{height:84px}
 .tour-name{font-size:12.5px;font-weight:800;color:var(--text)}
 .tour-meta{font-size:10.5px;color:var(--text2);margin-top:2px}
 .tour-add-box{background:var(--surf);border:1.5px solid var(--brd);border-radius:10px;padding:12px;margin-bottom:16px}
-.tour-attach-row{display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:6px}
+.tour-attach-row{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;margin-top:6px}
 .tour-attach-row input[type=file]{display:none}
 #imgLightbox{position:fixed;inset:0;background:rgba(20,26,34,.88);display:none;align-items:center;justify-content:center;z-index:700;padding:24px}
 #imgLightbox.show{display:flex}
@@ -91,6 +91,7 @@ textarea.ta-lg{height:84px}
 .shared-chk{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px}
 .shared-chk.done{color:var(--text3);text-decoration:line-through}
 .btn-add{height:36px;align-self:flex-end;padding:0 22px;background:var(--accent);color:white;border:none;border-radius:8px;font-family:var(--f);font-size:12px;font-weight:800;cursor:pointer;transition:all .18s;white-space:nowrap;box-shadow:0 3px 10px rgba(58,123,213,.35)}
+.btn-add.editing{background:#1f9d63;box-shadow:0 3px 10px rgba(31,157,99,.35)}
 .btn-add:hover{background:var(--accent2)}
 .btn-add:active{transform:scale(.97)}
 .btn-sm{height:30px;padding:0 12px;background:var(--surf);color:var(--text2);border:1.5px solid var(--brd);border-radius:7px;font-family:var(--f);font-size:11px;font-weight:700;cursor:pointer;transition:all .18s}
@@ -546,7 +547,10 @@ input[type=file]{display:none}
             </div>
           </div>
           <div class="fg"><label class="fl">메모</label><input id="lgMemo" placeholder="예약 사이트 등"/></div>
-          <div class="fg" style="justify-content:flex-end;display:flex"><button class="btn-add" style="width:100%;margin-top:auto" onclick="addLodging()">+ 숙소 추가</button></div>
+          <div class="fg" style="justify-content:flex-end;display:flex;gap:6px">
+            <button class="btn-add" id="lgAddBtn" style="width:100%;margin-top:auto" onclick="addLodging()">+ 숙소 추가</button>
+            <button class="btn-sm" id="lgCancelBtn" style="display:none;margin-top:auto" onclick="cancelLodgingEdit()">취소</button>
+          </div>
         </div>
       </div>
 
@@ -575,7 +579,8 @@ input[type=file]{display:none}
           <input type="text" id="tourUrl" placeholder="예약 확인 링크 붙여넣기"/>
           <input type="file" id="tourFile" accept="image/*"/>
           <button class="btn-sm" onclick="document.getElementById('tourFile').click()">🖼️ 사진</button>
-          <button class="btn-add" onclick="addTour()">+ 투어 추가</button>
+          <button class="btn-add" id="tourAddBtn" onclick="addTour()">+ 투어 추가</button>
+          <button class="btn-sm" id="tourCancelBtn" style="display:none" onclick="cancelTourEdit()">취소</button>
         </div>
       </div>
     </div>
@@ -1433,6 +1438,7 @@ function getTrip(id){return data.trips.find(t=>t.id===id);}
 let _tripOpenSnapshot=null;
 function openTrip(id){
   curTripId=id;curDayIdx=0;curTab='plan';essentialsOpen=false;
+  cancelTourEdit();cancelLodgingEdit();
   const t=getTrip(id);
   _tripOpenSnapshot=JSON.stringify(t);
   document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획${(t._sharedFrom||(t.collaborators&&Object.keys(t.collaborators).length))?' 🤝':''}`;
@@ -1792,6 +1798,7 @@ function updateFlight(key,field,val){
   t[key][field]=val;
   save();
 }
+let _editingLodgingId=null;
 function addLodging(){
   const nameEl=document.getElementById('lgName');
   const locEl=document.getElementById('lgLocation');
@@ -1807,26 +1814,65 @@ function addLodging(){
   if(!name){toast('🏨 숙소명을 입력해주세요');nameEl.focus();return;}
   const t=getTrip(curTripId);
   if(!Array.isArray(t.lodgings))t.lodgings=[];
-  t.lodgings.push({
-    id:'lg_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+  const payload={
     name, location:locEl.value.trim(),
     checkIn:ciEl.value, checkInTime:citEl.value,
     checkOut:coEl.value, checkOutTime:cotEl.value,
     breakfast:bfEl.value,
     cost:stripComma(costEl.value), currency:currEl.value,
     memo:memoEl.value.trim()
-  });
+  };
+  if(_editingLodgingId){
+    const idx=t.lodgings.findIndex(l=>l.id===_editingLodgingId);
+    if(idx>-1)t.lodgings[idx]=Object.assign({id:_editingLodgingId},payload);
+    toast('🏨 숙소 정보를 수정했어요');
+    cancelLodgingEdit();
+  }else{
+    t.lodgings.push(Object.assign({id:'lg_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)},payload));
+    toast('🏨 숙소를 추가했어요');
+  }
   save();
   renderLodgings();
   [nameEl,locEl,ciEl,citEl,coEl,cotEl,costEl,memoEl].forEach(el=>el.value='');
   bfEl.value='';currEl.value='KRW';
-  toast('🏨 숙소를 추가했어요');
+}
+function editLodging(id){
+  const t=getTrip(curTripId);
+  const l=(t.lodgings||[]).find(x=>x.id===id);
+  if(!l)return;
+  _editingLodgingId=id;
+  document.getElementById('lgName').value=l.name||'';
+  document.getElementById('lgLocation').value=l.location||'';
+  document.getElementById('lgCheckIn').value=l.checkIn||'';
+  document.getElementById('lgCheckInTime').value=l.checkInTime||'';
+  document.getElementById('lgBreakfast').value=l.breakfast||'';
+  document.getElementById('lgCheckOut').value=l.checkOut||'';
+  document.getElementById('lgCheckOutTime').value=l.checkOutTime||'';
+  document.getElementById('lgCost').value=l.cost?Number(l.cost).toLocaleString('en-US'):'';
+  document.getElementById('lgCurrency').value=l.currency||'KRW';
+  document.getElementById('lgMemo').value=l.memo||'';
+  const btn=document.getElementById('lgAddBtn');
+  if(btn){btn.textContent='✔ 수정 완료';btn.classList.add('editing');}
+  const cancelBtn=document.getElementById('lgCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='';
+  document.getElementById('lgName').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function cancelLodgingEdit(){
+  _editingLodgingId=null;
+  ['lgName','lgLocation','lgCheckIn','lgCheckInTime','lgCheckOut','lgCheckOutTime','lgCost','lgMemo'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('lgBreakfast').value='';
+  document.getElementById('lgCurrency').value='KRW';
+  const btn=document.getElementById('lgAddBtn');
+  if(btn){btn.textContent='+ 숙소 추가';btn.classList.remove('editing');}
+  const cancelBtn=document.getElementById('lgCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='none';
 }
 function removeLodging(id){
   if(!confirm('이 숙소를 삭제할까요?'))return;
   const t=getTrip(curTripId);
   t.lodgings=(t.lodgings||[]).filter(l=>l.id!==id);
   save();
+  if(_editingLodgingId===id)cancelLodgingEdit();
   renderLodgings();
 }
 function renderLodgings(){
@@ -1844,6 +1890,7 @@ function renderLodgings(){
         ${meta?`<div class="tour-meta">${escapeHtml(meta)}</div>`:''}
         ${l.memo?`<div class="tour-meta">${escapeHtml(l.memo)}</div>`:''}
       </div>
+      <button class="btn-sm" onclick="editLodging('${l.id}')">✏️</button>
       <button class="chk-del" onclick="removeLodging('${l.id}')">✕</button>
     </div>`;
   }).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">등록된 숙소가 없어요</div>';
@@ -1929,6 +1976,7 @@ function closeLightbox(){
 }
 
 /* ---- 투어 / 액티비티 예약 ---- */
+let _editingTourId=null;
 async function addTour(){
   const nameEl=document.getElementById('tourName');
   const agencyEl=document.getElementById('tourAgency');
@@ -1942,15 +1990,17 @@ async function addTour(){
   if(!name){toast('🎫 투어명을 입력해주세요');nameEl.focus();return;}
   const t=getTrip(curTripId);
   if(!Array.isArray(t.tours))t.tours=[];
+  const isEditing=!!_editingTourId;
+  const existing=isEditing?t.tours.find(x=>x.id===_editingTourId):null;
   const tour={
-    id:'tour_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    id:isEditing?_editingTourId:('tour_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),
     name,
     agency:agencyEl.value.trim(),
     date:dateEl.value,
     cost:stripComma(costEl.value),
     currency:currEl.value,
     memo:memoEl.value.trim(),
-    attach:null
+    attach:existing?existing.attach:null
   };
   const file=fileEl.files[0];
   const url=urlEl.value.trim();
@@ -1962,19 +2012,55 @@ async function addTour(){
   }else if(url){
     tour.attach={type:'link',value:url};
   }
-  t.tours.push(tour);
+  if(isEditing){
+    const idx=t.tours.findIndex(x=>x.id===_editingTourId);
+    if(idx>-1)t.tours[idx]=tour;
+    toast('🎫 투어 정보를 수정했어요');
+    cancelTourEdit();
+  }else{
+    t.tours.push(tour);
+    toast('🎫 투어를 추가했어요');
+  }
   save();
   renderTours();
   [nameEl,agencyEl,dateEl,costEl,memoEl,urlEl].forEach(el=>el.value='');
   currEl.value='KRW';
   fileEl.value='';
-  toast('🎫 투어를 추가했어요');
+}
+function editTour(id){
+  const t=getTrip(curTripId);
+  const tr=(t.tours||[]).find(x=>x.id===id);
+  if(!tr)return;
+  _editingTourId=id;
+  document.getElementById('tourName').value=tr.name||'';
+  document.getElementById('tourAgency').value=tr.agency||'';
+  document.getElementById('tourDate').value=tr.date||'';
+  document.getElementById('tourCost').value=tr.cost?Number(tr.cost).toLocaleString('en-US'):'';
+  document.getElementById('tourCurrency').value=tr.currency||'KRW';
+  document.getElementById('tourMemo').value=tr.memo||'';
+  document.getElementById('tourUrl').value=(tr.attach&&tr.attach.type==='link')?tr.attach.value:'';
+  const btn=document.getElementById('tourAddBtn');
+  if(btn){btn.textContent='✔ 수정 완료';btn.classList.add('editing');}
+  const cancelBtn=document.getElementById('tourCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='';
+  document.getElementById('tourName').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function cancelTourEdit(){
+  _editingTourId=null;
+  ['tourName','tourAgency','tourDate','tourCost','tourMemo','tourUrl'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('tourCurrency').value='KRW';
+  document.getElementById('tourFile').value='';
+  const btn=document.getElementById('tourAddBtn');
+  if(btn){btn.textContent='+ 투어 추가';btn.classList.remove('editing');}
+  const cancelBtn=document.getElementById('tourCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='none';
 }
 function removeTour(id){
   if(!confirm('이 투어 예약을 삭제할까요?'))return;
   const t=getTrip(curTripId);
   t.tours=(t.tours||[]).filter(x=>x.id!==id);
   save();
+  if(_editingTourId===id)cancelTourEdit();
   renderTours();
 }
 function renderTours(){
@@ -1995,6 +2081,7 @@ function renderTours(){
         ${meta?`<div class="tour-meta">${escapeHtml(meta)}</div>`:''}
         ${tr.memo?`<div class="tour-meta">${escapeHtml(tr.memo)}</div>`:''}
       </div>
+      <button class="btn-sm" onclick="editTour('${tr.id}')">✏️</button>
       <button class="chk-del" onclick="removeTour('${tr.id}')">✕</button>
     </div>`;
   }).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">등록된 투어가 없어요</div>';
