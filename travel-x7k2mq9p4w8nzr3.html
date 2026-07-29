@@ -58,21 +58,24 @@ function _startListen(uid){
     if(trips.length>0){
       if(window._appReady&&typeof window._syncTripsFromCloud==='function')
         window._syncTripsFromCloud(trips);
-    }else if(!window._didMigrate){
-      window._didMigrate=true;
-      setTimeout(_migrateLocalToCloud,800);
     }
+    // 계획표에서 "지도로 보내기"로 로컬 캐시에 넣어둔 여행이 있으면,
+    // 이미 클라우드에 다른 여행 기록이 있어도 매번 추가로 업로드함
+    // (예전에는 클라우드가 완전히 비어있을 때 딱 한 번만 시도해서, 이미 여행 기록이 있는 계정에는 절대 반영이 안 됐음)
+    setTimeout(_migrateLocalToCloud,400);
   },err=>{
     console.error('[RTDB] 읽기 실패:',err.code,err.message);
     if(typeof window.toast==='function')window.toast('⚠️ DB 읽기 실패: '+err.message);
   });
 }
 
+let _migrating=false;
 async function _migrateLocalToCloud(){
-  if(!window._user)return;
+  if(!window._user||_migrating)return;
   let localData=[];
   try{const r=localStorage.getItem('travel_map_trips_cache_v1');localData=r?JSON.parse(r):[];}catch(e){}
   if(!localData.length){console.log('[Migration] 로컬 없음');return;}
+  _migrating=true;
   console.log('[Migration] 시작:',localData.length,'건');
   let ok=0,fail=0;
   for(const t of localData){
@@ -84,7 +87,9 @@ async function _migrateLocalToCloud(){
     }catch(e){console.error('[Migration] 실패:',t.city,e.message);fail++;}
   }
   console.log('[Migration] 완료: 성공',ok,'실패',fail);
+  try{localStorage.removeItem('travel_map_trips_cache_v1');}catch(e){}
   if(ok>0&&typeof window.toast==='function')window.toast('☁️ 여행 기록 '+ok+'개를 계정에 동기화했어요!');
+  _migrating=false;
 }
 
 window._googleLogin=async function(){
