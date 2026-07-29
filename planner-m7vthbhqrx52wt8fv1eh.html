@@ -266,7 +266,7 @@ input[type=file]{display:none}
 }
 </style>
 </head>
-<body>
+<body oncontextmenu="return false">
 <div id="lockScreen">
   <div class="lock-box">
     <div class="lk-emoji">📝</div>
@@ -888,6 +888,19 @@ let _collabIndexRefG=null;
 let _collabListeners={}; // key `${ownerUid}:${tripId}` -> ref
 let _shareBridges={};
 let _pendingDeletes=[]; // {ownerUid,tripId,bucket:'trips'|'trash'}
+let _lastSyncedJSON={}; // 동기화 키 -> 마지막으로 확인된 트립 JSON (실시간 변경 알림용)
+function syncKeyFor(t){return t._sharedFrom?t._sharedFrom+':'+t.id:t.id;}
+function notifyChangeFor(key,tripObj){
+  const cur=JSON.stringify(tripObj);
+  const prev=_lastSyncedJSON[key];
+  _lastSyncedJSON[key]=cur;
+  if(prev===undefined||prev===cur)return; // 최초 로드 시엔 기준선만 저장, 알림 없음
+  try{
+    const before=JSON.parse(prev);
+    const changes=diffTripSections(before,tripObj);
+    if(changes.length)toast('✔ 저장됨: '+changes.join(', '));
+  }catch(e){}
+}
 let _saveTimerG=null;
 
 function tripCloudPayload(t){
@@ -919,6 +932,7 @@ function mergeOwnTripsSnapshot(val){
     delete t._sharedFrom;
     const idx=data.trips.findIndex(x=>x.id===id&&!x._sharedFrom);
     if(idx>-1)data.trips[idx]=t;else data.trips.push(t);
+    notifyChangeFor(id,t);
   });
 }
 function mergeTrashSnapshot(val){
@@ -948,6 +962,7 @@ async function pushTripToCloud(t){
   if(typeof firebase==='undefined'||!window._planUser)return;
   try{
     await firebase.database().ref('travel_plans/'+ownerUidOf(t)+'/trips/'+t.id).set(tripCloudPayload(t));
+    notifyChangeFor(syncKeyFor(t),t);
   }catch(e){console.error('[plan] 트립 저장 실패',t.id,e);}
 }
 async function pushTrashToCloud(t){
@@ -1099,7 +1114,9 @@ function startCollabIndexListener(myUid){
         const before=JSON.stringify(data.trips.find(t=>t.id===entry.tripId&&t._sharedFrom===entry.ownerUid)||null);
         upsertCollabTrip(entry.ownerUid,entry.tripId,snap2.val());
         sanitizeData();
-        const after=JSON.stringify(data.trips.find(t=>t.id===entry.tripId&&t._sharedFrom===entry.ownerUid)||null);
+        const afterObj=data.trips.find(t=>t.id===entry.tripId&&t._sharedFrom===entry.ownerUid)||null;
+        const after=JSON.stringify(afterObj);
+        if(afterObj)notifyChangeFor(entry.ownerUid+':'+entry.tripId,afterObj);
         if(before===after)return; // 에코 → 재렌더링 생략
         renderStats();renderGrid();
         refreshOpenModalIfNeeded();
@@ -1393,7 +1410,7 @@ function renderGrid(){
     return `<div class="tc" onclick="openTrip('${t.id}')">
       <button class="cdel" onclick="deleteTrip('${t.id}',event)">✕</button>
       <div class="ct"><span class="cflag">${t.flag}</span>
-        <div><div class="cn">${t.cntry} · ${t.city}${t._sharedFrom?' <span style="font-size:10px;color:var(--accent)">🤝공유</span>':''}</div><div class="cc">${t.continent||''}</div></div>
+        <div><div class="cn">${t.cntry} · ${t.city}${t._sharedFrom?' <span style="font-size:10px;color:var(--accent)">🤝 공유받음</span>':(t.collaborators&&Object.keys(t.collaborators).length?' <span style="font-size:10px;color:var(--accent)">🤝 공유중</span>':'')}</div><div class="cc">${t.continent||''}</div></div>
       </div>
       <div class="cd">🛫 ${dateStr}</div>
       ${t.memo?`<div class="cm">👥 ${escapeHtml(t.memo)}</div>`:''}
@@ -1406,12 +1423,10 @@ function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 
 function getTrip(id){return data.trips.find(t=>t.id===id);}
 
-let _tripOpenSnapshot=null;
 function openTrip(id){
   curTripId=id;curDayIdx=0;curTab='plan';essentialsOpen=false;
   const t=getTrip(id);
-  _tripOpenSnapshot=JSON.stringify(t);
-  document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획${t._sharedFrom?' 🤝':''}`;
+  document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획${(t._sharedFrom||(t.collaborators&&Object.keys(t.collaborators).length))?' 🤝':''}`;
   renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();renderCollaborators();
   switchTab('plan');
   document.getElementById('modalBg').classList.add('show');
@@ -1427,15 +1442,6 @@ function diffTripSections(before,after){
   return changes;
 }
 function closeModal(){
-  const t=getTrip(curTripId);
-  if(t&&_tripOpenSnapshot){
-    try{
-      const before=JSON.parse(_tripOpenSnapshot);
-      const changes=diffTripSections(before,t);
-      if(changes.length)toast('✔ 수정됨: '+changes.join(', '));
-    }catch(e){}
-  }
-  _tripOpenSnapshot=null;
   document.getElementById('modalBg').classList.remove('show');
   save();
 }
@@ -2553,7 +2559,7 @@ function initSharedEditMode(shareId,tripRaw){
   _cloudSaveFn=function(){
     clearTimeout(window._shareSaveTimer);
     window._shareSaveTimer=setTimeout(()=>{
-      ref.set(data.trips[0]).then(()=>{_localDirty=false;}).catch(e=>console.error('[share-edit] 저장 실패',e));
+      ref.set(data.trips[0]).then(()=>{_localDirty=false;notifyChangeFor('share:'+shareId,data.trips[0]);}).catch(e=>console.error('[share-edit] 저장 실패',e));
     },800);
   };
   ref.on('value',snap=>{
@@ -2563,6 +2569,7 @@ function initSharedEditMode(shareId,tripRaw){
     const before=JSON.stringify(data.trips[0]);
     const incoming=sanitizeTrip(cloudTrip);
     const after=JSON.stringify(incoming);
+    notifyChangeFor('share:'+shareId,incoming);
     if(before===after)return; // 내가 방금 보낸 내용이 그대로 되돌아온 에코 → 재렌더링(깜빡임) 생략
     data.trips[0]=incoming;
     renderStats();
@@ -2667,5 +2674,8 @@ if(_shareId){
 
 <!-- boss_min_ 워터마크 -->
 <div style="position:fixed;right:16px;bottom:14px;font-family:Nunito,-apple-system,sans-serif;font-size:12px;font-weight:500;color:#bbb;opacity:.3;letter-spacing:1.5px;z-index:9999;pointer-events:none;user-select:none;">boss_min_</div>
+<script>
+  document.addEventListener('contextmenu', e => e.preventDefault());
+</script>
 </body>
 </html>
