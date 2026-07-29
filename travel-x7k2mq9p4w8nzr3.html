@@ -912,7 +912,7 @@ catch(e){
 try{const lite=trips.map(t=>{const c={...t};delete c.photo;return c;});localStorage.setItem(_LS_KEY,JSON.stringify(lite));}catch(e2){console.warn('로컬 캐시 저장 실패:',e2);}
 }
 }
-let trips=window._fbData||_loadLocalCache()||[];
+let trips=(window._fbData&&window._fbData.length?window._fbData:null)||_loadLocalCache()||[];
 let sortM='d', curIdx=-1, filterYear='all';
 let selCntry=null, selCity='', cntryFI=-1, cityFI=-1;
 let px, py, tx, ty, pang=0, tpts=[], mW, mH;
@@ -1741,7 +1741,7 @@ if(failCount>0)toast(`⚠️ ${failCount}개 항목은 동기화에 실패했어
 function _doBootApp(){
 if(window._appReady)return;
 window._appReady=true;window._render=render;
-trips=window._fbData||trips||[];window.trips=trips;
+trips=(window._fbData&&window._fbData.length?window._fbData:trips)||[];window.trips=trips;
 gms();render();anim();
 if(trips.length)setTimeout(startAuto,400);
 else{const s=s2xy(SEOUL_X,SEOUL_Y);px=s.x;py=s.y;tx=s.x;ty=s.y;}
