@@ -938,8 +938,8 @@ function upsertCollabTrip(ownerUid,tripId,raw){
     data.trips=data.trips.filter(t=>!(t._sharedFrom===ownerUid&&t.id===tripId));
     return;
   }
+  raw._sharedFrom=ownerUid; // sanitizeTrip 실행 전에 미리 표시해야, 그 안의 "자기 자신을 협업자로 가진 경우 정리" 로직이 소유자 판단을 잘못해서 정당한 협업자 초대 기록을 지워버리는 걸 막을 수 있음
   const t=sanitizeTrip(raw);
-  t._sharedFrom=ownerUid;
   const idx=data.trips.findIndex(x=>x.id===tripId&&x._sharedFrom===ownerUid);
   if(idx>-1)data.trips[idx]=t;else data.trips.push(t);
 }
@@ -1406,15 +1406,36 @@ function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&
 
 function getTrip(id){return data.trips.find(t=>t.id===id);}
 
+let _tripOpenSnapshot=null;
 function openTrip(id){
   curTripId=id;curDayIdx=0;curTab='plan';essentialsOpen=false;
   const t=getTrip(id);
+  _tripOpenSnapshot=JSON.stringify(t);
   document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획${t._sharedFrom?' 🤝':''}`;
   renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();renderCollaborators();
   switchTab('plan');
   document.getElementById('modalBg').classList.add('show');
 }
+function diffTripSections(before,after){
+  const changes=[];
+  if(JSON.stringify(before.days)!==JSON.stringify(after.days))changes.push('일정표');
+  if(JSON.stringify(before.flightOut)!==JSON.stringify(after.flightOut)||JSON.stringify(before.flightIn)!==JSON.stringify(after.flightIn))changes.push('항공편');
+  if(JSON.stringify(before.lodging)!==JSON.stringify(after.lodging))changes.push('숙소');
+  if(JSON.stringify(before.tours)!==JSON.stringify(after.tours))changes.push('투어');
+  if(JSON.stringify(before.checklist)!==JSON.stringify(after.checklist)||JSON.stringify(before.essentials)!==JSON.stringify(after.essentials))changes.push('체크리스트');
+  if((before.memo||'')!==(after.memo||'')||(before.note||'')!==(after.note||'')||(before.stars||0)!==(after.stars||0)||JSON.stringify(before.collaborators||{})!==JSON.stringify(after.collaborators||{}))changes.push('정보');
+  return changes;
+}
 function closeModal(){
+  const t=getTrip(curTripId);
+  if(t&&_tripOpenSnapshot){
+    try{
+      const before=JSON.parse(_tripOpenSnapshot);
+      const changes=diffTripSections(before,t);
+      if(changes.length)toast('✔ 수정됨: '+changes.join(', '));
+    }catch(e){}
+  }
+  _tripOpenSnapshot=null;
   document.getElementById('modalBg').classList.remove('show');
   save();
 }
