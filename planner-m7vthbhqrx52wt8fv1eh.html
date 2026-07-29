@@ -515,38 +515,41 @@ input[type=file]{display:none}
       </div>
 
       <div class="sec-ttl">🏨 숙소</div>
-      <div class="row2">
-        <div class="fg"><label class="fl">숙소명</label><input id="lgName" placeholder="예: OO 리조트" onchange="updateLodging('name',this.value)"/></div>
-        <div class="fg"><label class="fl">위치</label><input id="lgLocation" placeholder="주소 / 지역" onchange="updateLodging('location',this.value)"/></div>
-      </div>
-      <div class="row3">
-        <div class="fg"><label class="fl">체크인 날짜</label><input type="date" id="lgCheckIn" onchange="updateLodging('checkIn',this.value)"/></div>
-        <div class="fg"><label class="fl">체크인 시간</label><input type="time" id="lgCheckInTime" onchange="updateLodging('checkInTime',this.value)"/></div>
-        <div class="fg"><label class="fl">조식</label>
-          <select id="lgBreakfast" onchange="updateLodging('breakfast',this.value)">
-            <option value="">선택 안 함</option>
-            <option value="포함">포함</option>
-            <option value="미포함">미포함</option>
-          </select>
+      <div class="tour-list" id="lodgingList"></div>
+      <div class="tour-add-box">
+        <div class="row2">
+          <div class="fg"><label class="fl">숙소명</label><input id="lgName" placeholder="예: OO 리조트"/></div>
+          <div class="fg"><label class="fl">위치</label><input id="lgLocation" placeholder="주소 / 지역"/></div>
         </div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label class="fl">체크아웃 날짜</label><input type="date" id="lgCheckOut" onchange="updateLodging('checkOut',this.value)"/></div>
-        <div class="fg"><label class="fl">체크아웃 시간</label><input type="time" id="lgCheckOutTime" onchange="updateLodging('checkOutTime',this.value)"/></div>
-      </div>
-      <div class="row2">
-        <div class="fg"><label class="fl">비용</label>
-          <div style="display:flex;gap:6px">
-            <input id="lgCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateLodging('cost',stripComma(this.value))"/>
-            <select id="lgCurrency" style="flex:1;min-width:64px" onchange="updateLodging('currency',this.value)">
-              <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
+        <div class="row3">
+          <div class="fg"><label class="fl">체크인 날짜</label><input type="date" id="lgCheckIn"/></div>
+          <div class="fg"><label class="fl">체크인 시간</label><input type="time" id="lgCheckInTime"/></div>
+          <div class="fg"><label class="fl">조식</label>
+            <select id="lgBreakfast">
+              <option value="">선택 안 함</option>
+              <option value="포함">포함</option>
+              <option value="미포함">미포함</option>
             </select>
           </div>
         </div>
-        <div class="fg"><label class="fl">메모</label>
-          <input id="lgMemo" placeholder="예약 사이트 등" onchange="updateLodging('memo',this.value)"/>
+        <div class="row2">
+          <div class="fg"><label class="fl">체크아웃 날짜</label><input type="date" id="lgCheckOut"/></div>
+          <div class="fg"><label class="fl">체크아웃 시간</label><input type="time" id="lgCheckOutTime"/></div>
+        </div>
+        <div class="row3">
+          <div class="fg"><label class="fl">비용</label>
+            <div style="display:flex;gap:6px">
+              <input id="lgCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)"/>
+              <select id="lgCurrency" style="flex:1;min-width:64px">
+                <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg"><label class="fl">메모</label><input id="lgMemo" placeholder="예약 사이트 등"/></div>
+          <div class="fg" style="justify-content:flex-end;display:flex"><button class="btn-add" style="width:100%;margin-top:auto" onclick="addLodging()">+ 숙소 추가</button></div>
         </div>
       </div>
+
 
       <div class="sec-ttl">🎫 투어 / 액티비티 예약</div>
       <div class="tour-list" id="tourList"></div>
@@ -789,9 +792,10 @@ function sanitizeFlight(f,legacyImg){
   };
 }
 function sanitizeLodging(l){
-  if(typeof l==='string')return{name:'',location:'',breakfast:'',checkIn:'',checkInTime:'',checkOut:'',checkOutTime:'',cost:'',currency:'KRW',memo:l};
+  if(typeof l==='string')return{id:'lg_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),name:'',location:'',breakfast:'',checkIn:'',checkInTime:'',checkOut:'',checkOutTime:'',cost:'',currency:'KRW',memo:l};
   l=(l&&typeof l==='object')?l:{};
   return{
+    id:l.id||('lg_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),
     name:l.name||'',
     location:l.location||'',
     breakfast:l.breakfast||'',
@@ -855,7 +859,15 @@ function sanitizeTrip(t){
   };
   t.flightOut=sanitizeFlight(t.flightOut,t.flightOutImg);
   t.flightIn=sanitizeFlight(t.flightIn,t.flightInImg);
-  t.lodging=sanitizeLodging(t.lodging);
+  if(Array.isArray(t.lodgings)){
+    t.lodgings=t.lodgings.map(sanitizeLodging).filter(l=>l.name||l.location||l.cost||l.memo);
+  }else if(t.lodging&&(t.lodging.name||t.lodging.location||t.lodging.cost||t.lodging.memo||typeof t.lodging==='string')){
+    // 예전 단일 숙소 데이터를 배열로 이전
+    t.lodgings=[sanitizeLodging(t.lodging)];
+  }else{
+    t.lodgings=[];
+  }
+  delete t.lodging;
   delete t.flightOutImg;
   delete t.flightInImg;
   t.tours=(Array.isArray(t.tours)?t.tours:[]).map(tr=>({
@@ -1620,7 +1632,7 @@ function budgetCategories(t){
   });
   cats.push({icon:'✈️',label:'항공편',sums:flightSum});
   const lgSum={};
-  if(t.lodging&&t.lodging.cost){const c=t.lodging.currency||'KRW';lgSum[c]=(lgSum[c]||0)+(Number(t.lodging.cost)||0);}
+  (t.lodgings||[]).forEach(l=>{if(l.cost){const c=l.currency||'KRW';lgSum[c]=(lgSum[c]||0)+(Number(l.cost)||0);}});
   cats.push({icon:'🏨',label:'숙소',sums:lgSum});
   const tourSum={};
   (t.tours||[]).forEach(tr=>{if(tr.cost){const c=tr.currency||'KRW';tourSum[c]=(tourSum[c]||0)+(Number(tr.cost)||0);}});
@@ -1755,7 +1767,7 @@ function onInfoEdit(){
 function renderTravelTab(){
   const t=getTrip(curTripId);
   if(!t)return;
-  const fo=t.flightOut||{},fi=t.flightIn||{},lg=t.lodging||{};
+  const fo=t.flightOut||{},fi=t.flightIn||{};
   document.getElementById('foAirline').value=fo.airline||'';
   document.getElementById('foFlightNo').value=fo.flightNo||'';
   document.getElementById('foDepTime').value=fo.depTime||'';
@@ -1772,16 +1784,7 @@ function renderTravelTab(){
   document.getElementById('fiCost').value=fi.cost?Number(fi.cost).toLocaleString('en-US'):'';
   document.getElementById('fiCurrency').value=fi.currency||'KRW';
   document.getElementById('fiMemo').value=fi.memo||'';
-  document.getElementById('lgName').value=lg.name||'';
-  document.getElementById('lgLocation').value=lg.location||'';
-  document.getElementById('lgBreakfast').value=lg.breakfast||'';
-  document.getElementById('lgCheckIn').value=lg.checkIn||'';
-  document.getElementById('lgCheckInTime').value=lg.checkInTime||'';
-  document.getElementById('lgCheckOut').value=lg.checkOut||'';
-  document.getElementById('lgCheckOutTime').value=lg.checkOutTime||'';
-  document.getElementById('lgCost').value=lg.cost?Number(lg.cost).toLocaleString('en-US'):'';
-  document.getElementById('lgCurrency').value=lg.currency||'KRW';
-  document.getElementById('lgMemo').value=lg.memo||'';
+  renderLodgings();
 }
 function updateFlight(key,field,val){
   const t=getTrip(curTripId);
@@ -1789,11 +1792,61 @@ function updateFlight(key,field,val){
   t[key][field]=val;
   save();
 }
-function updateLodging(field,val){
+function addLodging(){
+  const nameEl=document.getElementById('lgName');
+  const locEl=document.getElementById('lgLocation');
+  const ciEl=document.getElementById('lgCheckIn');
+  const citEl=document.getElementById('lgCheckInTime');
+  const bfEl=document.getElementById('lgBreakfast');
+  const coEl=document.getElementById('lgCheckOut');
+  const cotEl=document.getElementById('lgCheckOutTime');
+  const costEl=document.getElementById('lgCost');
+  const currEl=document.getElementById('lgCurrency');
+  const memoEl=document.getElementById('lgMemo');
+  const name=nameEl.value.trim();
+  if(!name){toast('🏨 숙소명을 입력해주세요');nameEl.focus();return;}
   const t=getTrip(curTripId);
-  if(!t.lodging||typeof t.lodging!=='object')t.lodging={};
-  t.lodging[field]=val;
+  if(!Array.isArray(t.lodgings))t.lodgings=[];
+  t.lodgings.push({
+    id:'lg_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),
+    name, location:locEl.value.trim(),
+    checkIn:ciEl.value, checkInTime:citEl.value,
+    checkOut:coEl.value, checkOutTime:cotEl.value,
+    breakfast:bfEl.value,
+    cost:stripComma(costEl.value), currency:currEl.value,
+    memo:memoEl.value.trim()
+  });
   save();
+  renderLodgings();
+  [nameEl,locEl,ciEl,citEl,coEl,cotEl,costEl,memoEl].forEach(el=>el.value='');
+  bfEl.value='';currEl.value='KRW';
+  toast('🏨 숙소를 추가했어요');
+}
+function removeLodging(id){
+  if(!confirm('이 숙소를 삭제할까요?'))return;
+  const t=getTrip(curTripId);
+  t.lodgings=(t.lodgings||[]).filter(l=>l.id!==id);
+  save();
+  renderLodgings();
+}
+function renderLodgings(){
+  const t=getTrip(curTripId);
+  if(!t)return;
+  const box=document.getElementById('lodgingList');
+  if(!box)return;
+  const list=t.lodgings||[];
+  box.innerHTML=list.length?list.map(l=>{
+    const meta=[l.location,l.checkIn?fmtD(l.checkIn):'',l.checkOut?fmtD(l.checkOut):'',l.breakfast,l.cost?fmtNum(l.cost)+' '+(l.currency||'KRW'):''].filter(Boolean).join(' · ');
+    return `<div class="tour-row">
+      <span style="font-size:22px">🏨</span>
+      <div class="tour-body">
+        <div class="tour-name">${escapeHtml(l.name)}</div>
+        ${meta?`<div class="tour-meta">${escapeHtml(meta)}</div>`:''}
+        ${l.memo?`<div class="tour-meta">${escapeHtml(l.memo)}</div>`:''}
+      </div>
+      <button class="chk-del" onclick="removeLodging('${l.id}')">✕</button>
+    </div>`;
+  }).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">등록된 숙소가 없어요</div>';
 }
 
 /* ---- 모바일 항공권 (인원별, 이미지 또는 링크) ---- */
@@ -2404,10 +2457,11 @@ function renderSharedView(container,t){
       ${stars?`<div style="margin-top:6px">${stars}</div>`:''}
     </div>`;
 
-  const fo=t.flightOut||{},fi=t.flightIn||{},lg=t.lodging||{};
+  const fo=t.flightOut||{},fi=t.flightIn||{};
+  const lodgings=t.lodgings||[];
   const hasFlightOut=fo.airline||fo.flightNo||fo.depTime||fo.arrTime||fo.duration||fo.memo||(fo.tickets&&fo.tickets.length);
   const hasFlightIn=fi.airline||fi.flightNo||fi.depTime||fi.arrTime||fi.duration||fi.memo||(fi.tickets&&fi.tickets.length);
-  const hasLodging=lg.name||lg.location||lg.breakfast||lg.checkIn||lg.checkOut||lg.memo;
+  const hasLodging=lodgings.length>0;
 
   function flightLine(f){
     const parts=[];
@@ -2441,14 +2495,14 @@ function renderSharedView(container,t){
         ${ticketsHtml(fi.tickets)}
       </div>`;
     }
-    if(hasLodging){
+    lodgings.forEach(lg=>{
       const lgLine=[lg.name,lg.location].filter(Boolean).join(' · ');
       const ci=[lg.checkIn,lg.checkInTime].filter(Boolean).join(' ');
       const co=[lg.checkOut,lg.checkOutTime].filter(Boolean).join(' ');
-      html+=`<div><b style="font-size:11px">숙소</b>
-        <div class="shared-pre">${escapeHtml(lgLine)||'-'}${ci?'\n체크인: '+escapeHtml(ci):''}${co?'\n체크아웃: '+escapeHtml(co):''}${lg.breakfast?'\n조식: '+escapeHtml(lg.breakfast):''}${lg.memo?'\n'+escapeHtml(lg.memo):''}</div>
+      html+=`<div style="margin-bottom:10px"><b style="font-size:11px">숙소</b>
+        <div class="shared-pre">${escapeHtml(lgLine)||'-'}${ci?'\n체크인: '+escapeHtml(ci):''}${co?'\n체크아웃: '+escapeHtml(co):''}${lg.breakfast?'\n조식: '+escapeHtml(lg.breakfast):''}${lg.cost?'\n비용: '+fmtNum(lg.cost)+' '+(lg.currency||'KRW'):''}${lg.memo?'\n'+escapeHtml(lg.memo):''}</div>
       </div>`;
-    }
+    });
     html+=`</div>`;
   }
 
