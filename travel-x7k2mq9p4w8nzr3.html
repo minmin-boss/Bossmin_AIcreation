@@ -905,7 +905,7 @@ const BY_EN={}, BY_KO={};
 COUNTRIES.forEach(c=>{BY_EN[c.en]=c; BY_KO[c.name]=c;});
 // ── 상태 ──
 // ── 로컬 캐시 (Firebase 동기화 실패/지연 대비 안전망) ──
-const _LS_KEY='travel_map_trips_cache_v1';
+const _LS_KEY='travel_map_own_backup_v1'; // 계획표가 쓰는 'travel_map_trips_cache_v1'과 절대 겹치면 안 됨(겹치면 서로 덮어써서 데이터가 사라짐)
 function _loadLocalCache(){
 try{const raw=localStorage.getItem(_LS_KEY);if(!raw)return null;const arr=JSON.parse(raw);return Array.isArray(arr)?arr:null;}
 catch(e){return null;}
@@ -985,7 +985,7 @@ window._syncTripsFromCloud=function(cloudData){
 // 클라우드에 데이터 있을 때만 덮어씀 (빈 클라우드로 로컬 데이터 지우는 것 방지)
 if(!cloudData||cloudData.length===0)return;
 trips=cloudData;window.trips=trips;
-try{localStorage.setItem('travel_map_trips_cache_v1',JSON.stringify(trips));}catch(e){}
+_saveLocalCache(); // 계획표 전용 열쇠(travel_map_trips_cache_v1)를 건드리지 않도록, 지도 자체 백업 열쇠에만 저장
 render();
 };
 function renderStats(){
