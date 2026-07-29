@@ -397,11 +397,11 @@ input[type=file]{display:none}
     </div>
 
     <div class="page-tabs">
-      <button class="page-tab" id="tabBtn-plan" onclick="switchTab('plan')">📅 일정표</button>
+      <button class="page-tab" id="tabBtn-plan" onclick="switchTab('plan')">📋 일정표</button>
       <button class="page-tab" id="tabBtn-budget" onclick="switchTab('budget')">💰 예산</button>
       <button class="page-tab" id="tabBtn-travel" onclick="switchTab('travel')">🧳 예약정보</button>
       <button class="page-tab" id="tabBtn-check" onclick="switchTab('check')">🎒 체크리스트</button>
-      <button class="page-tab" id="tabBtn-info" onclick="switchTab('info')">ℹ️ 정보</button>
+      <button class="page-tab" id="tabBtn-info" onclick="switchTab('info')">🔖 정보</button>
     </div>
 
     <div id="tab-plan">
@@ -1395,7 +1395,7 @@ function renderGrid(){
       <div class="ct"><span class="cflag">${t.flag}</span>
         <div><div class="cn">${t.cntry} · ${t.city}${t._sharedFrom?' <span style="font-size:10px;color:var(--accent)">🤝공유</span>':''}</div><div class="cc">${t.continent||''}</div></div>
       </div>
-      <div class="cd">📅 ${dateStr}</div>
+      <div class="cd">🛫 ${dateStr}</div>
       ${t.memo?`<div class="cm">👥 ${escapeHtml(t.memo)}</div>`:''}
       ${stars?`<div class="cm">${stars}</div>`:''}
       <div class="cbudget"><span>예산 ${t.cost?fmtNum(t.cost)+' '+t.currency:'미정'}</span><b>계획 ${fmtNum(planned)}${hasOtherCur?' +':''}</b></div>
@@ -2178,7 +2178,7 @@ function handleTemplateFile(ev){
 }
 function runTemplateImport(){
   const start=document.getElementById('tplStartDate').value;
-  if(!start){toast('📅 여행 시작일을 입력해주세요');return;}
+  if(!start){toast('여행 시작일을 입력해주세요');return;}
   const parsedItems=templateToItems(tplDays,start);
   buildFromItems(parsedItems);
 }
@@ -2361,7 +2361,7 @@ function renderSharedView(container,t){
     <div class="shared-hdr" style="text-align:center">
       <div class="flag">${t.flag||'🌍'}</div>
       <h2>${escapeHtml(t.cntry||'')} · ${escapeHtml(t.city||'')}</h2>
-      <div class="sub">📅 ${dateStr}${t.memo?' · 👥 '+escapeHtml(t.memo):''}</div>
+      <div class="sub">🛫 ${dateStr}${t.memo?' · 👥 '+escapeHtml(t.memo):''}</div>
       ${stars?`<div style="margin-top:6px">${stars}</div>`:''}
     </div>`;
 
@@ -2432,7 +2432,7 @@ function renderSharedView(container,t){
     html+=`</div>`;
   }
 
-  html+=`<div class="shared-card"><h3>📅 일정표</h3>`;
+  html+=`<div class="shared-card"><h3>📋 일정표</h3>`;
   t.days.forEach((d,i)=>{
     const lbl=d.date?(new Date(d.date).getMonth()+1)+'/'+new Date(d.date).getDate()+'일차':('Day '+(i+1));
     html+=`<div class="shared-day-ttl">${i+1}. ${lbl}</div>`;
