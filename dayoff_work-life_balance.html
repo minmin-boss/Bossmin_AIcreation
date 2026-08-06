@@ -756,7 +756,7 @@ let adminMode = false;
 
 window.checkAdminPw = function() {
   const val = document.getElementById('admin-pw-input').value;
-  if (val === '020622') {
+  if (val === '1234') {
     adminMode = true;
     document.getElementById('admin-lock-section').style.display = 'none';
     document.getElementById('admin-active-section').style.display = 'block';
@@ -935,7 +935,7 @@ let memberUnlocked = false;
 
 window.checkMemberPw = function() {
   const val = document.getElementById('member-pw-input').value;
-  if (val === '721104') {
+  if (val === '1234') {
     memberUnlocked = true;
     document.getElementById('member-lock-wrap').style.display = 'none';
     document.getElementById('team-sections-wrap').style.display = 'block';
@@ -1205,7 +1205,7 @@ function renderPersonal() {
 
 // ── Team tab (with filter buttons) ───────────────────────
 let selectedTeam = '1팀';
-const TEAM_PASSWORDS = { '1팀': '0000', '2팀': '1111' };
+const TEAM_PASSWORDS = { '1팀': '1234', '2팀': '1234' };
 let unlockedTeams = new Set(); // 잠금 해제된 팀 목록
 
 window.filterTeam = function(team) {
