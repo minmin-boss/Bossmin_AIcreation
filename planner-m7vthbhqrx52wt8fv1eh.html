@@ -6,6 +6,7 @@
 <title>📝 내 여행 계획표</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.2/Sortable.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
@@ -135,8 +136,13 @@ textarea.ta-lg{height:84px}
 .day-photo-thumb{margin-bottom:10px}
 .day-photo-thumb img{width:100%;max-height:160px;object-fit:cover;border-radius:10px;cursor:pointer;display:block;margin-bottom:6px}
 .item-card{background:var(--surf);border:1.5px solid var(--brd);border-radius:10px;padding:9px;margin-bottom:8px}
-.item-row-top{display:grid;grid-template-columns:100px 1.3fr 1fr 26px;gap:6px;align-items:center;margin-bottom:6px}
+.item-row-top{display:grid;grid-template-columns:100px 1.3fr 1fr 26px 26px;gap:6px;align-items:center;margin-bottom:6px}
 .item-row-top input{height:32px;font-size:11.5px}
+.item-drag-handle{width:100%;height:100%;min-height:32px;display:flex;align-items:center;justify-content:center;cursor:grab;background:var(--bg2);border:1px solid var(--brd);border-radius:6px;color:var(--text2);font-size:15px;user-select:none;touch-action:none}
+.item-drag-handle:hover{border-color:var(--accent);color:var(--accent)}
+.item-drag-handle:active{cursor:grabbing;background:var(--acl);border-color:var(--accent);color:var(--accent)}
+.item-drag-ghost{opacity:.3}
+.item-drag-chosen{box-shadow:0 4px 14px rgba(58,123,213,.3)}
 .item-costs{display:flex;flex-direction:column;gap:5px}
 .cost-line{display:grid;grid-template-columns:1fr 66px 84px 22px;gap:4px}
 .cost-line input,.cost-line select{height:30px;font-size:10.5px;padding:0 4px}
@@ -148,7 +154,7 @@ textarea.ta-lg{height:84px}
 .add-item-btn:hover{border-color:var(--accent);color:var(--accent)}
 .day-total{text-align:right;font-size:11px;color:var(--text2);margin-top:6px;font-weight:700}
 .day-total b{color:var(--accent)}
-.budget-sum{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:1rem}
+.budget-sum{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:1rem}
 .bsum-box{background:var(--surf);border:1.5px solid var(--brd);border-radius:12px;padding:12px 14px;text-align:center}
 .bsum-box .v{font-size:18px;font-weight:800;color:var(--accent);word-break:break-word}
 .bsum-box .v.multi{font-size:12px;line-height:1.5}
@@ -230,7 +236,7 @@ input[type=file]{display:none}
 .sv{font-size:18px}
 .hbtns{gap:6px}
 .hbtn.pri{padding:6px 12px}
-.item-row-top{grid-template-columns:56px 1fr 24px;}
+.item-row-top{grid-template-columns:56px 1fr 24px 24px;}
 .item-row-top input:nth-child(3){display:none}
 .cost-line{grid-template-columns:1fr 56px 66px 20px}
 .cost-line input,.cost-line select{font-size:9.5px}
@@ -257,7 +263,7 @@ input[type=file]{display:none}
 @media(max-width:420px){
 .cost-line{grid-template-columns:1fr 1fr;grid-template-rows:auto auto}
 .cost-line input,.cost-line select{font-size:11px;height:34px}
-.item-row-top{grid-template-columns:52px 1fr 26px}
+.item-row-top{grid-template-columns:52px 1fr 22px 22px}
 .hl span{font-size:22px}
 .hl h1{font-size:15.5px}
 .hl p{font-size:10px}
@@ -307,7 +313,6 @@ input[type=file]{display:none}
     </div>
     <input type="file" id="importFile" accept="application/json" onchange="importJSONFile(event)"/>
   </header>
-
   <div class="notice">
     <span>💡</span>
     <div>
@@ -317,7 +322,6 @@ input[type=file]{display:none}
       올려두어야 브라우저 저장공간을 함께 쓸 수 있어요.)
     </div>
   </div>
-
   <div class="form-box">
     <div class="sec-ttl">✈️ 새 여행 계획 만들기</div>
     <div class="row3">
@@ -367,7 +371,6 @@ input[type=file]{display:none}
       <button class="btn-add" onclick="addTrip()">+ 계획표 만들기</button>
     </div>
   </div>
-
   <div class="list-hdr">
     <div class="list-ttl">🗒️ 계획 중인 여행</div>
     <div class="lc">
@@ -377,7 +380,6 @@ input[type=file]{display:none}
   </div>
   <div class="tg" id="tripGrid"></div>
 </div>
-
 <div id="trashModalBg" onclick="if(event.target===this)closeTrash()">
   <div class="modal-box">
     <div class="modal-hdr">
@@ -389,14 +391,12 @@ input[type=file]{display:none}
     <button class="btn-sm danger" style="width:100%;margin-top:10px" onclick="emptyTrash()">휴지통 비우기</button>
   </div>
 </div>
-
 <div id="modalBg" onclick="if(event.target===this)closeModal()">
   <div class="modal-box">
     <div class="modal-hdr">
       <div class="modal-ttl" id="mTitle">✈️ 여행 계획</div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
-
     <div class="page-tabs">
       <button class="page-tab" id="tabBtn-plan" onclick="switchTab('plan')">📋 일정표</button>
       <button class="page-tab" id="tabBtn-budget" onclick="switchTab('budget')">💰 예산</button>
@@ -404,20 +404,21 @@ input[type=file]{display:none}
       <button class="page-tab" id="tabBtn-check" onclick="switchTab('check')">🎒 체크리스트</button>
       <button class="page-tab" id="tabBtn-info" onclick="switchTab('info')">🔖 정보</button>
     </div>
-
     <div id="tab-plan">
       <div class="day-tabs" id="dayTabs"></div>
       <div id="dayPanels"></div>
     </div>
-
     <div id="tab-budget" style="display:none">
       <div class="budget-sum">
-        <div class="bsum-box" id="bPlannedBox" style="grid-column:1/-1"><div class="v" id="bTotalPlanned">0</div><div class="l">전체 합계</div></div>
+        <div class="bsum-box" id="bPlannedBox"><div class="v" id="bTotalPlanned">0</div><div class="l">전체 합계</div></div>
+        <div class="bsum-box" id="bPlannedKrwBox"><div class="v" id="bTotalPlannedKRW">0</div><div class="l">원화 환산 합계</div></div>
       </div>
-
+      <div style="display:flex;justify-content:flex-end;margin:-6px 0 10px">
+        <button class="btn-sm" onclick="toggleRateEditor()">💱 환율 설정</button>
+      </div>
+      <div id="rateEditor" class="tour-add-box" style="display:none"></div>
       <div class="sec-ttl">카테고리별 지출</div>
       <div id="budgetByCategory" style="margin-bottom:1rem"></div>
-
       <div class="sec-ttl">🧮 N빵 계산기</div>
       <div class="row3">
         <div class="fg"><label class="fl">총 금액</label><input id="splitAmount" placeholder="0" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateSplitCalc('amount',stripComma(this.value))"/></div>
@@ -430,7 +431,6 @@ input[type=file]{display:none}
       </div>
       <div class="split-result" id="splitResult"></div>
     </div>
-
     <div id="tab-check" style="display:none">
       <div class="ess-section">
         <button class="ess-toggle" id="essToggleBtn" onclick="toggleEssentials()">
@@ -439,7 +439,6 @@ input[type=file]{display:none}
         </button>
         <div class="ess-list" id="essList" style="display:none"></div>
       </div>
-
       <div class="sec-ttl">나만의 체크리스트</div>
       <div class="chk-list" id="chkList"></div>
       <div class="chk-add">
@@ -447,74 +446,44 @@ input[type=file]{display:none}
         <button class="btn-add" onclick="addChecklistItem()">추가</button>
       </div>
     </div>
-
     <div id="tab-travel" style="display:none">
-      <div class="sec-ttl">✈️ 가는 항공편</div>
-      <div class="row3">
-        <div class="fg"><label class="fl">항공사</label><input id="foAirline" placeholder="예: 대한항공" onchange="updateFlight('flightOut','airline',this.value)"/></div>
-        <div class="fg"><label class="fl">항공편명</label><input id="foFlightNo" placeholder="예: KE651" onchange="updateFlight('flightOut','flightNo',this.value)"/></div>
-        <div class="fg"><label class="fl">출발시간</label><input type="time" id="foDepTime" onchange="updateFlight('flightOut','depTime',this.value)"/></div>
-      </div>
-      <div class="row3">
-        <div class="fg"><label class="fl">도착시간</label><input type="time" id="foArrTime" onchange="updateFlight('flightOut','arrTime',this.value)"/></div>
-        <div class="fg"><label class="fl">소요시간</label><input id="foDuration" placeholder="예: 4시간 45분" onchange="updateFlight('flightOut','duration',this.value)"/></div>
-        <div class="fg"><label class="fl">비용</label>
-          <div style="display:flex;gap:6px">
-            <input id="foCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateFlight('flightOut','cost',stripComma(this.value))"/>
-            <select id="foCurrency" style="flex:1;min-width:64px" onchange="updateFlight('flightOut','currency',this.value)">
-              <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
+      <div class="sec-ttl">✈️ 항공편</div>
+      <div class="tour-list" id="flightList"></div>
+      <div class="tour-add-box">
+        <div class="row3">
+          <div class="fg"><label class="fl">구분</label>
+            <select id="flDirection">
+              <option value="out">가는 항공편</option>
+              <option value="in">오는 항공편</option>
             </select>
+          </div>
+          <div class="fg"><label class="fl">항공사</label><input id="flAirline" placeholder="예: 대한항공"/></div>
+          <div class="fg"><label class="fl">항공편명</label><input id="flFlightNo" placeholder="예: KE651"/></div>
+        </div>
+        <div class="row3">
+          <div class="fg"><label class="fl">출발시간</label><input type="time" id="flDepTime"/></div>
+          <div class="fg"><label class="fl">도착시간</label><input type="time" id="flArrTime"/></div>
+          <div class="fg"><label class="fl">소요시간</label><input id="flDuration" placeholder="예: 4시간 45분"/></div>
+        </div>
+        <div class="row2">
+          <div class="fg"><label class="fl">비용</label>
+            <div style="display:flex;gap:6px">
+              <input id="flCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)"/>
+              <select id="flCurrency" style="flex:1;min-width:64px">
+                <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
+              </select>
+            </div>
+          </div>
+          <div class="fg"><label class="fl">메모</label><input id="flMemo" placeholder="수하물, 예약번호 등"/></div>
+        </div>
+        <div class="row-btn">
+          <div></div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-sm" id="flCancelBtn" style="display:none" onclick="cancelFlightEdit()">취소</button>
+            <button class="btn-add" id="flAddBtn" onclick="addFlight()">+ 항공편 추가</button>
           </div>
         </div>
       </div>
-      <div class="fg" style="margin-bottom:10px">
-        <label class="fl">메모</label><input id="foMemo" placeholder="수하물, 예약번호 등" onchange="updateFlight('flightOut','memo',this.value)"/>
-      </div>
-      <div class="fg" style="margin-bottom:16px">
-        <label class="fl">📱 모바일 항공권 (인원별)</label>
-        <div class="ticket-list" id="foTicketList"></div>
-        <div class="ticket-add">
-          <input type="text" id="foTicketName" placeholder="이름 (예: 민경)"/>
-          <input type="text" id="foTicketUrl" placeholder="항공권 링크 붙여넣기"/>
-          <input type="file" id="foTicketFile" accept="image/*"/>
-          <button class="btn-sm" onclick="document.getElementById('foTicketFile').click()">🖼️ 사진</button>
-          <button class="btn-add" onclick="addTicket('flightOut')">추가</button>
-        </div>
-      </div>
-
-      <div class="sec-ttl">✈️ 오는 항공편</div>
-      <div class="row3">
-        <div class="fg"><label class="fl">항공사</label><input id="fiAirline" placeholder="예: 대한항공" onchange="updateFlight('flightIn','airline',this.value)"/></div>
-        <div class="fg"><label class="fl">항공편명</label><input id="fiFlightNo" placeholder="예: KE652" onchange="updateFlight('flightIn','flightNo',this.value)"/></div>
-        <div class="fg"><label class="fl">출발시간</label><input type="time" id="fiDepTime" onchange="updateFlight('flightIn','depTime',this.value)"/></div>
-      </div>
-      <div class="row3">
-        <div class="fg"><label class="fl">도착시간</label><input type="time" id="fiArrTime" onchange="updateFlight('flightIn','arrTime',this.value)"/></div>
-        <div class="fg"><label class="fl">소요시간</label><input id="fiDuration" placeholder="예: 5시간 10분" onchange="updateFlight('flightIn','duration',this.value)"/></div>
-        <div class="fg"><label class="fl">비용</label>
-          <div style="display:flex;gap:6px">
-            <input id="fiCost" placeholder="0" style="flex:1.4" oninput="formatNumInput(this)" onkeydown="handlePlusZeros(event)" onchange="updateFlight('flightIn','cost',stripComma(this.value))"/>
-            <select id="fiCurrency" style="flex:1;min-width:64px" onchange="updateFlight('flightIn','currency',this.value)">
-              <option>KRW</option><option>USD</option><option>JPY</option><option>VND</option><option>THB</option><option>PHP</option><option>TWD</option><option>HKD</option><option>SGD</option><option>CNY</option><option>IDR</option><option>EUR</option>
-            </select>
-          </div>
-        </div>
-      </div>
-      <div class="fg" style="margin-bottom:10px">
-        <label class="fl">메모</label><input id="fiMemo" placeholder="수하물, 예약번호 등" onchange="updateFlight('flightIn','memo',this.value)"/>
-      </div>
-      <div class="fg" style="margin-bottom:16px">
-        <label class="fl">📱 모바일 항공권 (인원별)</label>
-        <div class="ticket-list" id="fiTicketList"></div>
-        <div class="ticket-add">
-          <input type="text" id="fiTicketName" placeholder="이름 (예: 민경)"/>
-          <input type="text" id="fiTicketUrl" placeholder="항공권 링크 붙여넣기"/>
-          <input type="file" id="fiTicketFile" accept="image/*"/>
-          <button class="btn-sm" onclick="document.getElementById('fiTicketFile').click()">🖼️ 사진</button>
-          <button class="btn-add" onclick="addTicket('flightIn')">추가</button>
-        </div>
-      </div>
-
       <div class="sec-ttl">🏨 숙소</div>
       <div class="tour-list" id="lodgingList"></div>
       <div class="tour-add-box">
@@ -553,8 +522,6 @@ input[type=file]{display:none}
           </div>
         </div>
       </div>
-
-
       <div class="sec-ttl">🎫 투어 / 액티비티 예약</div>
       <div class="tour-list" id="tourList"></div>
       <div class="tour-add-box">
@@ -584,7 +551,6 @@ input[type=file]{display:none}
         </div>
       </div>
     </div>
-
     <div id="tab-info" style="display:none">
       <div class="row2">
         <div class="fg"><label class="fl">별점</label>
@@ -598,7 +564,6 @@ input[type=file]{display:none}
         <label class="fl">여행 상세 메모</label>
         <textarea id="mNote" oninput="onInfoEdit()" placeholder="숙소, 항공편, 예약 정보 등을 자유롭게 적어보세요"></textarea>
       </div>
-
       <div class="sec-ttl" style="margin-top:14px">👥 함께 편집하는 사람 (각자 자기 구글 계정으로 로그인)</div>
       <div id="collabList" style="margin-bottom:8px"></div>
       <div class="row-btn" id="collabAddRow">
@@ -607,7 +572,6 @@ input[type=file]{display:none}
       </div>
       <div style="font-size:10px;color:var(--text2);margin-top:4px">* 상대방이 이 사이트에 한 번 이상 로그인한 적이 있어야 초대할 수 있어요. 초대하면 상대방이 자기 계정으로 로그인했을 때 이 여행이 자동으로 보여요.</div>
     </div>
-
     <button class="modal-map-btn" onclick="exportOneToMap()">🗺️ 이 여행을 지도로 보내기</button>
     <div class="share-btn-row">
       <button class="modal-map-btn" onclick="createShareLink('view')">👀 보기 전용 링크</button>
@@ -616,20 +580,17 @@ input[type=file]{display:none}
     <button class="modal-save-btn" onclick="closeModal()">✔ 완료</button>
   </div>
 </div>
-
 <div id="importModalBg" onclick="if(event.target===this)closeImportModal()">
   <div class="imp-box">
     <div class="modal-hdr">
       <div class="modal-ttl">📊 구글시트에서 일정 가져오기</div>
       <button class="modal-close" onclick="closeImportModal()">✕</button>
     </div>
-
     <div id="impStep1">
       <div class="mode-row">
         <button class="mode-btn on" id="srcGenericBtn" onclick="setImportSource('generic')">🗂 표 형식 시트</button>
         <button class="mode-btn" id="srcTemplateBtn" onclick="setImportSource('template')">✈️ 내 여행일정 템플릿</button>
       </div>
-
       <div id="srcGeneric">
         <div class="fg" style="margin-bottom:6px">
           <label class="fl">구글시트 공유 링크 (링크 있는 모든 사용자가 볼 수 있도록 공유 설정 필요)</label>
@@ -645,7 +606,6 @@ input[type=file]{display:none}
         </div>
         <input type="file" id="sheetFile" accept=".csv,.xlsx,.xls" onchange="handleSheetFile(event)"/>
       </div>
-
       <div id="srcTemplate" style="display:none">
         <div class="fg" style="margin-bottom:6px">
           <label class="fl">여행 시작일 (전체 여행 첫날 — "1 Day"에 해당하는 날짜)</label>
@@ -665,32 +625,25 @@ input[type=file]{display:none}
         </div>
         <input type="file" id="tplFile" accept=".csv" onchange="handleTemplateFile(event)"/>
       </div>
-
       <div class="imp-status" id="impStatus"></div>
     </div>
-
     <div id="impStep2" style="display:none">
       <div class="imp-status ok" id="impLoadedInfo"></div>
-
       <div id="genericPreview">
         <div class="sec-ttl" style="margin-top:10px">미리보기</div>
         <div class="prev-wrap"><table class="prev-table" id="prevTable"></table></div>
-
         <div class="sec-ttl" style="margin-top:10px">열 매칭 — 시트의 각 열이 어떤 정보인지 알려주세요</div>
         <div class="map-grid" id="mapGrid"></div>
       </div>
-
       <div id="templatePreview" style="display:none">
         <div class="sec-ttl" style="margin-top:10px">인식된 일정</div>
         <div id="tplPreviewList" style="font-size:11.5px;display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
       </div>
-
       <div class="sec-ttl" style="margin-top:10px">어디에 넣을까요?</div>
       <div class="mode-row">
         <button class="mode-btn on" id="modeNewBtn" onclick="setImportMode('new')">✈️ 새 여행으로 만들기</button>
         <button class="mode-btn" id="modeExistBtn" onclick="setImportMode('exist')">➕ 기존 여행에 추가</button>
       </div>
-
       <div id="impNewFields" class="row3">
         <div class="fg"><label class="fl">국가</label><input id="impCntry" list="cntryList" placeholder="예: 일본"/></div>
         <div class="fg"><label class="fl">도시</label><input id="impCity" placeholder="예: 오사카"/></div>
@@ -705,19 +658,15 @@ input[type=file]{display:none}
         <label class="fl">여행 선택</label>
         <select id="impTripSel"></select>
       </div>
-
       <button class="modal-save-btn" onclick="runImportDispatch()">✔ 이 데이터로 일정표 만들기</button>
       <button class="btn-sm" style="margin-top:8px;width:100%" onclick="resetImportStep()">↺ 다시 선택하기</button>
     </div>
   </div>
 </div>
-
 <div id="imgLightbox" onclick="closeLightbox()">
   <img id="lightboxImg" src="" alt="모바일 항공권"/>
 </div>
-
 <div id="toast"></div>
-
 <script>
 const LS_KEY='travel_planner_data_v1';
 const MAP_KEY='travel_map_trips_cache_v1';
@@ -766,16 +715,68 @@ const COUNTRIES=[
 const ESSENTIAL_ITEMS=["여권/신분증","충전기/보조배터리","상비약","세면도구","카메라","현금/카드","우산/우비","기내용 파우치"];
 const CURRENCY_OPTIONS=["KRW","USD","JPY","VND","THB","PHP","TWD","HKD","SGD","CNY","IDR","EUR"];
 const CATEGORY_OPTIONS=["식비","쇼핑","교통","입장료","기타"];
-
+const DEFAULT_RATES={KRW:1,USD:1380,JPY:9.2,VND:0.056,THB:39,PHP:24,TWD:43,HKD:177,SGD:1020,CNY:190,IDR:0.084,EUR:1500};
 let data={trips:[],trash:[]};
 let curTripId=null;
 let curDayIdx=0;
 let curTab='plan';
 let essentialsOpen=false;
+let rateEditorOpen=false;
 let _cloudSaveFn=null;
 let _localDirty=false;
-
-function sanitizeFlight(f,legacyImg){
+function getRates(){
+  const custom=(data.settings&&data.settings.rates)||{};
+  return Object.assign({},DEFAULT_RATES,custom,{KRW:1});
+}
+function toKRW(amount,cur){
+  const rates=getRates();
+  return (Number(amount)||0)*(rates[cur||'KRW']||1);
+}
+function updateRate(cur,val){
+  if(!data.settings||typeof data.settings!=='object')data.settings={};
+  if(!data.settings.rates||typeof data.settings.rates!=='object')data.settings.rates={};
+  const n=Number(val);
+  data.settings.rates[cur]=(n&&n>0)?n:DEFAULT_RATES[cur];
+  try{localStorage.setItem(LS_KEY,JSON.stringify(data));}catch(e){}
+  renderBudgetTab();
+}
+function toggleRateEditor(){
+  rateEditorOpen=!rateEditorOpen;
+  const box=document.getElementById('rateEditor');
+  if(box)box.style.display=rateEditorOpen?'':'none';
+  if(rateEditorOpen)renderRateEditor();
+}
+function renderRateEditor(){
+  const box=document.getElementById('rateEditor');
+  if(!box)return;
+  const rates=getRates();
+  box.innerHTML=`<div style="font-size:10.5px;color:var(--text2);margin-bottom:8px">1 단위당 원화(KRW) 환율을 입력하면 예산 합계를 더 정확하게 환산해요. 실제 환율에 맞게 자유롭게 수정하세요.</div>
+    <div class="row3">${CURRENCY_OPTIONS.filter(c=>c!=='KRW').map(c=>`
+      <div class="fg"><label class="fl">${c} → KRW</label><input type="text" value="${fmtNum(rates[c])}" oninput="formatNumInput(this)" onchange="updateRate('${c}',stripComma(this.value))"/></div>
+    `).join('')}</div>`;
+}
+function sanitizeFlightEntry(f){
+  f=(f&&typeof f==='object')?f:{};
+  const tickets=Array.isArray(f.tickets)?f.tickets.map(tk=>({
+    name:(tk&&tk.name)||'',
+    type:(tk&&tk.type==='link')?'link':'image',
+    value:(tk&&tk.value)||''
+  })).filter(tk=>tk.value):[];
+  return{
+    id:f.id||('fl_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),
+    direction:f.direction==='in'?'in':'out',
+    airline:f.airline||'',
+    flightNo:f.flightNo||'',
+    depTime:f.depTime||'',
+    arrTime:f.arrTime||'',
+    duration:f.duration||'',
+    cost:(f.cost!=null)?f.cost:'',
+    currency:f.currency||'KRW',
+    memo:f.memo||'',
+    tickets
+  };
+}
+function sanitizeLegacyFlight(f,legacyImg){
   if(typeof f==='string')f={memo:f};
   f=(f&&typeof f==='object')?f:{};
   const tickets=Array.isArray(f.tickets)?f.tickets.map(tk=>({
@@ -862,8 +863,24 @@ function sanitizeTrip(t){
     currency:t.splitCalc.currency||'KRW',
     people:(t.splitCalc.people!=null&&t.splitCalc.people!=='')?t.splitCalc.people:2
   };
-  t.flightOut=sanitizeFlight(t.flightOut,t.flightOutImg);
-  t.flightIn=sanitizeFlight(t.flightIn,t.flightInImg);
+  if(Array.isArray(t.flights)){
+    t.flights=t.flights.map(sanitizeFlightEntry);
+  }else{
+    const migrated=[];
+    const fo=sanitizeLegacyFlight(t.flightOut,t.flightOutImg);
+    const fi=sanitizeLegacyFlight(t.flightIn,t.flightInImg);
+    if(fo.airline||fo.flightNo||fo.depTime||fo.arrTime||fo.duration||fo.cost||fo.memo||fo.tickets.length){
+      migrated.push(Object.assign({id:'fl_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_out',direction:'out'},fo));
+    }
+    if(fi.airline||fi.flightNo||fi.depTime||fi.arrTime||fi.duration||fi.cost||fi.memo||fi.tickets.length){
+      migrated.push(Object.assign({id:'fl_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)+'_in',direction:'in'},fi));
+    }
+    t.flights=migrated;
+  }
+  delete t.flightOut;
+  delete t.flightIn;
+  delete t.flightOutImg;
+  delete t.flightInImg;
   if(Array.isArray(t.lodgings)){
     t.lodgings=t.lodgings.map(sanitizeLodging).filter(l=>l.name||l.location||l.cost||l.memo);
   }else if(t.lodging&&(t.lodging.name||t.lodging.location||t.lodging.cost||t.lodging.memo||typeof t.lodging==='string')){
@@ -873,8 +890,6 @@ function sanitizeTrip(t){
     t.lodgings=[];
   }
   delete t.lodging;
-  delete t.flightOutImg;
-  delete t.flightInImg;
   t.tours=(Array.isArray(t.tours)?t.tours:[]).map(tr=>({
     id:(tr&&tr.id)||('tour_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),
     name:(tr&&tr.name)||'',
@@ -896,8 +911,9 @@ function sanitizeData(){
     if(typeof s.deletedAt!=='number')s.deletedAt=Date.now();
     return s;
   });
+  if(!data.settings||typeof data.settings!=='object')data.settings={};
+  if(!data.settings.rates||typeof data.settings.rates!=='object')data.settings.rates={};
 }
-
 /* ===== 클라우드 동기화 (트립별 개별 저장 + 협업자 실시간 공동편집) ===== */
 let _ownTripsRefG=null;
 let _trashRefG=null;
@@ -915,7 +931,6 @@ function checkActivity(key,tripObj){
   if(act.changes&&act.changes.length)toast('✔ '+(act.byName||'상대방')+'님이 저장함: '+act.changes.join(', '));
 }
 let _saveTimerG=null;
-
 function tripCloudPayload(t){
   const c=Object.assign({},t);
   delete c._sharedFrom;
@@ -930,7 +945,7 @@ function refreshOpenModalIfNeeded(){
     const t=getTrip(curTripId);
     if(t){
       renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();
-      renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');
+      renderInfoTab();renderTravelTab();
       renderTours();renderCollaborators();
     }
   }
@@ -970,7 +985,6 @@ function upsertCollabTrip(ownerUid,tripId,raw){
   const idx=data.trips.findIndex(x=>x.id===tripId&&x._sharedFrom===ownerUid);
   if(idx>-1)data.trips[idx]=t;else data.trips.push(t);
 }
-
 async function pushTripToCloud(t){
   if(typeof firebase==='undefined'||!window._planUser)return;
   try{
@@ -1013,7 +1027,6 @@ function scheduleCloudSaveTop(){
   },800);
 }
 _cloudSaveFn=scheduleCloudSaveTop;
-
 function attachShareBridge(shareId){
   const ref=firebase.database().ref('shared_plans/'+shareId+'/trip');
   ref.on('value',snap=>{
@@ -1047,7 +1060,6 @@ function syncShareBridges(){
     }
   });
 }
-
 async function migrateOwnTripsIfNeeded(uid){
   const ref=firebase.database().ref('travel_plans/'+uid+'/trips');
   try{
@@ -1143,7 +1155,6 @@ function stopCollabListeners(){
   Object.values(_collabListeners).forEach(ref=>ref.off());
   _collabListeners={};
 }
-
 /* ---- 협업자 초대 ---- */
 function renderCollaborators(){
   const t=getTrip(curTripId);
@@ -1201,7 +1212,6 @@ async function removeCollaborator(uid){
     firebase.database().ref('collab_index/'+uid+'/'+t.id).remove().catch(e=>console.error('[invite] 제거 실패',e));
   }
 }
-
 function load(){
   try{const r=localStorage.getItem(LS_KEY);if(r)data=JSON.parse(r);}catch(e){}
   sanitizeData();
@@ -1237,7 +1247,6 @@ function seasonOf(dstr){
   const mon=new Date(dstr).getMonth()+1;
   return mon>=3&&mon<=5?'🌸봄':mon>=6&&mon<=8?'☀️여름':mon>=9&&mon<=11?'🍂가을':'❄️겨울';
 }
-
 function fillCountryOptions(){
   const cont=document.getElementById('contSel').value;
   const dl=document.getElementById('cntryList');
@@ -1254,7 +1263,6 @@ function onCntryPick(){
   }
 }
 fillCountryOptions();
-
 function genDays(df,dt){
   const days=[];
   if(!df){return[{date:null,items:[],photo:''}];}
@@ -1270,7 +1278,6 @@ function genDays(df,dt){
   }
   return days.length?days:[{date:df,items:[],photo:''}];
 }
-
 function addTrip(){
   const cntry=document.getElementById('cntryIn').value.trim();
   const city=document.getElementById('cityIn').value.trim();
@@ -1300,7 +1307,6 @@ function addTrip(){
   toast('✔ 여행 계획이 추가되었어요');
   openTrip(trip.id);
 }
-
 function deleteTrip(id,ev){
   if(ev)ev.stopPropagation();
   if(!confirm('이 여행 계획을 삭제할까요? (휴지통으로 이동해요)'))return;
@@ -1327,7 +1333,6 @@ function clearAll(){
   renderTrashBadge();
   toast('🗑️ 전체 삭제했어요 (휴지통으로 이동)');
 }
-
 /* ---- 휴지통 ---- */
 function renderTrashBadge(){
   const b=document.getElementById('trashBadge');
@@ -1396,14 +1401,12 @@ function emptyTrash(){
   renderTrashList();
   toast('🗑️ 휴지통을 비웠어요');
 }
-
 function renderStats(){
   document.getElementById('statTrips').textContent=data.trips.length;
   let totalKRW=0;
   data.trips.forEach(t=>{if(t.cost&&t.currency==='KRW')totalKRW+=t.cost;});
   document.getElementById('statBudget').textContent=fmtNum(totalKRW);
 }
-
 function renderGrid(){
   const grid=document.getElementById('tripGrid');
   if(!data.trips.length){
@@ -1432,25 +1435,23 @@ function renderGrid(){
   }).join('');
 }
 function escapeHtml(s){return (s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-
 function getTrip(id){return data.trips.find(t=>t.id===id);}
-
 let _tripOpenSnapshot=null;
 function openTrip(id){
   curTripId=id;curDayIdx=0;curTab='plan';essentialsOpen=false;
-  cancelTourEdit();cancelLodgingEdit();
+  cancelTourEdit();cancelLodgingEdit();cancelFlightEdit();
   const t=getTrip(id);
   _tripOpenSnapshot=JSON.stringify(t);
   document.getElementById('mTitle').textContent=`${t.flag} ${t.cntry} · ${t.city} 여행 계획${(t._sharedFrom||(t.collaborators&&Object.keys(t.collaborators).length))?' 🤝':''}`;
-  renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();renderCollaborators();
+  renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTours();renderCollaborators();
   switchTab('plan');
   document.getElementById('modalBg').classList.add('show');
 }
 function diffTripSections(before,after){
   const changes=[];
   if(JSON.stringify(before.days)!==JSON.stringify(after.days))changes.push('일정표');
-  if(JSON.stringify(before.flightOut)!==JSON.stringify(after.flightOut)||JSON.stringify(before.flightIn)!==JSON.stringify(after.flightIn))changes.push('항공편');
-  if(JSON.stringify(before.lodging)!==JSON.stringify(after.lodging))changes.push('숙소');
+  if(JSON.stringify(before.flights)!==JSON.stringify(after.flights))changes.push('항공편');
+  if(JSON.stringify(before.lodgings)!==JSON.stringify(after.lodgings))changes.push('숙소');
   if(JSON.stringify(before.tours)!==JSON.stringify(after.tours))changes.push('투어');
   if(JSON.stringify(before.checklist)!==JSON.stringify(after.checklist)||JSON.stringify(before.essentials)!==JSON.stringify(after.essentials))changes.push('체크리스트');
   if((before.memo||'')!==(after.memo||'')||(before.note||'')!==(after.note||'')||(before.stars||0)!==(after.stars||0)||JSON.stringify(before.collaborators||{})!==JSON.stringify(after.collaborators||{}))changes.push('정보');
@@ -1483,7 +1484,6 @@ function switchTab(tab){
   });
   if(tab==='budget')renderBudgetTab();
 }
-
 function renderDayTabs(){
   const t=getTrip(curTripId);
   const wrap=document.getElementById('dayTabs');
@@ -1517,6 +1517,7 @@ function renderDayPanel(){
         <input type="text" placeholder="예: 06:15 - 09:05" value="${escapeHtml(it.time||'')}" onchange="updateItem(${idx},'time',this.value)"/>
         <input type="text" placeholder="활동 / 장소" value="${escapeHtml(it.title||'')}" onchange="updateItem(${idx},'title',this.value)"/>
         <input type="text" placeholder="메모" value="${escapeHtml(it.memo||'')}" onchange="updateItem(${idx},'memo',this.value)"/>
+        <div class="item-drag-handle" title="끌어서 순서 변경">⠿</div>
         <button class="item-del" onclick="removeItem(${idx})">✕</button>
       </div>
       ${costLineHtml(idx,it.costs)}
@@ -1534,10 +1535,38 @@ function renderDayPanel(){
         <button class="btn-sm" onclick="openDayMap()">🗺️ 지도에서 보기</button>
       </div>
       ${photoHtml}
-      ${rows||'<div style="font-size:11px;color:var(--text3);padding:6px 2px">아직 일정이 없어요. 아래에서 추가해보세요.</div>'}
+      <div id="dayItemsList">${rows}</div>
+      ${!d.items.length?'<div style="font-size:11px;color:var(--text3);padding:6px 2px">아직 일정이 없어요. 아래에서 추가해보세요.</div>':''}
       <button class="add-item-btn" onclick="addItem()">+ 일정 추가</button>
       <div class="day-total">이 날 지출 계획: <b>${fmtCurrencySums(sums)}</b></div>
     </div>`;
+  initDaySortable();
+}
+let _daySortable=null;
+function initDaySortable(){
+  const el=document.getElementById('dayItemsList');
+  if(_daySortable){_daySortable.destroy();_daySortable=null;}
+  if(!el||typeof Sortable==='undefined')return;
+  _daySortable=Sortable.create(el,{
+    handle:'.item-drag-handle',
+    animation:150,
+    ghostClass:'item-drag-ghost',
+    chosenClass:'item-drag-chosen',
+    onStart:function(){
+      // 드래그를 시작하기 전에 편집 중이던 입력칸의 값을 먼저 커밋해서,
+      // 순서 변경 로직이 예전 인덱스를 참조하는 change 이벤트와 뒤섞이지 않도록 함
+      if(document.activeElement&&typeof document.activeElement.blur==='function')document.activeElement.blur();
+    },
+    onEnd:function(evt){
+      if(evt.oldIndex===evt.newIndex||evt.oldIndex==null||evt.newIndex==null)return;
+      const t=getTrip(curTripId);
+      const items=t.days[curDayIdx].items;
+      const moved=items.splice(evt.oldIndex,1)[0];
+      items.splice(evt.newIndex,0,moved);
+      save();
+      renderDayPanel();
+    }
+  });
 }
 async function handleDayPhoto(ev){
   const file=ev.target.files[0];
@@ -1615,7 +1644,6 @@ function removeItem(idx){
   t.days[curDayIdx].items.splice(idx,1);
   save();renderDayPanel();
 }
-
 function currencySumsForCosts(costs){
   const sums={};
   (costs||[]).forEach(c=>{
@@ -1633,7 +1661,7 @@ function fmtCurrencySums(sums){
 function budgetCategories(t){
   const cats=[];
   const flightSum={};
-  [t.flightOut,t.flightIn].forEach(f=>{
+  (t.flights||[]).forEach(f=>{
     if(f&&f.cost){const c=f.currency||'KRW';flightSum[c]=(flightSum[c]||0)+(Number(f.cost)||0);}
   });
   cats.push({icon:'✈️',label:'항공편',sums:flightSum});
@@ -1659,9 +1687,13 @@ function renderBudgetTab(){
   const plannedEl=document.getElementById('bTotalPlanned');
   plannedEl.textContent=fmtCurrencySums(grand);
   plannedEl.classList.toggle('multi',Object.keys(grand).length>1);
+  const krwTotal=Object.keys(grand).reduce((sum,cur)=>sum+toKRW(grand[cur],cur),0);
+  const krwEl=document.getElementById('bTotalPlannedKRW');
+  if(krwEl)krwEl.textContent=fmtNum(Math.round(krwTotal))+' 원';
   document.getElementById('budgetByCategory').innerHTML=cats.map(c=>
     `<div class="cat-row"><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.label}</span><span class="cat-amt">${fmtCurrencySums(c.sums)}</span></div>`
   ).join('');
+  if(rateEditorOpen)renderRateEditor();
   renderSplitCalc();
 }
 function renderSplitCalc(){
@@ -1688,7 +1720,6 @@ function updateSplitCalc(field,val){
   save();
   renderSplitCalc();
 }
-
 function renderChecklist(){
   const t=getTrip(curTripId);
   const list=document.getElementById('chkList');
@@ -1750,7 +1781,6 @@ function delChk(i){
   t.checklist.splice(i,1);
   save();renderChecklist();
 }
-
 function renderInfoTab(){
   const t=getTrip(curTripId);
   document.getElementById('mMemo').value=t.memo||'';
@@ -1769,35 +1799,203 @@ function onInfoEdit(){
   t.note=document.getElementById('mNote').value;
   save();
 }
-
 function renderTravelTab(){
   const t=getTrip(curTripId);
   if(!t)return;
-  const fo=t.flightOut||{},fi=t.flightIn||{};
-  document.getElementById('foAirline').value=fo.airline||'';
-  document.getElementById('foFlightNo').value=fo.flightNo||'';
-  document.getElementById('foDepTime').value=fo.depTime||'';
-  document.getElementById('foArrTime').value=fo.arrTime||'';
-  document.getElementById('foDuration').value=fo.duration||'';
-  document.getElementById('foCost').value=fo.cost?Number(fo.cost).toLocaleString('en-US'):'';
-  document.getElementById('foCurrency').value=fo.currency||'KRW';
-  document.getElementById('foMemo').value=fo.memo||'';
-  document.getElementById('fiAirline').value=fi.airline||'';
-  document.getElementById('fiFlightNo').value=fi.flightNo||'';
-  document.getElementById('fiDepTime').value=fi.depTime||'';
-  document.getElementById('fiArrTime').value=fi.arrTime||'';
-  document.getElementById('fiDuration').value=fi.duration||'';
-  document.getElementById('fiCost').value=fi.cost?Number(fi.cost).toLocaleString('en-US'):'';
-  document.getElementById('fiCurrency').value=fi.currency||'KRW';
-  document.getElementById('fiMemo').value=fi.memo||'';
+  renderFlights();
   renderLodgings();
 }
-function updateFlight(key,field,val){
-  const t=getTrip(curTripId);
-  if(!t[key]||typeof t[key]!=='object')t[key]={};
-  t[key][field]=val;
-  save();
+/* ---- 항공편 (여러 항공사 지원, 항공편별 모바일 항공권) ---- */
+let _editingFlightId=null;
+function resizeImageFile(file,maxW,quality){
+  maxW=maxW||900;quality=quality||0.72;
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.width,h=img.height;
+        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+        const canvas=document.createElement('canvas');
+        canvas.width=w;canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',quality));
+      };
+      img.onerror=()=>reject(new Error('이미지를 열지 못했어요'));
+      img.src=e.target.result;
+    };
+    reader.onerror=()=>reject(new Error('파일을 읽지 못했어요'));
+    reader.readAsDataURL(file);
+  });
 }
+function addFlight(){
+  const dirEl=document.getElementById('flDirection');
+  const airlineEl=document.getElementById('flAirline');
+  const noEl=document.getElementById('flFlightNo');
+  const depEl=document.getElementById('flDepTime');
+  const arrEl=document.getElementById('flArrTime');
+  const durEl=document.getElementById('flDuration');
+  const costEl=document.getElementById('flCost');
+  const currEl=document.getElementById('flCurrency');
+  const memoEl=document.getElementById('flMemo');
+  const airline=airlineEl.value.trim();
+  if(!airline){toast('✈️ 항공사를 입력해주세요');airlineEl.focus();return;}
+  const t=getTrip(curTripId);
+  if(!Array.isArray(t.flights))t.flights=[];
+  const payload={
+    direction:dirEl.value==='in'?'in':'out',
+    airline,
+    flightNo:noEl.value.trim(),
+    depTime:depEl.value,
+    arrTime:arrEl.value,
+    duration:durEl.value.trim(),
+    cost:stripComma(costEl.value),
+    currency:currEl.value,
+    memo:memoEl.value.trim()
+  };
+  if(_editingFlightId){
+    const idx=t.flights.findIndex(f=>f.id===_editingFlightId);
+    if(idx>-1)t.flights[idx]=Object.assign({},t.flights[idx],payload);
+    toast('✈️ 항공편 정보를 수정했어요');
+    cancelFlightEdit();
+  }else{
+    t.flights.push(Object.assign({id:'fl_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),tickets:[]},payload));
+    toast('✈️ 항공편을 추가했어요');
+  }
+  save();
+  renderFlights();
+  [airlineEl,noEl,depEl,arrEl,durEl,costEl,memoEl].forEach(el=>el.value='');
+  currEl.value='KRW';dirEl.value='out';
+}
+function editFlight(id){
+  const t=getTrip(curTripId);
+  const f=(t.flights||[]).find(x=>x.id===id);
+  if(!f)return;
+  _editingFlightId=id;
+  document.getElementById('flDirection').value=f.direction||'out';
+  document.getElementById('flAirline').value=f.airline||'';
+  document.getElementById('flFlightNo').value=f.flightNo||'';
+  document.getElementById('flDepTime').value=f.depTime||'';
+  document.getElementById('flArrTime').value=f.arrTime||'';
+  document.getElementById('flDuration').value=f.duration||'';
+  document.getElementById('flCost').value=f.cost?Number(f.cost).toLocaleString('en-US'):'';
+  document.getElementById('flCurrency').value=f.currency||'KRW';
+  document.getElementById('flMemo').value=f.memo||'';
+  const btn=document.getElementById('flAddBtn');
+  if(btn){btn.textContent='✔ 수정 완료';btn.classList.add('editing');}
+  const cancelBtn=document.getElementById('flCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='';
+  document.getElementById('flAirline').scrollIntoView({behavior:'smooth',block:'center'});
+}
+function cancelFlightEdit(){
+  _editingFlightId=null;
+  ['flAirline','flFlightNo','flDepTime','flArrTime','flDuration','flCost','flMemo'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.value='';
+  });
+  const currEl=document.getElementById('flCurrency');if(currEl)currEl.value='KRW';
+  const dirEl=document.getElementById('flDirection');if(dirEl)dirEl.value='out';
+  const btn=document.getElementById('flAddBtn');
+  if(btn){btn.textContent='+ 항공편 추가';btn.classList.remove('editing');}
+  const cancelBtn=document.getElementById('flCancelBtn');
+  if(cancelBtn)cancelBtn.style.display='none';
+}
+function removeFlight(id){
+  if(!confirm('이 항공편을 삭제할까요? (등록된 모바일 항공권도 함께 삭제돼요)'))return;
+  const t=getTrip(curTripId);
+  t.flights=(t.flights||[]).filter(x=>x.id!==id);
+  save();
+  if(_editingFlightId===id)cancelFlightEdit();
+  renderFlights();
+}
+function flightLine(f){
+  const parts=[];
+  if(f.airline||f.flightNo)parts.push([f.airline,f.flightNo].filter(Boolean).join(' '));
+  if(f.depTime||f.arrTime)parts.push([f.depTime,f.arrTime].filter(Boolean).join(' → '));
+  if(f.duration)parts.push('소요 '+f.duration);
+  if(f.cost)parts.push(fmtNum(f.cost)+' '+(f.currency||'KRW'));
+  return parts.join(' · ');
+}
+function renderFlights(){
+  const t=getTrip(curTripId);
+  if(!t)return;
+  const box=document.getElementById('flightList');
+  if(!box)return;
+  const list=t.flights||[];
+  box.innerHTML=list.length?list.map(f=>{
+    const dirLabel=f.direction==='in'?'🛫 오는 항공편':'🛫 가는 항공편';
+    const meta=flightLine(f);
+    const tickets=f.tickets||[];
+    const ticketsHtml=tickets.length?`<div class="ticket-list">`+tickets.map((tk,ti)=>{
+      const thumb=tk.type==='image'
+        ?`<img class="ticket-thumb" src="${tk.value}" onclick="openLightboxUrl('${tk.value}')"/>`
+        :`<a class="ticket-link" href="${tk.value}" target="_blank" rel="noopener">🔗</a>`;
+      return `<div class="ticket-row">${thumb}<span>${escapeHtml(tk.name)}</span><button class="chk-del" onclick="removeFlightTicket('${f.id}',${ti})">✕</button></div>`;
+    }).join('')+`</div>`:'';
+    return `<div class="tour-row" style="flex-direction:column;align-items:stretch">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:22px">✈️</span>
+        <div class="tour-body">
+          <div class="tour-name">${dirLabel} · ${escapeHtml(f.airline||'항공사 미정')}</div>
+          ${meta?`<div class="tour-meta">${escapeHtml(meta)}</div>`:''}
+          ${f.memo?`<div class="tour-meta">${escapeHtml(f.memo)}</div>`:''}
+        </div>
+        <button class="btn-sm" onclick="editFlight('${f.id}')">✏️</button>
+        <button class="chk-del" onclick="removeFlight('${f.id}')">✕</button>
+      </div>
+      ${ticketsHtml}
+      <div class="ticket-add" style="margin-top:8px">
+        <input type="text" placeholder="이름 (예: 민경)" id="flTkName_${f.id}"/>
+        <input type="text" placeholder="항공권 링크 붙여넣기" id="flTkUrl_${f.id}"/>
+        <input type="file" accept="image/*" id="flTkFile_${f.id}"/>
+        <button class="btn-sm" onclick="document.getElementById('flTkFile_${f.id}').click()">🖼️ 사진</button>
+        <button class="btn-add" onclick="addFlightTicket('${f.id}')">추가</button>
+      </div>
+    </div>`;
+  }).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">등록된 항공편이 없어요</div>';
+}
+async function addFlightTicket(flightId){
+  const nameEl=document.getElementById('flTkName_'+flightId);
+  const urlEl=document.getElementById('flTkUrl_'+flightId);
+  const fileEl=document.getElementById('flTkFile_'+flightId);
+  const name=nameEl.value.trim();
+  const url=urlEl.value.trim();
+  const file=fileEl.files[0];
+  if(!name){toast('👤 이름을 입력해주세요');nameEl.focus();return;}
+  if(!file&&!url){toast('🖼️ 사진 또는 🔗 링크 중 하나를 추가해주세요');return;}
+  const t=getTrip(curTripId);
+  const f=(t.flights||[]).find(x=>x.id===flightId);
+  if(!f)return;
+  if(!Array.isArray(f.tickets))f.tickets=[];
+  if(file){
+    try{
+      const dataUrl=await resizeImageFile(file);
+      f.tickets.push({name,type:'image',value:dataUrl});
+    }catch(e){toast('⚠️ 이미지를 처리하지 못했어요');return;}
+  }else{
+    f.tickets.push({name,type:'link',value:url});
+  }
+  save();
+  renderFlights();
+  toast('📱 모바일 항공권을 추가했어요');
+}
+function removeFlightTicket(flightId,idx){
+  if(!confirm('이 모바일 항공권을 삭제할까요?'))return;
+  const t=getTrip(curTripId);
+  const f=(t.flights||[]).find(x=>x.id===flightId);
+  if(f&&Array.isArray(f.tickets))f.tickets.splice(idx,1);
+  save();
+  renderFlights();
+}
+function openLightboxUrl(url){
+  if(!url)return;
+  document.getElementById('lightboxImg').src=url;
+  document.getElementById('imgLightbox').classList.add('show');
+}
+function closeLightbox(){
+  document.getElementById('imgLightbox').classList.remove('show');
+}
+/* ---- 숙소 ---- */
 let _editingLodgingId=null;
 function addLodging(){
   const nameEl=document.getElementById('lgName');
@@ -1895,86 +2093,6 @@ function renderLodgings(){
     </div>`;
   }).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">등록된 숙소가 없어요</div>';
 }
-
-/* ---- 모바일 항공권 (인원별, 이미지 또는 링크) ---- */
-function resizeImageFile(file,maxW,quality){
-  maxW=maxW||900;quality=quality||0.72;
-  return new Promise((resolve,reject)=>{
-    const reader=new FileReader();
-    reader.onload=e=>{
-      const img=new Image();
-      img.onload=()=>{
-        let w=img.width,h=img.height;
-        if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
-        const canvas=document.createElement('canvas');
-        canvas.width=w;canvas.height=h;
-        canvas.getContext('2d').drawImage(img,0,0,w,h);
-        resolve(canvas.toDataURL('image/jpeg',quality));
-      };
-      img.onerror=()=>reject(new Error('이미지를 열지 못했어요'));
-      img.src=e.target.result;
-    };
-    reader.onerror=()=>reject(new Error('파일을 읽지 못했어요'));
-    reader.readAsDataURL(file);
-  });
-}
-function ticketPrefix(key){return key==='flightOut'?'fo':'fi';}
-async function addTicket(key){
-  const p=ticketPrefix(key);
-  const nameEl=document.getElementById(p+'TicketName');
-  const urlEl=document.getElementById(p+'TicketUrl');
-  const fileEl=document.getElementById(p+'TicketFile');
-  const name=nameEl.value.trim();
-  const url=urlEl.value.trim();
-  const file=fileEl.files[0];
-  if(!name){toast('👤 이름을 입력해주세요');nameEl.focus();return;}
-  if(!file&&!url){toast('🖼️ 사진 또는 🔗 링크 중 하나를 추가해주세요');return;}
-  const t=getTrip(curTripId);
-  if(!t[key]||typeof t[key]!=='object')t[key]={};
-  if(!Array.isArray(t[key].tickets))t[key].tickets=[];
-  if(file){
-    try{
-      const dataUrl=await resizeImageFile(file);
-      t[key].tickets.push({name,type:'image',value:dataUrl});
-    }catch(e){toast('⚠️ 이미지를 처리하지 못했어요');return;}
-  }else{
-    t[key].tickets.push({name,type:'link',value:url});
-  }
-  save();
-  renderTickets(key);
-  nameEl.value='';urlEl.value='';fileEl.value='';
-  toast('📱 모바일 항공권을 추가했어요');
-}
-function removeTicket(key,idx){
-  if(!confirm('이 모바일 항공권을 삭제할까요?'))return;
-  const t=getTrip(curTripId);
-  if(t[key]&&Array.isArray(t[key].tickets))t[key].tickets.splice(idx,1);
-  save();
-  renderTickets(key);
-}
-function renderTickets(key){
-  const t=getTrip(curTripId);
-  if(!t)return;
-  const p=ticketPrefix(key);
-  const box=document.getElementById(p+'TicketList');
-  if(!box)return;
-  const list=(t[key]&&t[key].tickets)||[];
-  box.innerHTML=list.length?list.map((tk,i)=>{
-    const thumb=tk.type==='image'
-      ?`<img class="ticket-thumb" src="${tk.value}" onclick="openLightboxUrl('${tk.value}')"/>`
-      :`<a class="ticket-link" href="${tk.value}" target="_blank" rel="noopener">🔗</a>`;
-    return `<div class="ticket-row">${thumb}<span>${escapeHtml(tk.name)}</span><button class="chk-del" onclick="removeTicket('${key}',${i})">✕</button></div>`;
-  }).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">등록된 항공권이 없어요</div>';
-}
-function openLightboxUrl(url){
-  if(!url)return;
-  document.getElementById('lightboxImg').src=url;
-  document.getElementById('imgLightbox').classList.add('show');
-}
-function closeLightbox(){
-  document.getElementById('imgLightbox').classList.remove('show');
-}
-
 /* ---- 투어 / 액티비티 예약 ---- */
 let _editingTourId=null;
 async function addTour(){
@@ -2086,7 +2204,6 @@ function renderTours(){
     </div>`;
   }).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">등록된 투어가 없어요</div>';
 }
-
 function readMapCache(){
   try{const r=localStorage.getItem(MAP_KEY);const arr=r?JSON.parse(r):[];return Array.isArray(arr)?arr:[];}catch(e){return[];}
 }
@@ -2115,7 +2232,6 @@ function exportOneToMap(){
     toast('⚠️ 저장에 실패했어요 (브라우저 저장공간 확인)');
   }
 }
-
 function downloadJSON(){
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -2144,7 +2260,6 @@ function importJSONFile(ev){
   reader.readAsText(file);
   ev.target.value='';
 }
-
 /* ===== 구글시트 가져오기 ===== */
 let impHeaders=[];
 let impRows=[];      // array of arrays (raw, includes header row at 0)
@@ -2152,7 +2267,6 @@ let impMapping={};   // header -> field ('ignore'|'date'|'time'|'title'|'memo'|'
 let impMode='new';
 let impSource='generic';
 let tplDays=[];
-
 const FIELD_SYNONYMS={
   date:['날짜','일자','day','date','일','날'],
   time:['시간','time','시각'],
@@ -2167,7 +2281,6 @@ function guessField(header){
   }
   return 'ignore';
 }
-
 function openImportModal(){
   resetImportStep();
   document.getElementById('importModalBg').classList.add('show');
@@ -2198,7 +2311,6 @@ function setStatus(msg,cls){
   const el=document.getElementById('impStatus');
   el.textContent=msg;el.className='imp-status'+(cls?(' '+cls):'');
 }
-
 function parseCSV(text){
   const rows=[];let row=[];let field='';let inQ=false;
   for(let i=0;i<text.length;i++){
@@ -2218,7 +2330,6 @@ function parseCSV(text){
   if(field.length||row.length){row.push(field);rows.push(row);}
   return rows.filter(r=>r.some(c=>c!==''));
 }
-
 function loadRows(rows){
   if(!rows.length){setStatus('⚠️ 데이터를 찾지 못했어요','err');return;}
   impHeaders=rows[0].map(h=>(h||'').toString().trim());
@@ -2233,7 +2344,6 @@ function loadRows(rows){
   document.getElementById('impLoadedInfo').textContent=`✔ ${impHeaders.length}개 열, ${impRows.length}개 행을 불러왔어요`;
   refreshTripSelect();
 }
-
 async function fetchFromSheetLink(){
   const url=document.getElementById('sheetUrlIn').value.trim();
   if(!url){setStatus('⚠️ 시트 링크를 입력해주세요','err');return;}
@@ -2253,7 +2363,6 @@ async function fetchFromSheetLink(){
     setStatus('⚠️ 불러오지 못했어요. 시트를 "링크가 있는 모든 사용자" 보기로 공유했는지 확인하거나, 파일을 다운로드해서 업로드해주세요.','err');
   }
 }
-
 function handleSheetFile(ev){
   const file=ev.target.files[0];
   if(!file)return;
@@ -2274,7 +2383,6 @@ function handleSheetFile(ev){
     reader.readAsArrayBuffer(file);
   }
 }
-
 /* ---- 고정 템플릿("N Day" + "HH:MM - HH:MM" 시간표) 전용 파서 ---- */
 function parseTemplateSheet(rows){
   const dayBlocks=[];
@@ -2361,7 +2469,6 @@ function runTemplateImport(){
   const parsedItems=templateToItems(tplDays,start);
   buildFromItems(parsedItems);
 }
-
 function renderImportPreview(){
   const table=document.getElementById('prevTable');
   const showRows=impRows.slice(0,6);
@@ -2376,7 +2483,6 @@ function renderImportPreview(){
       </select>
     </div>`).join('');
 }
-
 function setImportMode(mode){
   impMode=mode;
   document.getElementById('modeNewBtn').classList.toggle('on',mode==='new');
@@ -2388,12 +2494,10 @@ function refreshTripSelect(){
   const sel=document.getElementById('impTripSel');
   sel.innerHTML=data.trips.map(t=>`<option value="${t.id}">${t.flag} ${t.cntry} · ${t.city}</option>`).join('')||'<option value="">계획된 여행이 없어요</option>';
 }
-
 function fieldIndex(field){
   for(const h of impHeaders)if(impMapping[h]===field)return impHeaders.indexOf(h);
   return -1;
 }
-
 function runImport(){
   const dIdx=fieldIndex('date'),tIdx=fieldIndex('time'),titIdx=fieldIndex('title'),mIdx=fieldIndex('memo'),cIdx=fieldIndex('cost');
   const parsedItems=impRows.map(r=>({
@@ -2405,12 +2509,9 @@ function runImport(){
   })).filter(it=>it.title||it.memo||it.cost||it.time);
   buildFromItems(parsedItems);
 }
-
 function buildFromItems(parsedItems){
   if(!parsedItems.length){toast('⚠️ 가져올 일정 데이터가 없어요');return;}
-
   const dates=[...new Set(parsedItems.filter(i=>i.date).map(i=>i.date))].sort();
-
   if(impMode==='new'){
     const cntry=document.getElementById('impCntry').value.trim();
     const city=document.getElementById('impCity').value.trim();
@@ -2444,12 +2545,10 @@ function buildFromItems(parsedItems){
     openTrip(t.id);
   }
 }
-
 function runImportDispatch(){
   if(impSource==='template')runTemplateImport();
   else runImport();
 }
-
 function normalizeDate(v){
   if(!v)return null;
   const s=v.toString().trim();
@@ -2461,7 +2560,6 @@ function normalizeDate(v){
   if(!isNaN(d.getTime()))return d.toISOString().slice(0,10);
   return null;
 }
-
 function groupIntoDays(items,df,dt){
   const withDate=items.filter(i=>i.date);
   if(!withDate.length){
@@ -2476,7 +2574,6 @@ function groupIntoDays(items,df,dt){
   if(unmatched.length&&days[0])days[0].items=days[0].items.concat(unmatched.map(i=>({time:i.time,title:i.title,memo:i.memo,cost:i.cost})));
   return days;
 }
-
 function mergeIntoTrip(t,items){
   items.forEach(i=>{
     let day=t.days.find(d=>d.date===i.date);
@@ -2491,7 +2588,6 @@ function mergeIntoTrip(t,items){
   const last=t.days[t.days.length-1];
   if(!t.dt||(last.date&&last.date>t.dt))t.dt=last.date||t.dt;
 }
-
 const FIREBASE_CONFIG={
   apiKey:"AIzaSyD9DYsjkHIKJzjhbuIvZwpwGUVvYqo09V8",
   authDomain:"travel-tracker-9f0f7.firebaseapp.com",
@@ -2501,7 +2597,6 @@ const FIREBASE_CONFIG={
   messagingSenderId:"157327971618",
   appId:"1:157327971618:web:b5eca73698db54034b817b"
 };
-
 /* ===== 공유 링크(보기전용 / 함께편집) ===== */
 async function createShareLink(permission){
   if(typeof firebase==='undefined'){toast('⚠️ 공유 기능을 사용할 수 없어요 (네트워크 확인)');return;}
@@ -2530,11 +2625,18 @@ async function createShareLink(permission){
     toast('⚠️ 링크 생성에 실패했어요 (Firebase 규칙에 shared_plans 경로가 있는지 확인해주세요)');
   }
 }
-
+function ticketsHtmlShared(tickets){
+  if(!tickets||!tickets.length)return'';
+  return `<div class="ticket-list">`+tickets.map(tk=>{
+    const thumb=tk.type==='image'
+      ?`<img class="ticket-thumb" src="${tk.value}" onclick="openLightboxUrl('${tk.value}')"/>`
+      :`<a class="ticket-link" href="${tk.value}" target="_blank" rel="noopener">🔗</a>`;
+    return `<div class="ticket-row">${thumb}<span>${escapeHtml(tk.name)}</span></div>`;
+  }).join('')+`</div>`;
+}
 function renderSharedView(container,t){
   const dateStr=t.df?(fmtD(t.df)+(t.dt&&t.dt!==t.df?' ~ '+fmtD(t.dt):'')):'날짜 미정';
   const stars=t.stars?'⭐'.repeat(t.stars):'';
-
   let html=`<div class="shared-wrap">
     <div style="text-align:center"><span class="shared-badge">🔒 공유된 여행 계획 · 읽기 전용</span></div>
     <div class="shared-hdr" style="text-align:center">
@@ -2543,45 +2645,19 @@ function renderSharedView(container,t){
       <div class="sub">🛫 ${dateStr}${t.memo?' · 👥 '+escapeHtml(t.memo):''}</div>
       ${stars?`<div style="margin-top:6px">${stars}</div>`:''}
     </div>`;
-
-  const fo=t.flightOut||{},fi=t.flightIn||{};
+  const flights=t.flights||[];
   const lodgings=t.lodgings||[];
-  const hasFlightOut=fo.airline||fo.flightNo||fo.depTime||fo.arrTime||fo.duration||fo.memo||(fo.tickets&&fo.tickets.length);
-  const hasFlightIn=fi.airline||fi.flightNo||fi.depTime||fi.arrTime||fi.duration||fi.memo||(fi.tickets&&fi.tickets.length);
+  const hasFlights=flights.length>0;
   const hasLodging=lodgings.length>0;
-
-  function flightLine(f){
-    const parts=[];
-    if(f.airline||f.flightNo)parts.push([f.airline,f.flightNo].filter(Boolean).join(' '));
-    if(f.depTime||f.arrTime)parts.push([f.depTime,f.arrTime].filter(Boolean).join(' → '));
-    if(f.duration)parts.push('소요 '+f.duration);
-    if(f.cost)parts.push(fmtNum(f.cost)+' '+(f.currency||'KRW'));
-    return parts.join(' · ');
-  }
-  function ticketsHtml(tickets){
-    if(!tickets||!tickets.length)return'';
-    return `<div class="ticket-list">`+tickets.map(tk=>{
-      const thumb=tk.type==='image'
-        ?`<img class="ticket-thumb" src="${tk.value}" onclick="openLightboxUrl('${tk.value}')"/>`
-        :`<a class="ticket-link" href="${tk.value}" target="_blank" rel="noopener">🔗</a>`;
-      return `<div class="ticket-row">${thumb}<span>${escapeHtml(tk.name)}</span></div>`;
-    }).join('')+`</div>`;
-  }
-
-  if(hasFlightOut||hasFlightIn||hasLodging){
+  if(hasFlights||hasLodging){
     html+=`<div class="shared-card"><h3>✈️ 항공 · 숙소</h3>`;
-    if(hasFlightOut){
-      html+=`<div style="margin-bottom:10px"><b style="font-size:11px">가는 항공편</b>
-        <div class="shared-pre">${escapeHtml(flightLine(fo))||'-'}${fo.memo?'\n'+escapeHtml(fo.memo):''}</div>
-        ${ticketsHtml(fo.tickets)}
+    flights.forEach(f=>{
+      const dirLabel=f.direction==='in'?'오는 항공편':'가는 항공편';
+      html+=`<div style="margin-bottom:10px"><b style="font-size:11px">${dirLabel}${f.airline?(' · '+escapeHtml(f.airline)):''}</b>
+        <div class="shared-pre">${escapeHtml(flightLine(f))||'-'}${f.memo?'\n'+escapeHtml(f.memo):''}</div>
+        ${ticketsHtmlShared(f.tickets)}
       </div>`;
-    }
-    if(hasFlightIn){
-      html+=`<div style="margin-bottom:10px"><b style="font-size:11px">오는 항공편</b>
-        <div class="shared-pre">${escapeHtml(flightLine(fi))||'-'}${fi.memo?'\n'+escapeHtml(fi.memo):''}</div>
-        ${ticketsHtml(fi.tickets)}
-      </div>`;
-    }
+    });
     lodgings.forEach(lg=>{
       const lgLine=[lg.name,lg.location].filter(Boolean).join(' · ');
       const ci=[lg.checkIn,lg.checkInTime].filter(Boolean).join(' ');
@@ -2592,7 +2668,6 @@ function renderSharedView(container,t){
     });
     html+=`</div>`;
   }
-
   if(t.tours&&t.tours.length){
     html+=`<div class="shared-card"><h3>🎫 투어 · 액티비티</h3>`;
     t.tours.forEach(tr=>{
@@ -2611,7 +2686,6 @@ function renderSharedView(container,t){
     });
     html+=`</div>`;
   }
-
   html+=`<div class="shared-card"><h3>📋 일정표</h3>`;
   t.days.forEach((d,i)=>{
     const lbl=d.date?(new Date(d.date).getMonth()+1)+'/'+new Date(d.date).getDate()+'일차':('Day '+(i+1));
@@ -2631,17 +2705,19 @@ function renderSharedView(container,t){
     }
   });
   html+=`</div>`;
-
   const catSumsShared=budgetCategories(t);
   const grandShared={};
   catSumsShared.forEach(c=>{Object.keys(c.sums).forEach(cur=>{grandShared[cur]=(grandShared[cur]||0)+c.sums[cur];});});
+  const krwTotalShared=Object.keys(grandShared).reduce((sum,cur)=>sum+toKRW(grandShared[cur],cur),0);
   html+=`<div class="shared-card"><h3>💰 지출 합계</h3>
-    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px;border-bottom:1px dashed var(--brd);padding-bottom:8px">
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;border-bottom:1px dashed var(--brd);padding-bottom:8px">
       <span>전체 합계</span><b style="color:var(--accent)">${fmtCurrencySums(grandShared)}</b>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:10px">
+      <span>원화 환산 합계</span><b style="color:var(--accent)">${fmtNum(Math.round(krwTotalShared))} 원</b>
     </div>
     ${catSumsShared.map(c=>`<div class="cat-row"><span class="cat-icon">${c.icon}</span><span class="cat-name">${c.label}</span><span class="cat-amt">${fmtCurrencySums(c.sums)}</span></div>`).join('')}
   </div>`;
-
   if(t.checklist&&t.checklist.length){
     html+=`<div class="shared-card"><h3>🎒 체크리스트</h3>`;
     t.checklist.forEach(c=>{
@@ -2649,18 +2725,14 @@ function renderSharedView(container,t){
     });
     html+=`</div>`;
   }
-
   if(t.note){
     html+=`<div class="shared-card"><h3>📝 메모</h3><div class="shared-pre">${escapeHtml(t.note)}</div></div>`;
   }
-
   html+=`<div style="text-align:center;margin-top:1.5rem">
     <a href="${location.origin+location.pathname}" style="font-size:11.5px;color:var(--accent);font-weight:700;text-decoration:none">📝 나도 여행 계획표 만들어보기 →</a>
   </div></div>`;
-
   container.innerHTML=html;
 }
-
 function initShareEntry(shareId){
   const ls=document.getElementById('lockScreen');if(ls)ls.style.display='none';
   if(typeof firebase==='undefined'){
@@ -2694,7 +2766,6 @@ function initShareEntry(shareId){
     if(sw){sw.style.display='';sw.innerHTML='<div class="shared-msg">불러오는 중 문제가 발생했어요.</div>';}
   });
 }
-
 function initSharedEditMode(shareId,tripRaw){
   const trip=sanitizeTrip(tripRaw||{});
   data={trips:[trip]};
@@ -2727,13 +2798,12 @@ function initSharedEditMode(shareId,tripRaw){
     data.trips[0]=incoming;
     renderStats();
     if(document.getElementById('modalBg').classList.contains('show')){
-      renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTickets('flightOut');renderTickets('flightIn');renderTours();
+      renderDayTabs();renderDayPanel();renderBudgetTab();renderChecklist();renderEssentials();renderInfoTab();renderTravelTab();renderTours();
     }
   });
   renderStats();
   openTrip(trip.id);
 }
-
 const _shareId=new URLSearchParams(location.search).get('share');
 if(_shareId){
   initShareEntry(_shareId);
@@ -2742,7 +2812,6 @@ if(_shareId){
   renderStats();
   renderGrid();
   renderTrashBadge();
-
   /* ===== Firebase: Google 로그인 + 계정별 클라우드 저장 + 협업자 초대 ===== */
   (function(){
     if(typeof firebase==='undefined'){
@@ -2753,12 +2822,10 @@ if(_shareId){
     // 여행지도와 같은 Firebase 프로젝트/같은 Google 계정을 사용해요.
     // 계획표 데이터는 지도의 방문 기록과 겹치지 않게 'travel_plans/{uid}/trips/{tripId}' 경로에 트립별로 따로 저장돼요.
     const _FC=FIREBASE_CONFIG;
-
     firebase.initializeApp(_FC);
     const _auth=firebase.auth();
     const _gp=new firebase.auth.GoogleAuthProvider();
     try{_auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);}catch(e){}
-
     function updateUserUI(user){
       const badge=document.getElementById('userInfo');
       if(!badge)return;
@@ -2775,11 +2842,9 @@ if(_shareId){
         uid:user.uid,name:user.displayName||'',email:user.email
       }).catch(e=>console.error('[directory] 등록 실패',e));
     }
-
     _auth.getRedirectResult().catch(e=>{
       if(e&&e.code&&e.code!=='auth/no-auth-event')console.error('[auth] 리다이렉트 로그인 처리 실패',e);
     });
-
     _auth.onAuthStateChanged(user=>{
       if(user){
         window._planUser=user;
@@ -2796,7 +2861,6 @@ if(_shareId){
         stopCollabListeners();
       }
     });
-
     window._planGoogleLogin=async function(){
       const btn=document.getElementById('googleBtn');
       if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
@@ -2824,7 +2888,6 @@ if(_shareId){
   })();
 }
 </script>
-
 <!-- boss_min_ 워터마크 -->
 <div style="position:fixed;right:16px;bottom:14px;font-family:Nunito,-apple-system,sans-serif;font-size:12px;font-weight:500;color:#bbb;opacity:.3;letter-spacing:1.5px;z-index:9999;pointer-events:none;user-select:none;">boss_min_</div>
 <script>
