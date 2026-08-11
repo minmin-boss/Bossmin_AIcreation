@@ -66,8 +66,13 @@ textarea.ta-lg{height:84px}
 .tour-name{font-size:12.5px;font-weight:800;color:var(--text)}
 .tour-meta{font-size:10.5px;color:var(--text2);margin-top:2px}
 .tour-add-box{background:var(--surf);border:1.5px solid var(--brd);border-radius:10px;padding:12px;margin-bottom:16px}
-.tour-attach-row{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;margin-top:6px}
+.tour-attach-row{display:grid;grid-template-columns:1fr auto auto;gap:6px;margin-top:8px}
 .tour-attach-row input[type=file]{display:none}
+.tour-attach-grid{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.tour-attach-item{position:relative;width:44px;height:44px;flex-shrink:0}
+.tour-attach-item .ticket-thumb,.tour-attach-item .ticket-link{width:44px;height:44px}
+.tour-attach-del{position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;background:var(--pin);color:#fff;border:none;font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;padding:0}
+.tour-attach-del:hover{background:#c62e42}
 #imgLightbox{position:fixed;inset:0;background:rgba(20,26,34,.88);display:none;align-items:center;justify-content:center;z-index:700;padding:24px}
 #imgLightbox.show{display:flex}
 #imgLightbox img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
@@ -542,13 +547,11 @@ input[type=file]{display:none}
           </div>
           <div class="fg"><label class="fl">메모</label><input id="tourMemo" placeholder="시간, 인원 등"/></div>
         </div>
-        <div class="tour-attach-row">
-          <input type="text" id="tourUrl" placeholder="예약 확인 링크 붙여넣기"/>
-          <input type="file" id="tourFile" accept="image/*"/>
-          <button class="btn-sm" onclick="document.getElementById('tourFile').click()">🖼️ 사진</button>
-          <button class="btn-add" id="tourAddBtn" onclick="addTour()">+ 투어 추가</button>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
           <button class="btn-sm" id="tourCancelBtn" style="display:none" onclick="cancelTourEdit()">취소</button>
+          <button class="btn-add" id="tourAddBtn" onclick="addTour()">+ 투어 추가</button>
         </div>
+        <div style="font-size:10px;color:var(--text2);margin-top:6px">* 투어를 추가한 뒤, 목록에 표시되는 카드에서 사진(여러 장)이나 예약 확인 링크를 첨부할 수 있어요.</div>
       </div>
     </div>
     <div id="tab-info" style="display:none">
@@ -890,16 +893,27 @@ function sanitizeTrip(t){
     t.lodgings=[];
   }
   delete t.lodging;
-  t.tours=(Array.isArray(t.tours)?t.tours:[]).map(tr=>({
-    id:(tr&&tr.id)||('tour_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),
-    name:(tr&&tr.name)||'',
-    agency:(tr&&tr.agency)||'',
-    date:(tr&&tr.date)||'',
-    cost:(tr&&tr.cost!=null)?tr.cost:'',
-    currency:(tr&&tr.currency)||'KRW',
-    memo:(tr&&tr.memo)||'',
-    attach:(tr&&tr.attach&&tr.attach.value)?{type:tr.attach.type==='link'?'link':'image',value:tr.attach.value}:null
-  })).filter(tr=>tr.name);
+  t.tours=(Array.isArray(t.tours)?t.tours:[]).map(tr=>{
+    let attachments;
+    if(Array.isArray(tr&&tr.attachments)){
+      attachments=tr.attachments.map(a=>({type:(a&&a.type==='link')?'link':'image',value:(a&&a.value)||''})).filter(a=>a.value);
+    }else if(tr&&tr.attach&&tr.attach.value){
+      // 예전 단일 첨부 데이터를 배열로 이전
+      attachments=[{type:tr.attach.type==='link'?'link':'image',value:tr.attach.value}];
+    }else{
+      attachments=[];
+    }
+    return{
+      id:(tr&&tr.id)||('tour_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),
+      name:(tr&&tr.name)||'',
+      agency:(tr&&tr.agency)||'',
+      date:(tr&&tr.date)||'',
+      cost:(tr&&tr.cost!=null)?tr.cost:'',
+      currency:(tr&&tr.currency)||'KRW',
+      memo:(tr&&tr.memo)||'',
+      attachments
+    };
+  }).filter(tr=>tr.name);
   return t;
 }
 function sanitizeData(){
@@ -2102,8 +2116,6 @@ async function addTour(){
   const costEl=document.getElementById('tourCost');
   const currEl=document.getElementById('tourCurrency');
   const memoEl=document.getElementById('tourMemo');
-  const urlEl=document.getElementById('tourUrl');
-  const fileEl=document.getElementById('tourFile');
   const name=nameEl.value.trim();
   if(!name){toast('🎫 투어명을 입력해주세요');nameEl.focus();return;}
   const t=getTrip(curTripId);
@@ -2118,18 +2130,8 @@ async function addTour(){
     cost:stripComma(costEl.value),
     currency:currEl.value,
     memo:memoEl.value.trim(),
-    attach:existing?existing.attach:null
+    attachments:existing?existing.attachments:[]
   };
-  const file=fileEl.files[0];
-  const url=urlEl.value.trim();
-  if(file){
-    try{
-      const dataUrl=await resizeImageFile(file);
-      tour.attach={type:'image',value:dataUrl};
-    }catch(e){toast('⚠️ 이미지를 처리하지 못했어요');return;}
-  }else if(url){
-    tour.attach={type:'link',value:url};
-  }
   if(isEditing){
     const idx=t.tours.findIndex(x=>x.id===_editingTourId);
     if(idx>-1)t.tours[idx]=tour;
@@ -2141,9 +2143,8 @@ async function addTour(){
   }
   save();
   renderTours();
-  [nameEl,agencyEl,dateEl,costEl,memoEl,urlEl].forEach(el=>el.value='');
+  [nameEl,agencyEl,dateEl,costEl,memoEl].forEach(el=>el.value='');
   currEl.value='KRW';
-  fileEl.value='';
 }
 function editTour(id){
   const t=getTrip(curTripId);
@@ -2156,7 +2157,6 @@ function editTour(id){
   document.getElementById('tourCost').value=tr.cost?Number(tr.cost).toLocaleString('en-US'):'';
   document.getElementById('tourCurrency').value=tr.currency||'KRW';
   document.getElementById('tourMemo').value=tr.memo||'';
-  document.getElementById('tourUrl').value=(tr.attach&&tr.attach.type==='link')?tr.attach.value:'';
   const btn=document.getElementById('tourAddBtn');
   if(btn){btn.textContent='✔ 수정 완료';btn.classList.add('editing');}
   const cancelBtn=document.getElementById('tourCancelBtn');
@@ -2165,13 +2165,41 @@ function editTour(id){
 }
 function cancelTourEdit(){
   _editingTourId=null;
-  ['tourName','tourAgency','tourDate','tourCost','tourMemo','tourUrl'].forEach(id=>document.getElementById(id).value='');
+  ['tourName','tourAgency','tourDate','tourCost','tourMemo'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('tourCurrency').value='KRW';
-  document.getElementById('tourFile').value='';
   const btn=document.getElementById('tourAddBtn');
   if(btn){btn.textContent='+ 투어 추가';btn.classList.remove('editing');}
   const cancelBtn=document.getElementById('tourCancelBtn');
   if(cancelBtn)cancelBtn.style.display='none';
+}
+async function addTourAttachment(tourId){
+  const urlEl=document.getElementById('tourAttUrl_'+tourId);
+  const fileEl=document.getElementById('tourAttFile_'+tourId);
+  const url=urlEl.value.trim();
+  const files=Array.from(fileEl.files||[]);
+  if(!files.length&&!url){toast('🖼️ 사진 또는 🔗 링크 중 하나를 추가해주세요');return;}
+  const t=getTrip(curTripId);
+  const tr=(t.tours||[]).find(x=>x.id===tourId);
+  if(!tr)return;
+  if(!Array.isArray(tr.attachments))tr.attachments=[];
+  for(const file of files){
+    try{
+      const dataUrl=await resizeImageFile(file);
+      tr.attachments.push({type:'image',value:dataUrl});
+    }catch(e){toast('⚠️ 이미지를 처리하지 못했어요');}
+  }
+  if(url)tr.attachments.push({type:'link',value:url});
+  save();
+  renderTours();
+  toast('🖼️ 첨부를 추가했어요');
+}
+function removeTourAttachment(tourId,idx){
+  if(!confirm('이 첨부를 삭제할까요?'))return;
+  const t=getTrip(curTripId);
+  const tr=(t.tours||[]).find(x=>x.id===tourId);
+  if(tr&&Array.isArray(tr.attachments))tr.attachments.splice(idx,1);
+  save();
+  renderTours();
 }
 function removeTour(id){
   if(!confirm('이 투어 예약을 삭제할까요?'))return;
@@ -2188,19 +2216,32 @@ function renderTours(){
   if(!box)return;
   const list=t.tours||[];
   box.innerHTML=list.length?list.map(tr=>{
-    const attach=tr.attach?(tr.attach.type==='image'
-      ?`<img class="ticket-thumb" src="${tr.attach.value}" onclick="openLightboxUrl('${tr.attach.value}')"/>`
-      :`<a class="ticket-link" href="${tr.attach.value}" target="_blank" rel="noopener">🔗</a>`):'';
+    const attachList=tr.attachments||[];
+    const attachHtml=attachList.length?`<div class="tour-attach-grid">`+attachList.map((a,ai)=>{
+      const el=a.type==='image'
+        ?`<img class="ticket-thumb" src="${a.value}" onclick="openLightboxUrl('${a.value}')"/>`
+        :`<a class="ticket-link" href="${a.value}" target="_blank" rel="noopener">🔗</a>`;
+      return `<div class="tour-attach-item">${el}<button type="button" class="tour-attach-del" onclick="removeTourAttachment('${tr.id}',${ai})">✕</button></div>`;
+    }).join('')+`</div>`:'';
     const meta=[tr.agency,tr.date?fmtD(tr.date):'',tr.cost?fmtNum(tr.cost)+' '+(tr.currency||'KRW'):''].filter(Boolean).join(' · ');
-    return `<div class="tour-row">
-      ${attach}
-      <div class="tour-body">
-        <div class="tour-name">${escapeHtml(tr.name)}</div>
-        ${meta?`<div class="tour-meta">${escapeHtml(meta)}</div>`:''}
-        ${tr.memo?`<div class="tour-meta">${escapeHtml(tr.memo)}</div>`:''}
+    return `<div class="tour-row" style="flex-direction:column;align-items:stretch">
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <span style="font-size:22px">🎫</span>
+        <div class="tour-body">
+          <div class="tour-name">${escapeHtml(tr.name)}</div>
+          ${meta?`<div class="tour-meta">${escapeHtml(meta)}</div>`:''}
+          ${tr.memo?`<div class="tour-meta">${escapeHtml(tr.memo)}</div>`:''}
+        </div>
+        <button class="btn-sm" onclick="editTour('${tr.id}')">✏️</button>
+        <button class="chk-del" onclick="removeTour('${tr.id}')">✕</button>
       </div>
-      <button class="btn-sm" onclick="editTour('${tr.id}')">✏️</button>
-      <button class="chk-del" onclick="removeTour('${tr.id}')">✕</button>
+      ${attachHtml}
+      <div class="tour-attach-row">
+        <input type="text" placeholder="예약 확인 링크 붙여넣기" id="tourAttUrl_${tr.id}"/>
+        <input type="file" accept="image/*" multiple id="tourAttFile_${tr.id}"/>
+        <button class="btn-sm" onclick="document.getElementById('tourAttFile_${tr.id}').click()">🖼️ 사진 추가</button>
+        <button class="btn-add" onclick="addTourAttachment('${tr.id}')">추가</button>
+      </div>
     </div>`;
   }).join(''):'<div style="font-size:11px;color:var(--text3);padding:2px 0">등록된 투어가 없어요</div>';
 }
@@ -2671,17 +2712,23 @@ function renderSharedView(container,t){
   if(t.tours&&t.tours.length){
     html+=`<div class="shared-card"><h3>🎫 투어 · 액티비티</h3>`;
     t.tours.forEach(tr=>{
-      const attach=tr.attach?(tr.attach.type==='image'
-        ?`<img class="ticket-thumb" src="${tr.attach.value}" onclick="openLightboxUrl('${tr.attach.value}')"/>`
-        :`<a class="ticket-link" href="${tr.attach.value}" target="_blank" rel="noopener">🔗</a>`):'';
+      const attachList=tr.attachments||[];
+      const attachHtml=attachList.length?`<div class="tour-attach-grid">`+attachList.map(a=>
+        a.type==='image'
+          ?`<img class="ticket-thumb" src="${a.value}" onclick="openLightboxUrl('${a.value}')"/>`
+          :`<a class="ticket-link" href="${a.value}" target="_blank" rel="noopener">🔗</a>`
+      ).join('')+`</div>`:'';
       const meta=[tr.agency,tr.date?fmtD(tr.date):'',tr.cost?fmtNum(tr.cost)+' '+(tr.currency||'KRW'):''].filter(Boolean).join(' · ');
-      html+=`<div class="tour-row">
-        ${attach}
-        <div class="tour-body">
-          <div class="tour-name">${escapeHtml(tr.name)}</div>
-          ${meta?`<div class="tour-meta">${escapeHtml(meta)}</div>`:''}
-          ${tr.memo?`<div class="tour-meta">${escapeHtml(tr.memo)}</div>`:''}
+      html+=`<div class="tour-row" style="flex-direction:column;align-items:stretch">
+        <div style="display:flex;align-items:flex-start;gap:10px">
+          <span style="font-size:22px">🎫</span>
+          <div class="tour-body">
+            <div class="tour-name">${escapeHtml(tr.name)}</div>
+            ${meta?`<div class="tour-meta">${escapeHtml(meta)}</div>`:''}
+            ${tr.memo?`<div class="tour-meta">${escapeHtml(tr.memo)}</div>`:''}
+          </div>
         </div>
+        ${attachHtml}
       </div>`;
     });
     html+=`</div>`;
