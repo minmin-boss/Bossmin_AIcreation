@@ -45,8 +45,6 @@ h1{font-family:var(--serif);font-weight:400;font-size:38px;letter-spacing:.02em;
 .btn.danger{color:var(--seal);border-color:transparent;background:transparent}
 .btn.danger:hover{background:var(--hover)}
 .btn.small{padding:4px 10px;font-size:13px}
-.auth-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-#auth{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
 
 .note{margin:12px 0 0;font-size:13px;color:var(--ink-2)}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:32px;margin-top:24px}
@@ -146,7 +144,7 @@ form textarea.tall{min-height:180px}
       <h1>REPORT</h1>
       <p class="lede">지원한 회사, 면접 일정, 면접 후기를 한곳에 적어 둡니다.</p>
     </div>
-    <div class="auth-bar"><span id="auth"></span><button class="btn primary" id="addApp" type="button" hidden>회사 추가</button></div>
+    <button class="btn primary" id="addApp" type="button">회사 추가</button>
   </header>
 
   <div class="layout">
@@ -208,7 +206,6 @@ form textarea.tall{min-height:180px}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 /* ▼ Firebase 콘솔 > 프로젝트 설정 > 내 앱 > SDK 설정 및 구성(구성)에서 복사한 값을 붙여 넣으세요. */
@@ -262,51 +259,22 @@ const firebaseConfig = {
   /* ---------- storage ---------- */
   function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('on'), 2200); }
 
-  let auth = null, unsub = null;
-
-  function renderAuth(u){
-    $('#auth').innerHTML = u
-      ? `<span>${esc(u.displayName || u.email || '')}</span><button class="btn small" type="button" data-act="logout">로그아웃</button>`
-      : '';
-    $('#addApp').hidden = !u;
-  }
+  const VAULT = 'v1de2b7ab81aadc0647888d72';
 
   function init(){
-    if(!window.firebase || !firebaseConfig.apiKey){
-      state.mode = 'noconfig';
-      render(); return;
-    }
+    if(!window.firebase || !firebaseConfig.apiKey){ state.mode = 'noconfig'; render(); return; }
     if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    const fs = firebase.firestore();
-    auth.onAuthStateChanged(u => {
-      if(unsub){ unsub(); unsub = null; }
-      renderAuth(u);
-      if(!u){
-        state.mode = 'signedout'; state.apps = []; col = null; state.openId = null;
-        document.querySelectorAll('dialog[open]').forEach(d => d.close());
-        render(); return;
-      }
-      state.mode = 'loading'; render();
-      col = fs.collection('users').doc(u.uid).collection('reportApplications');
-      unsub = col.onSnapshot(snap => {
-        state.mode = 'db';
-        state.apps = snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }));
-        render();
-        if(state.openId) renderDetail();
-      }, err => {
-        toast('기록을 불러오지 못했습니다.');
-      });
-    });
-  }
-
-  async function login(){
-    try { await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()); }
-    catch(e){ if(e && e.code !== 'auth/popup-closed-by-user') toast('로그인하지 못했습니다. (' + (e.code || 'error') + ')'); }
+    col = firebase.firestore().collection('jobReports').doc(VAULT).collection('applications');
+    col.onSnapshot(snap => {
+      state.mode = 'db';
+      state.apps = snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }));
+      render();
+      if(state.openId) renderDetail();
+    }, () => toast('기록을 불러오지 못했습니다.'));
   }
 
   async function saveApp(app){
-    if(!col){ toast('로그인 후 저장할 수 있습니다.'); return false; }
+    if(!col){ toast('저장소에 연결하지 못했습니다.'); return false; }
     app.updated_at = new Date().toISOString();
     try { await col.doc(app.id).set(JSON.parse(JSON.stringify(app))); return true; }
     catch(e){ toast('저장하지 못했습니다. (' + (e && e.code || 'error') + ')'); return false; }
@@ -334,11 +302,9 @@ const firebaseConfig = {
       .sort((x, y) => (y.applied_date || '').localeCompare(x.applied_date || '') || (y.updated_at || '').localeCompare(x.updated_at || ''));
 
     const ledger = $('#ledger');
-    if(state.mode === 'signedout' || state.mode === 'noconfig'){
-      ledger.innerHTML = state.mode === 'signedout'
-        ? `<div class="empty"><p>로그인하면 어느 기기에서든 같은 기록을 볼 수 있습니다.</p><button class="btn primary" type="button" data-act="login">Google로 로그인</button></div>`
-        : `<div class="empty"><p>저장소에 연결하지 못했습니다. 잠시 후 다시 열어 주세요.</p></div>`;
-      $('#upcoming').innerHTML = `<p class="up-empty">로그인 후 표시됩니다.</p>`;
+    if(state.mode === 'noconfig'){
+      ledger.innerHTML = `<div class="empty"><p>저장소에 연결하지 못했습니다. 잠시 후 다시 열어 주세요.</p></div>`;
+      $('#upcoming').innerHTML = '';
       return;
     }
     if(state.mode === 'loading'){
@@ -450,8 +416,6 @@ const firebaseConfig = {
     if(t.dataset.open){ state.openId = t.dataset.open; renderDetail(); const d = $('#dDetail'); if(!d.open) d.showModal(); return; }
     if(t.hasAttribute('data-close')){ t.closest('dialog').close(); return; }
     const act = t.dataset.act;
-    if(act === 'login'){ login(); return; }
-    if(act === 'logout'){ if(auth) auth.signOut(); return; }
     if(act === 'add') openAppForm();
     if(act === 'edit-app') openAppForm(state.openId);
     if(act === 'add-iv') openIvForm();
