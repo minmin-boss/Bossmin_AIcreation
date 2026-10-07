@@ -148,7 +148,6 @@ form textarea.tall{min-height:180px}
     </div>
     <div class="auth-bar"><span id="auth"></span><button class="btn primary" id="addApp" type="button" hidden>회사 추가</button></div>
   </header>
-  <p class="note" id="note" hidden></p>
 
   <div class="layout">
     <main>
@@ -261,7 +260,6 @@ const firebaseConfig = {
   }
 
   /* ---------- storage ---------- */
-  function showNote(t){ const n = $('#note'); n.textContent = t; n.hidden = !t; }
   function toast(t){ const el = $('#toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('on'), 2200); }
 
   let auth = null, unsub = null;
@@ -276,7 +274,6 @@ const firebaseConfig = {
   function init(){
     if(!window.firebase || !firebaseConfig.apiKey){
       state.mode = 'noconfig';
-      showNote('민경이가 직접 선택한 회사들로 좋은 결과가 있길 바랍니다);
       render(); return;
     }
     if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
@@ -293,12 +290,12 @@ const firebaseConfig = {
       state.mode = 'loading'; render();
       col = fs.collection('users').doc(u.uid).collection('reportApplications');
       unsub = col.onSnapshot(snap => {
-        state.mode = 'db'; showNote('');
+        state.mode = 'db';
         state.apps = snap.docs.map(d => Object.assign({}, d.data(), { id: d.id }));
         render();
         if(state.openId) renderDetail();
       }, err => {
-        showNote('기록을 불러오지 못했습니다. Firestore 보안 규칙과 로그인 상태를 확인해 주세요. (' + (err && err.code || 'error') + ')');
+        toast('기록을 불러오지 못했습니다.');
       });
     });
   }
@@ -340,7 +337,7 @@ const firebaseConfig = {
     if(state.mode === 'signedout' || state.mode === 'noconfig'){
       ledger.innerHTML = state.mode === 'signedout'
         ? `<div class="empty"><p>로그인하면 어느 기기에서든 같은 기록을 볼 수 있습니다.</p><button class="btn primary" type="button" data-act="login">Google로 로그인</button></div>`
-        : `<div class="empty"><p>Firebase 설정값이 아직 없습니다.<br>파일 안의 firebaseConfig를 채운 뒤 다시 열어 주세요.</p></div>`;
+        : `<div class="empty"><p>저장소에 연결하지 못했습니다. 잠시 후 다시 열어 주세요.</p></div>`;
       $('#upcoming').innerHTML = `<p class="up-empty">로그인 후 표시됩니다.</p>`;
       return;
     }
